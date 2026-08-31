@@ -18,7 +18,7 @@ import './Categories.css';
 const categoryData = [
   {
     id: 'c1',
-    title: 'OPPI Marketing Excellence Awards New Product',
+    title: 'OPPI Marketing Excellence Awards - New Pharma Product',
     tag: 'Marketing Excellence',
     icon: Award,
     eligibility: [
@@ -34,7 +34,7 @@ const categoryData = [
   },
   {
     id: 'c2',
-    title: 'OPPI Marketing Excellence Awards Existing Product',
+    title: 'OPPI Marketing Excellence Awards - Existing Pharma Product',
     tag: 'Marketing Excellence',
     icon: TrendingUp,
     eligibility: [
@@ -79,7 +79,7 @@ const categoryData = [
   },
   {
     id: 'c5',
-    title: 'OPPI HR Award - Diversity & Inclusion Award',
+    title: 'OPPI HR Award - D&I Award',
     tag: 'Diversity & Inclusion',
     icon: HeartHandshake,
     eligibility: [
@@ -139,7 +139,7 @@ const categoryData = [
   },
   {
     id: 'c9',
-    title: 'Ranjit Shahani Memorial Award For Excellence in Patient Centricity',
+    title: 'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
     tag: 'Patient Centricity',
     icon: Heart,
     eligibility: [

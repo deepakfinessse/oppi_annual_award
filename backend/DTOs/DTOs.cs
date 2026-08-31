@@ -2,12 +2,13 @@ namespace OppiInnovationApi.DTOs;
 
 public class RegisterDto
 {
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
     public string First_Name { get; set; } = null!;
     public string? Middle_Name { get; set; }
     public string Last_Name { get; set; } = null!;
-    public string Dob { get; set; } = null!;
-    public string Gender { get; set; } = null!;
+    public string? Dob { get; set; }
+    public string? Gender { get; set; }
+    public string? Organisation { get; set; }
     public string Email { get; set; } = null!;
     public string Mobile { get; set; } = null!;
     public string Password { get; set; } = null!;

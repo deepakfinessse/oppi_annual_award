@@ -258,10 +258,15 @@ const ApplicationForm = () => {
                 required
               >
                 <option value="">Choose a category</option>
-                <option value="OPPI Scientist Award">OPPI Scientist Award</option>
-                <option value="OPPI Young Scientist Award">OPPI Young Scientist Award</option>
-                <option value="OPPI Special Award for Women Scientist">OPPI Special Award for Women Scientist</option>
-                <option value="OPPI Innovation Award">OPPI Innovation Award</option>
+                <option value="OPPI Marketing Excellence Awards - Existing Pharma Product">OPPI Marketing Excellence Awards - Existing Pharma Product</option>
+                <option value="OPPI Marketing Excellence Awards - New Pharma Product">OPPI Marketing Excellence Awards - New Pharma Product</option>
+                <option value="OPPI Sales Force Excellence Award">OPPI Sales Force Excellence Award</option>
+                <option value="OPPI HR Award - HR Excellence Award">OPPI HR Award - HR Excellence Award</option>
+                <option value="OPPI HR Award - D&I Award">OPPI HR Award - D&I Award</option>
+                <option value="OPPI Healthcare Communications Award">OPPI Healthcare Communications Award</option>
+                <option value="OPPI Medical Excellence Award">OPPI Medical Excellence Award</option>
+                <option value="OPPI Sustainability Excellence Award">OPPI Sustainability Excellence Award</option>
+                <option value="OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity">OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity</option>
               </select>
             </div>
 
