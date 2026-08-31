@@ -1,0 +1,148 @@
+.jury-section {
+  padding: 5rem 0;
+  background: #ffffff;
+}
+
+.jury-section-title {
+  font-size: 42px;
+  font-weight: 800;
+  color: #0b72c4;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.jury-layout-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.jury-categories-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.jury-cat-tab {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 0.85rem 1.1rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jury-cat-tab:hover {
+  background: #edf2f7;
+  color: #0f172a;
+}
+
+.jury-cat-tab.active {
+  background: #25bbec;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(37, 187, 236, 0.3);
+}
+
+.jury-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.jury-member-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.jury-member-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px rgba(11, 114, 196, 0.12);
+  border-color: #25bbec;
+}
+
+.jury-member-photo-frame {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.jury-member-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jury-member-info {
+  padding: 1.25rem;
+}
+
+.jury-member-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.jury-member-role {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jury-member-company {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b72c4;
+}
+
+@media (max-width: 1024px) {
+  .jury-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jury-categories-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0.75rem;
+  }
+
+  .jury-cat-tab {
+    flex: 0 0 auto;
+  }
+
+  .jury-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .jury-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,337 @@
+.preview-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #fff;
+  border-radius: 16px;
+  border: 2px dashed #e2e8f0;
+  color: #718096;
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 2rem;
+}
+
+.preview-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  padding: 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.preview-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 118, 190, 0.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.preview-error {
+  padding: 1.5rem;
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.app-preview-container {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.preview-app-title {
+  font-size: 1.4rem;
+  color: var(--primary-dark);
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #eff6ff;
+  padding-bottom: 0.8rem;
+  font-weight: 800;
+}
+
+.preview-section-card {
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.preview-section-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.preview-card-title {
+  font-size: 1.1rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.preview-content-grid {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.preview-photo-frame {
+  flex-shrink: 0;
+}
+
+.preview-img {
+  width: 130px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 3px solid var(--primary);
+  box-shadow: 0 4px 10px rgba(0, 118, 190, 0.15);
+}
+
+.preview-fields-layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.5rem;
+  flex: 1;
+}
+
+.preview-fields-layout.full-width {
+  grid-template-columns: 1fr;
+}
+
+.preview-data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.preview-data-field.full-row {
+  grid-column: 1 / -1;
+}
+
+.preview-data-field.text-block {
+  background: #ffffff;
+  padding: 1rem;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #718096;
+}
+
+.field-value {
+  font-size: 0.95rem;
+  color: #2d3748;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.field-value.category-tag {
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: 700;
+  border: 1px solid #dbeafe;
+}
+
+.field-value.pre-wrap {
+  white-space: pre-wrap;
+  font-weight: 400;
+}
+
+.preview-files-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.preview-file-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.preview-file-link:hover {
+  text-decoration: underline;
+  color: var(--primary-dark);
+}
+
+.no-data-text {
+  color: #a0aec0;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.preview-patents-block {
+  margin-top: 1rem;
+}
+
+.preview-patents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.preview-patent-item {
+  display: flex;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+}
+
+.patent-idx {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.patent-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.patent-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #2d3748;
+}
+
+.patent-metadata-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.meta-badge {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+}
+
+.patent-attachment-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.patent-attachment-link:hover {
+  text-decoration: underline;
+}
+
+.attachment-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  margin-top: 0.3rem;
+}
+
+.attachment-preview-card.img-type {
+  border-left: 3px solid #0284c7;
+}
+
+.attachment-preview-card.pdf-type {
+  border-left: 3px solid #dc2626;
+}
+
+.preview-attachment-img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.preview-attachment-img:hover {
+  transform: scale(1.08);
+}
+
+.attachment-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.file-type-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.file-type-badge.img-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.file-type-badge.pdf-badge {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 768px) {
+  .preview-content-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+  .preview-fields-layout {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .preview-files-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}

@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #0076BE;
+  --primary-light: #00A6E6;
+  --primary-dark: #2A488E;
+  --accent-orange: #FF8A00;
+  --accent: #E0F2FE;
+  --background: #FFFFFF;
+  --text-main: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --white: #FFFFFF;
+  --glass: rgba(255, 255, 255, 0.8);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --transition: all 0.3s ease;
+  
+  --gradient-blue: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%);
+  --gradient-orange: linear-gradient(135deg, #FFB703 0%, #FB8500 100%);
+  --gradient-soft: linear-gradient(180deg, #FFFFFF 0%, #F0F9FF 100%);
+  --gradient-hero: linear-gradient(180deg, #0076BE 0%, #00A6E6 100%);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-main);
+  background-color: var(--background);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition);
+}
+
+ul {
+  list-style: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.container {
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+}
+
+.btn-primary {
+  background: var(--gradient-blue);
+  color: var(--white);
+  padding: 0.8rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(0, 118, 190, 0.3);
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.btn-orange {
+  background: var(--gradient-orange);
+  color: var(--white);
+  padding: 1rem 3rem;
+  border-radius: 50px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  box-shadow: 0 6px 20px rgba(251, 133, 0, 0.4);
+  text-transform: uppercase;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.btn-orange:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(251, 133, 0, 0.5);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 118, 190, 0.4);
+}
+
+.section-padding {
+  padding: 4rem 0;
+}
+
+@media (max-width: 768px) {
+  /* .section-padding {
+    padding: 4rem 0;
+  } */
+}
+
+/* Captcha styling */
+.captcha-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+.captcha-container label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.captcha-row-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.captcha-row-wrapper .captcha-code-display {
+  flex: 1;
+  max-width: 140px;
+  background-color: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #1e293b;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.12);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(148, 163, 184, 0.04) 10px, rgba(148, 163, 184, 0.04) 20px);
+  user-select: none;
+  height: 44px;
+}
+
+.captcha-row-wrapper .btn-refresh-captcha {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  height: 44px;
+  padding: 0 0.85rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.captcha-row-wrapper .btn-refresh-captcha:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.captcha-row-wrapper input {
+  flex: 1.5;
+  height: 44px;
+  padding: 0.85rem 1rem !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-family: inherit !important;
+  font-size: 0.95rem !important;
+  color: #0f172a !important;
+  transition: all 0.2s !important;
+  background-color: white !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.captcha-row-wrapper input:focus {
+  outline: none !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+.captcha-code-display img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: 6px;
+}
+
+

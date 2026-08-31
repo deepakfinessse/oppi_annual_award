@@ -1,0 +1,394 @@
+/* Login.css - Figma Match Design System */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  background-image: url('../../assets/exact-figma-bg.png?v=2') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+.login-page-container {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+}
+
+/* Floating White Capsule Header */
+.login-page-container .admin-floating-header {
+  background: white;
+  border-radius: 50px;
+  padding: 0.6rem 1.75rem;
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.header-logo-section {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo-img {
+  height: 42px;
+  object-fit: contain;
+}
+
+.header-logout-section {
+  display: flex;
+  align-items: center;
+}
+
+/* Header Back Pill Button - Solid Cyan/Blue Pill Style from Figma */
+.header-back-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #009be3;
+  color: white !important;
+  padding: 0.55rem 1.5rem;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 155, 227, 0.25);
+}
+
+.header-back-pill:hover {
+  background: #0084c3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 155, 227, 0.35);
+}
+
+/* Login Split Card */
+.login-content-wrapper {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  justify-content: center;
+}
+
+.login-card {
+  display: flex;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  min-height: 540px;
+}
+
+/* Left Image Section - Vibrant Blue Container with Golden Trophy */
+.login-image-section {
+  flex: 0 0 380px;
+  width: 380px;
+  position: relative;
+  background: linear-gradient(160deg, #00a4e4 0%, #007bbd 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1.5rem;
+}
+
+.login-trophy {
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  z-index: 1;
+}
+
+/* Right Form Section */
+.login-form-section {
+  flex: 1;
+  padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: white;
+  min-width: 0;
+}
+
+.login-header {
+  margin-bottom: 1.5rem;
+}
+
+.login-header h2 {
+  color: #111827;
+  margin-bottom: 0.35rem;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.login-header p {
+  color: #4b5563;
+  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.green-link {
+  color: #00a651 !important;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.green-link:hover {
+  text-decoration: underline;
+  color: #008842 !important;
+}
+
+/* Form Styles */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.form-group input {
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #0f172a;
+  transition: all 0.2s;
+  background-color: white;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #009be3;
+  box-shadow: 0 0 0 3px rgba(0, 155, 227, 0.15);
+}
+
+.form-group input::placeholder {
+  color: #94a3b8;
+}
+
+/* Chrome autofill white background overrides */
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Options Bar */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.15rem 0 0.5rem 0;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.remember-me input {
+  width: 1.05rem;
+  height: 1.05rem;
+  cursor: pointer;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  accent-color: #009be3;
+}
+
+/* Bottom Actions Row - reCAPTCHA + LOG IN Button */
+.form-actions-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.captcha-wrapper {
+  flex-shrink: 0;
+  width: 304px;
+}
+
+.btn-login {
+  flex: 1;
+  background: #009be3;
+  color: white;
+  border: none;
+  height: 78px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 155, 227, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.btn-login:hover {
+  background: #0084c3;
+  box-shadow: 0 6px 18px rgba(0, 155, 227, 0.35);
+}
+
+.btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.form-error {
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Responsiveness */
+@media (max-width: 900px) {
+  .login-card {
+    flex-direction: column;
+  }
+
+  .login-image-section {
+    display: none;
+  }
+
+  .login-form-section {
+    padding: 2.5rem 2rem;
+  }
+
+  .form-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-login {
+    height: 48px;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-page-container {
+    padding: 1rem;
+  }
+
+  .login-page-container .admin-floating-header {
+    padding: 0.6rem 1.25rem;
+    border-radius: 30px;
+    margin-bottom: 1.5rem;
+  }
+
+  .login-form-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .login-header h2 {
+    font-size: 1.65rem;
+  }
+
+  .form-options {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+}
+
+/* Validation field error styling */
+.field-error-msg {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  display: block;
+}
+
+.form-group input.input-error,
+.form-group .mobile-input-group.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Password eye toggle styling */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  padding-right: 2.75rem !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  z-index: 5;
+}
+
+.password-toggle-btn:hover {
+  color: #0f172a;
+}

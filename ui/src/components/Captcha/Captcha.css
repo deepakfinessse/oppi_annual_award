@@ -1,0 +1,62 @@
+.captcha-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.g-recaptcha-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  min-height: 78px;
+}
+
+/* Scale reCAPTCHA responsively on smaller devices */
+@media (max-width: 380px) {
+  .g-recaptcha-wrapper > div {
+    transform: scale(0.88);
+    transform-origin: left center;
+  }
+}
+
+@media (max-width: 340px) {
+  .g-recaptcha-wrapper > div {
+    transform: scale(0.8);
+    transform-origin: left center;
+  }
+}
+
+/* Elegant Premium Error Box for Captcha validation */
+.field-error-text {
+  color: #e11d48;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(225, 29, 72, 0.05);
+  animation: shake 0.4s ease-in-out;
+  align-self: flex-start;
+}
+
+.field-error-text .error-icon {
+  flex-shrink: 0;
+  color: #e11d48;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

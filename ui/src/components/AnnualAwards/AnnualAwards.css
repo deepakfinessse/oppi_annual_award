@@ -1,0 +1,66 @@
+.annual-awards-section {
+  padding: 5rem 0;
+  background: #ffffff;
+}
+
+.annual-awards-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+  gap: 3rem;
+}
+
+.annual-awards-title {
+  font-size: 46px;
+  font-weight: 800;
+  color: #0d2a4a;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.annual-awards-title .highlight-year {
+  background: linear-gradient(135deg, #1282db 0%, #0861ab 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.annual-awards-desc {
+  font-size: 17px;
+  line-height: 1.65;
+  color: #4a5568;
+  max-width: 620px;
+}
+
+.annual-awards-trophy-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gold-trophy-img {
+  max-height: 380px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0, 50, 100, 0.15));
+  transition: transform 0.3s ease;
+}
+
+.gold-trophy-img:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+
+@media (max-width: 992px) {
+  .annual-awards-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 2rem;
+  }
+
+  .annual-awards-desc {
+    margin: 0 auto;
+  }
+
+  .gold-trophy-img {
+    max-height: 300px;
+  }
+}

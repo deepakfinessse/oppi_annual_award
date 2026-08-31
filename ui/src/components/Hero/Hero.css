@@ -1,0 +1,164 @@
+.hero-annual {
+  position: relative;
+  min-height: 90vh;
+  padding-top: 10rem;
+  padding-bottom: 7rem;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  overflow: hidden;
+}
+
+/* Subtle gradient overlay to make white text popped, but keeping background DNA fully visible */
+.hero-annual-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(0, 40, 80, 0.1) 0%, rgba(0, 20, 50, 0.25) 100%);
+  z-index: 1;
+}
+
+.hero-annual-container {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  width: 100%;
+}
+
+.hero-annual-content {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-annual-title {
+  font-size: 64px;
+  line-height: 1.12;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 4px 16px rgba(0, 40, 80, 0.3);
+}
+
+.hero-annual-title span {
+  display: block;
+}
+
+.hero-annual-action {
+  margin-bottom: 1.75rem;
+}
+
+.submit-entry-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.annual-apply-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #25bbec;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0.8rem 2.25rem;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 10px 28px rgba(0, 100, 160, 0.35);
+  transition: all 0.25s ease;
+  letter-spacing: 0.04em;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.annual-apply-pill:hover {
+  background: #ffffff;
+  color: #0b72c4;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(255, 255, 255, 0.4);
+}
+
+/* Individual Glassmorphism Countdown Cards matching Figma */
+.hero-countdown-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.countdown-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 105px;
+  min-height: 105px;
+  background: rgba(8, 120, 175, 0.25);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  padding: 0.85rem 1.25rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.countdown-box:hover {
+  background: rgba(8, 120, 175, 0.4);
+  transform: translateY(-3px);
+}
+
+.countdown-num {
+  font-size: 46px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.countdown-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+.countdown-colon {
+  font-size: 40px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1;
+  margin: 0 0.25rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .hero-annual-title {
+    font-size: 40px;
+  }
+  
+  .countdown-box {
+    min-width: 85px;
+    min-height: 85px;
+    padding: 0.65rem 0.85rem;
+  }
+  
+  .countdown-num {
+    font-size: 34px;
+  }
+  
+  .countdown-colon {
+    font-size: 30px;
+  }
+}
