@@ -58,9 +58,14 @@ const ApplicationForm = () => {
             setFormData(prev => ({
               ...prev,
               awardCategory: data.personal_info.award_category || '',
-              organisationName: data.personal_info.company_name || '',
+              organisationName: data.personal_info.company_name || data.user?.organisation || '',
               designation: data.personal_info.designation || '',
               briefDescription: data.personal_info.company_brief || '',
+            }));
+          } else if (data.user?.organisation) {
+            setFormData(prev => ({
+              ...prev,
+              organisationName: data.user.organisation
             }));
           }
 
@@ -234,7 +239,7 @@ const ApplicationForm = () => {
           <div className="card-header">
             <h2>Fill in your details</h2>
             <div className="autofill-notice">
-              All details entered during registration will be auto-filled. Please verify and complete the remaining fields.
+              All details entered during registration will be auto-filled. <strong>Note:</strong> Only one nomination entry per OPPI member company per category is permitted.
             </div>
           </div>
 

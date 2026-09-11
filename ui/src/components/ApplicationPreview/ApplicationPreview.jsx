@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getScientistApplication, getFileUrl } from '../../utils/api';
+import { getScientistApplication, getApplicationReview, getFileUrl } from '../../utils/api';
+import { exportSingleApplicationDossierWord } from '../../utils/wordExport';
+import { FileText, Video, Download, CheckCircle, ExternalLink } from 'lucide-react';
 import './ApplicationPreview.css';
 
 const isImageFile = (fileNameOrPath) => {
@@ -20,7 +22,13 @@ const ApplicationPreview = ({ appId }) => {
       setLoading(true);
       setError('');
       try {
-        const response = await getScientistApplication(appId);
+        // Try getting comprehensive review/application data
+        let response = null;
+        try {
+          response = await getApplicationReview(appId);
+        } catch (e) {
+          response = await getScientistApplication(appId);
+        }
         setData(response);
       } catch (err) {
         console.error('Failed to load application preview:', err);
@@ -56,195 +64,127 @@ const ApplicationPreview = ({ appId }) => {
 
   if (!data) return null;
 
+  const pInfo = data.personal_info;
+  const fileUploads = data.file_uploads || [];
   const { applicant_detail: ad, application_detail: apd } = data;
+
+  const compName = pInfo?.company_name || data.user_organisation || ad?.instituteName || '—';
+  const categoryName = pInfo?.award_category || apd?.category || '—';
+  const repName = data.user_name || `${ad?.firstName || ''} ${ad?.lastName || ''}`.trim() || '—';
+  const designation = pInfo?.designation || '—';
+  const briefDesc = pInfo?.company_brief || apd?.briefStatement || '';
 
   return (
     <div className="app-preview-container">
-      <h3 className="preview-app-title">Application ID: #{appId ? String(appId).padStart(2, '0') : ''}</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+        <h3 className="preview-app-title" style={{ margin: 0 }}>Application ID: #{appId ? String(appId).padStart(2, '0') : ''}</h3>
+        <button
+          className="btn-card-action download-btn"
+          style={{ padding: '6px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => exportSingleApplicationDossierWord(data)}
+        >
+          <FileText size={15} />
+          <span>Export Word Dossier</span>
+        </button>
+      </div>
 
-      {/* SECTION 1 - APPLICANT DETAILS */}
+      {/* SECTION 1 - NOMINATION & COMPANY DETAILS */}
       <div className="preview-section-card">
-        <h4 className="preview-card-title">Section 1 – Applicant Details</h4>
-
-        {ad ? (
-          <div className="preview-content-grid">
-            {ad.photoPath && (
-              <div className="preview-photo-frame">
-                <img src={getFileUrl(ad.photoPath)} alt="Applicant photo" className="preview-img" />
-              </div>
-            )}
-
-            <div className="preview-fields-layout">
-              {[
-                ['Full Name', `${ad.title || ''} ${ad.firstName || ''} ${ad.middleName || ''} ${ad.lastName || ''}`.trim()],
-                ['Date of Birth', ad.dob || '—'],
-                ['Gender', ad.gender || '—'],
-                ['Email Address', ad.email || '—'],
-                ['Mobile Number', ad.mobile || '—'],
-                ['Telephone', ad.telephone || '—'],
-                ['Discipline / Area', ad.discipline || '—'],
-                ['Institute Category', (ad.instituteCategory === 'Others' && ad.instituteOtherDetails ? `Others (${ad.instituteOtherDetails})` : ad.instituteCategory) || '—'],
-                ['Institute Name', ad.instituteName || '—']
-              ].map(([label, val]) => (
-                <div key={label} className="preview-data-field">
-                  <span className="field-label">{label}</span>
-                  <span className="field-value">{val}</span>
-                </div>
-              ))}
+        <h4 className="preview-card-title">Section 1 – Member Company & Representative Details</h4>
+        <div className="preview-fields-layout">
+          {[
+            ['Award Category', categoryName],
+            ['OPPI Member Company', compName],
+            ['Representative Name', repName],
+            ['Designation', designation],
+            ['Gender', data.user?.gender || ad?.gender || '—'],
+            ['Email Address', data.user_email || ad?.email || '—'],
+            ['Mobile Number', data.user_mobile || ad?.mobile || '—'],
+            ['Submission Status', data.status || '—'],
+          ].map(([label, val]) => (
+            <div key={label} className="preview-data-field">
+              <span className="field-label">{label}</span>
+              <span className="field-value" style={label === 'Award Category' ? { fontWeight: '700', color: '#1F4E38' } : {}}>{val}</span>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION 2 - BRIEF DESCRIPTION */}
+      <div className="preview-section-card">
+        <h4 className="preview-card-title">Section 2 – Brief Description of the Nomination</h4>
+        {briefDesc ? (
+          <div className="preview-data-field full-row text-block">
+            <span className="field-value pre-wrap" style={{ lineHeight: '1.6', fontSize: '14px', color: '#2d3748' }}>{briefDesc}</span>
           </div>
         ) : (
-          <p className="no-data-text">Applicant details are not filled yet.</p>
+          <p className="no-data-text">No brief description provided.</p>
         )}
       </div>
 
-      {/* SECTION 2 - APPLICATION DETAILS */}
-      <div className="preview-section-card">
-        <h4 className="preview-card-title">Section 2 – Application Details</h4>
+      {/* SECTION 3 - ATTACHED DOCUMENTS & MEDIA */}
+      {fileUploads && fileUploads.length > 0 && (
+        <div className="preview-section-card">
+          <h4 className="preview-card-title">Section 3 – Supporting Documents & Videos ({fileUploads.length})</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px', marginTop: '12px' }}>
+            {fileUploads.map((file, idx) => {
+              const fUrl = getFileUrl(file.FilePath || file.filePath);
+              const fName = file.FileName || file.fileName || `Attachment ${idx + 1}`;
+              const isVid = (file.Section || file.section) === 'video' || /\.(mp4|mov|avi|webm)$/i.test(fName);
+              const fSize = file.FileSize || file.fileSize;
+              const sizeMB = fSize ? (fSize / (1024 * 1024)).toFixed(1) + ' MB' : '';
 
-        {apd ? (
-          <div className="preview-fields-layout full-width">
-            <div className="preview-data-field full-row">
-              <span className="field-label">Award Category</span>
-              <span className="field-value category-tag">{apd.category || '—'}</span>
-            </div>
-
-            <div className="preview-data-field full-row text-block">
-              <span className="field-label">Brief Statement of Research Contribution</span>
-              <span className="field-value pre-wrap">{apd.briefStatement || '—'}</span>
-            </div>
-
-            <div className="preview-data-field full-row text-block">
-              <span className="field-label">Significant Contribution to Science or Technology Development</span>
-              <span className="field-value pre-wrap">{apd.significantContribution || '—'}</span>
-            </div>
-
-            <div className="preview-data-field full-row text-block">
-              <span className="field-label">Impact of Contribution to the Concerned Field</span>
-              <span className="field-value pre-wrap">{apd.impactContribution || '—'}</span>
-            </div>
-
-            {/* RESEARCH PUBLICATIONS */}
-            {(apd.hasPublication === true || (apd.hasPublication !== false && apd.hasPublication !== null && apd.hasPublication !== undefined && apd.patents?.some(p => (p.type || '').toUpperCase() === 'PUBLICATION' || !p.type))) && (
-              <div className="preview-patents-block">
-                <span className="field-label">Most Significant Research Publications</span>
-                <div className="preview-patents-list">
-                  {apd.patents?.filter(p => (p.type || '').toUpperCase() === 'PUBLICATION' || !p.type).map((p, index) => {
-                    const filePath = p.attachmentPath || p.AttachmentPath || p.attachment_path || p.path || p.url || p.filePath || p.FilePath || p.file_path || '';
-                    const fileName = p.attachmentFileName || p.AttachmentFileName || p.attachment_file_name || p.fileName || p.name || (filePath ? filePath.split('/').pop() : '');
-                    const isImg = isImageFile(fileName || filePath);
-                    return (
-                      <div key={p.id || index} className="preview-patent-item">
-                        <span className="patent-idx">#{index + 1}</span>
-                        <div className="patent-details">
-                          <span className="patent-title">{p.title || 'Untitled Publication'}</span>
-                          <div className="patent-metadata-row">
-                            <span className="meta-badge">Primary Writer: {p.isPrimaryWriter ? 'Yes' : 'No'}</span>
-                            {filePath ? (
-                              isImg ? (
-                                <div className="attachment-preview-card img-type">
-                                  <a href={getFileUrl(filePath)} target="_blank" rel="noreferrer" className="preview-img-anchor" title="View Full Image">
-                                    <img src={getFileUrl(filePath)} alt={fileName} className="preview-attachment-img" />
-                                  </a>
-                                  <div className="attachment-card-info">
-                                    <span className="file-type-badge img-badge">🖼️ Image Attachment</span>
-                                    <a href={getFileUrl(filePath)} target="_blank" rel="noreferrer" className="patent-attachment-link">
-                                      View Image ({fileName || 'View Image'}) ↗
-                                    </a>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="attachment-preview-card pdf-type">
-                                  <span className="file-type-badge pdf-badge">📕 PDF Document</span>
-                                  <a href={getFileUrl(filePath)} target="_blank" rel="noreferrer" className="patent-attachment-link">
-                                    View PDF ({fileName || 'View Document'}) ↗
-                                  </a>
-                                </div>
-                              )
-                            ) : fileName ? (
-                              <span className="no-attachment-text" style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-                                Attached: {fileName} (No file uploaded)
-                              </span>
-                            ) : (
-                              <span className="no-attachment-text" style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-                                No attachment uploaded
-                              </span>
-                            )}
-                          </div>
-                        </div>
+              return (
+                <div key={file.Id || file.id || idx} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                    {isVid ? <Video size={24} style={{ color: '#0F5257', flexShrink: 0 }} /> : <FileText size={24} style={{ color: '#1F4E38', flexShrink: 0 }} />}
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontWeight: '600', fontSize: '13px', color: '#1a202c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={fName}>
+                        {fName}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* PATENTS */}
-            {(apd.hasPatent === true || (apd.hasPatent !== false && apd.hasPatent !== null && apd.hasPatent !== undefined && apd.patents?.some(p => (p.type || '').toUpperCase() === 'PATENT'))) && (
-              <div className="preview-patents-block" style={{ marginTop: '1.5rem' }}>
-                <span className="field-label">Most Significant Patents</span>
-                <div className="preview-patents-list">
-                  {apd.patents?.filter(p => (p.type || '').toUpperCase() === 'PATENT').map((p, index) => {
-                    const filePath = p.attachmentPath || p.AttachmentPath || p.attachment_path || p.path || p.url || p.filePath || p.FilePath || p.file_path || '';
-                    const fileName = p.attachmentFileName || p.AttachmentFileName || p.attachment_file_name || p.fileName || p.name || (filePath ? filePath.split('/').pop() : '');
-                    return (
-                      <div key={p.id || index} className="preview-patent-item">
-                        <span className="patent-idx">#{index + 1}</span>
-                        <div className="patent-details">
-                          <span className="patent-title">{p.title || 'Untitled Patent'}</span>
-                          <div className="patent-metadata-row">
-                            <span className="meta-badge">Primary Writer: {p.isPrimaryWriter ? 'Yes' : 'No'}</span>
-                            {filePath ? (
-                              <a href={getFileUrl(filePath)} target="_blank" rel="noreferrer" className="patent-attachment-link">
-                                📎 View Attachment ({fileName || 'View Document'}) ↗
-                              </a>
-                            ) : fileName ? (
-                              <span className="no-attachment-text" style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-                                Attached: {fileName} (No file uploaded)
-                              </span>
-                            ) : (
-                              <span className="no-attachment-text" style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                      <div style={{ fontSize: '11px', color: '#718096' }}>
+                        {(file.Section || file.section || 'File').toUpperCase()} {sizeMB && `• ${sizeMB}`}
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
+                  <a href={fUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '6px', backgroundColor: '#edf2f7', color: '#2b6cb0', textDecoration: 'none' }} title="Open file">
+                    <ExternalLink size={16} />
+                  </a>
                 </div>
-              </div>
-            )}
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-            {/* ATTACHED DOCUMENTS (CV & AUTHENTICATION CERTIFICATE) */}
-            <div className="preview-files-row" style={{ marginTop: '1.5rem' }}>
+      {/* OPTIONAL LEGACY ATTACHMENTS (IF PRESENT) */}
+      {apd && (apd.patents?.length > 0 || apd.cvFilePath || apd.authCertFilePath) && (
+        <div className="preview-section-card">
+          <h4 className="preview-card-title">Additional Attached Documents</h4>
+          <div className="preview-files-row">
+            {apd.cvFilePath && (
               <div className="preview-data-field">
-                <span className="field-label">Curriculum Vitae (CV)</span>
+                <span className="field-label">Curriculum Vitae</span>
                 <span className="field-value">
-                  {apd.cvFilePath ? (
-                    <a href={getFileUrl(apd.cvFilePath)} target="_blank" rel="noreferrer" className="preview-file-link">
-                      📄 View CV Document ↗
-                    </a>
-                  ) : 'Not uploaded'}
+                  <a href={getFileUrl(apd.cvFilePath)} target="_blank" rel="noreferrer" className="preview-file-link">
+                    📄 View CV Document ↗
+                  </a>
                 </span>
               </div>
-
+            )}
+            {apd.authCertFilePath && (
               <div className="preview-data-field">
                 <span className="field-label">Authentication Certificate</span>
                 <span className="field-value">
-                  {apd.authCertFilePath ? (
-                    <a href={getFileUrl(apd.authCertFilePath)} target="_blank" rel="noreferrer" className="preview-file-link">
-                      📄 View Certificate ↗
-                    </a>
-                  ) : 'Not uploaded'}
+                  <a href={getFileUrl(apd.authCertFilePath)} target="_blank" rel="noreferrer" className="preview-file-link">
+                    📄 View Certificate ↗
+                  </a>
                 </span>
               </div>
-            </div>
+            )}
           </div>
-        ) : (
-          <p className="no-data-text">Application details are not filled yet.</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

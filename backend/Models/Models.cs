@@ -12,6 +12,7 @@ public class User
     public string? Gender { get; set; }
     public string Email { get; set; } = null!;
     public string? Mobile { get; set; }
+    public string? Organisation { get; set; }
     [JsonIgnore]
     public string PasswordHash { get; set; } = null!;
     public string Role { get; set; } = "USER";
@@ -240,6 +241,7 @@ public class PanelMember
     public string Role { get; set; } = null!; // description/affiliation
     public string Type { get; set; } = null!; // VALIDATOR, JURY, PANEL_CHAIR
     public string? ImagePath { get; set; }
+    public string? Category { get; set; }
     public int SortOrder { get; set; } = 0;
     public string? Email { get; set; }
     [JsonIgnore]

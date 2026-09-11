@@ -20,53 +20,45 @@ const Rules = () => {
           >
             {/* Eligibility Card */}
             <div className="info-card">
-              <h3 className="info-card-title">Eligibility</h3>
+              <h3 className="info-card-title">Eligibility Criteria</h3>
               <div className="info-items">
                 <div className="info-item">
-                  <div className="info-icon indian-flag"><img src={indialogo} alt="India Flag" className="india-flag-image" /></div>
-                  <p>Scientist must be of Indian Nationality</p>
+                  <Building2 className="info-icon blue" width={34} height={34} />
+                  <p><strong>OPPI Member Company:</strong> Open exclusively to registered OPPI member companies operating in India.</p>
+                </div>
+                <div className="info-item">
+                  <BookmarkOff className="info-icon blue" width={34} height={34} />
+                  <p><strong>Single Entry Per Category:</strong> A member company can apply for all 9 categories, but only one nomination entry per member company is permitted in each category.</p>
                 </div>
                 <div className="info-item">
                   <GraduationCap className="info-icon blue" width={34} height={34} />
-                  <p>Must hold a Science / Pharmacy / Post-Graduate degree from a reputed university.</p>
-                </div>
-                <div className="info-item">
-                  <User className="info-icon blue" width={34} height={34} />
-                  <p><strong>OPPI Young Scientist Award:</strong> Age limit up to 40 years (as on the last date of application). Open to both male & female scientists.</p>
-                </div>
-                <div className="info-item">
-                  <User className="info-icon blue" width={34} height={34} />
-                  <p><strong>OPPI Scientist Award:</strong> Above 40 years (as on the last date of application). Open to both male & female scientists.</p>
-                </div>
-                <div className="info-item">
-                  <Building2 className="info-icon blue" width={34} height={34} />
-                  <p>Nominations/ Submissions are invited from all Biological Research Centres & institutions of Higher learning recognized by Government of India & its various agencies</p>
+                  <p><strong>Authorised Representation:</strong> Submissions must be made by an authorised representative or leadership team member.</p>
                 </div>
               </div>
             </div>
 
-            {/* Research Weightage Card */}
+            {/* Award Categories & Criteria Card */}
             <div className="info-card">
-              <h3 className="info-card-title">Research Weightage</h3>
+              <h3 className="info-card-title">Award Categories & Criteria</h3>
               <div className="info-items">
                 <div className="info-item">
                   <ClipboardPenLine className="info-icon blue" width={34} height={34} />
-                  <p>Patented research will receive additional weightage. Submissions must demonstrate commercial application.</p>
+                  <p><strong>9 Award Categories:</strong> Covering Marketing Excellence (New & Existing), Sales Force, HR Excellence, D&I, Communications, Medical Excellence, Sustainability, and Patient Centricity.</p>
                 </div>
                 <div className="info-item">
                   <FileBadge className="info-icon blue" width={31} height={35} />
-                  <p>Applicants must submit a certificate from their institution head confirming the work is original and does not infringe any Intellectual Property Rights.</p>
+                  <p>Detailed eligibility criteria and judging rubrics for each category are available on the application portal.</p>
                 </div>
               </div>
             </div>
 
-            {/* Submission Card */}
+            {/* Submission Guidelines Card */}
             <div className="info-card">
-              <h3 className="info-card-title">Submission</h3>
+              <h3 className="info-card-title">Submission Process</h3>
               <div className="info-items">
                 <div className="info-item">
-                  <BookmarkOff className="info-icon blue" width={34} height={34} />
-                  <p>Recipients of the Young Scientist & Women Scientist Awards cannot reapply in the same category.</p>
+                  <User className="info-icon blue" width={34} height={34} />
+                  <p>Register online, save your draft nomination anytime, and finalize your submission before the official deadline.</p>
                 </div>
               </div>
             </div>

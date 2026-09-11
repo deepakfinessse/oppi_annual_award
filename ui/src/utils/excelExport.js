@@ -138,6 +138,7 @@ const prepareAppRowData = (app) => {
         return '—';
       }
     })(),
+    designation: app.designation || '—',
     status: app.status || '—',
     score1: score1 !== null ? score1 : '—',
     score2: score2 !== null ? score2 : '—',
@@ -150,25 +151,112 @@ const prepareAppRowData = (app) => {
 
 const COMMON_HEADERS = [
   { header: 'App ID', key: 'id', width: 10, align: 'center' },
-  { header: 'Applicant Name', key: 'applicant_name', width: 25 },
+  { header: 'Member Company / Organisation', key: 'institute_name', width: 30 },
+  { header: 'Award Category', key: 'category', width: 34 },
+  { header: 'Representative Name', key: 'applicant_name', width: 25 },
+  { header: 'Designation', key: 'designation', width: 22 },
   { header: 'Email Address', key: 'applicant_email', width: 28 },
-  { header: 'Award Category', key: 'category', width: 32 },
-  { header: 'Institute / Organization', key: 'institute_name', width: 30 },
+  { header: 'Status', key: 'status', width: 16, align: 'center' },
   { header: 'Submission Date', key: 'submittedAt', width: 22, align: 'center' },
-  { header: 'Significance Score (30)', key: 'score1', width: 22, align: 'center' },
-  { header: 'Approach Score (25)', key: 'score2', width: 20, align: 'center' },
-  { header: 'Nature Innovation (25)', key: 'score3', width: 22, align: 'center' },
-  { header: 'Credentials Score (20)', key: 'score4', width: 22, align: 'center' },
-  { header: 'Total Score (100)', key: 'totalScore', width: 18, align: 'center' },
-  { header: 'Remarks / Comments', key: 'comments', width: 40 }
+  { header: 'Evaluation Score', key: 'totalScore', width: 16, align: 'center' },
+  { header: 'Remarks / Comments', key: 'comments', width: 35 }
 ];
+
+const REGISTRATION_HEADERS = [
+  { header: 'S.No', key: 'sno', width: 8, align: 'center' },
+  { header: 'Representative Name', key: 'name', width: 26 },
+  { header: 'Member Company', key: 'company', width: 30 },
+  { header: 'Email ID', key: 'email', width: 28 },
+  { header: 'Mobile Number', key: 'mobile', width: 18, align: 'center' },
+  { header: 'Nomination Category', key: 'category', width: 34 },
+  { header: 'Application Status', key: 'status', width: 18, align: 'center' },
+  { header: 'Registration Date', key: 'registeredAt', width: 22, align: 'center' }
+];
+
+/**
+ * Export Registered Users Tracking Sheet
+ */
+export const exportRegistrationsExcel = async (users = [], apps = []) => {
+  const workbook = new ExcelJS.Workbook();
+  const title = 'OPPI Annual Awards — Registered Members Tracking';
+  const worksheet = workbook.addWorksheet('Registrations');
+
+  const rows = users.map((u, idx) => {
+    const userApp = apps.find(a => (a.user_email === u.email || a.applicant_email === u.email));
+    const status = !userApp ? 'REGISTERED' : userApp.status;
+    const category = userApp?.category || '—';
+    const company = u.organisation || userApp?.company || userApp?.institute_name || '—';
+
+    let regDate = '—';
+    const rawDate = u.createdAt || u.created_at;
+    if (rawDate) {
+      try {
+        let str = String(rawDate).trim();
+        if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) str = str.replace(' ', 'T') + 'Z';
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          regDate = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+        }
+      } catch (e) {}
+    }
+
+    return {
+      sno: idx + 1,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      company,
+      email: u.email,
+      mobile: u.mobile || '—',
+      category,
+      status,
+      registeredAt: regDate
+    };
+  });
+
+  applyExcelStyling(worksheet, title, REGISTRATION_HEADERS, rows);
+
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `OPPI_Annual_Awards_Registrations_${dateStr}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+};
+
+/**
+ * Export Draft / Saved Applications Sheet
+ */
+export const exportDraftApplicationsExcel = async (draftApps = []) => {
+  const workbook = new ExcelJS.Workbook();
+  const title = 'OPPI Annual Awards — Draft / Saved Applications';
+  const worksheet = workbook.addWorksheet('Draft Applications');
+
+  const rows = draftApps.map(prepareAppRowData);
+  applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
+
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `OPPI_Annual_Awards_Drafts_${dateStr}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+};
+
+/**
+ * Export Final Submissions Sheet
+ */
+export const exportSubmissionsExcel = async (submittedApps = []) => {
+  const workbook = new ExcelJS.Workbook();
+  const title = 'OPPI Annual Awards — Final Submissions Report';
+  const worksheet = workbook.addWorksheet('Final Submissions');
+
+  const rows = submittedApps.map(prepareAppRowData);
+  applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
+
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `OPPI_Annual_Awards_Submissions_${dateStr}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+};
 
 /**
  * Export Validator Applications (Approved, Rejected, or All)
  */
 export const exportValidatorApplicationsExcel = async (apps = [], type = 'APPROVED') => {
   const workbook = new ExcelJS.Workbook();
-  const title = `OPPI Scientist Award — Validator ${type.toUpperCase()} Applications`;
+  const title = `OPPI Annual Awards — Validator ${type.toUpperCase()} Applications`;
   const sheetName = `Validator ${type} Apps`;
   const worksheet = workbook.addWorksheet(sheetName);
 
@@ -185,7 +273,7 @@ export const exportValidatorApplicationsExcel = async (apps = [], type = 'APPROV
  */
 export const exportJuryApplicationsExcel = async (apps = [], type = 'SCORED') => {
   const workbook = new ExcelJS.Workbook();
-  const title = `OPPI Scientist Award — Jury ${type.toUpperCase()} Applications`;
+  const title = `OPPI Annual Awards — Jury ${type.toUpperCase()} Applications`;
   const sheetName = `Jury ${type} Apps`;
   const worksheet = workbook.addWorksheet(sheetName);
 
@@ -200,7 +288,7 @@ export const exportJuryApplicationsExcel = async (apps = [], type = 'SCORED') =>
 /**
  * Export Generic Applications Sheet (Admin or custom filtering)
  */
-export const exportApplicationsExcel = async (apps = [], title = 'OPPI Applications Report', filePrefix = 'Applications_Report') => {
+export const exportApplicationsExcel = async (apps = [], title = 'OPPI Annual Awards — Applications Report', filePrefix = 'Applications_Report') => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Applications');
 

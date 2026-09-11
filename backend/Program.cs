@@ -122,7 +122,10 @@ using (var scope = app.Services.CreateScope())
         ("users", "middle_name", "ALTER TABLE `users` ADD COLUMN `middle_name` VARCHAR(100) NULL"),
         ("users", "dob", "ALTER TABLE `users` ADD COLUMN `dob` VARCHAR(50) NULL"),
         ("users", "gender", "ALTER TABLE `users` ADD COLUMN `gender` VARCHAR(50) NULL"),
+        ("users", "organisation", "ALTER TABLE `users` ADD COLUMN `organisation` VARCHAR(255) NULL"),
         ("jury_reviews", "comments", "ALTER TABLE `jury_reviews` ADD COLUMN `comments` TEXT NULL"),
+        ("panel_members", "sort_order", "ALTER TABLE `panel_members` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0"),
+        ("panel_members", "category", "ALTER TABLE `panel_members` ADD COLUMN `category` VARCHAR(100) NULL"),
         ("jury_reviews", "is_draft", "ALTER TABLE `jury_reviews` ADD COLUMN `is_draft` TINYINT(1) NOT NULL DEFAULT 0"),
         ("past_winners", "color", "ALTER TABLE `past_winners` ADD COLUMN `color` VARCHAR(50) NULL")
     };
@@ -291,101 +294,139 @@ using (var scope = app.Services.CreateScope())
     }
     Log.Information("Database migration check completed");
 
-    // 4. Seed default test accounts (Admin, Validator, Jury, Panel Chair) if not already existing
-    var seedUsers = new[]
+    // 4. Seed and synchronize default panel members and user accounts
+    var fullSeedPanel = new (string Name, string Role, string Type, string Category, string Email, string Password, int SortOrder, string? ImagePath)[]
     {
-        new User { FirstName = "Admin", LastName = "User", Email = "admin@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "ADMIN", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "Validator", LastName = "User", Email = "validator@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "VALIDATOR", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "Jury", LastName = "User", Email = "jury@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "JURY", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "PanelChair", LastName = "User", Email = "panelchair@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "PANEL_CHAIR", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "Prof. P. Balaram", LastName = "", Email = "balaram@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "JURY", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "Prof. K. G. Akamanchi", LastName = "", Email = "akamanchi@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "JURY", CreatedAt = DateTime.UtcNow },
-        new User { FirstName = "Prof. Y K Gupta", LastName = "", Email = "gupta@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "JURY", CreatedAt = DateTime.UtcNow }
+        ("Dr. Prabhat Ranjan Mishra", "Chief Scientist & Head, Pharmaceutics & Pharmacokinetics Division, CSIR-Central Drug Research Institute, Lucknow", "VALIDATOR", "General", "validator@nivyam.com", "Password123!", 1, "/validator.png"),
+        ("Dr. M. N. Welling", "Advisor to President - Shri Vile Parle Kelavani Mandal (SVKM) & to Chancellor - Narsee Monjee Institute of Management Studies (NMIMS), Mumbai", "PANEL_CHAIR", "General", "panelchair@nivyam.com", "Password123!", 2, "/jury1.png"),
+        ("Shekhar C. Mande", "FNA, FASc, FNASc, Distinguished Professor, Bioinformatics Centre Savitribai Phule Pune University, Pune & Honorary Distinguished Scientist National Centre for Cell Science, Pune", "JURY", "General", "jury@nivyam.com", "Password123!", 3, "/jury2.png"),
+        ("Prof. P. Balaram", "(Former Director, IISc), DST-Yos Chair Professor National Center for Biological Sciences (NCBS), Bangalore", "JURY", "General", "balaram@nivyam.com", "Password123!", 4, "/jury1.png"),
+        ("Prof. K. G. Akamanchi", "Professor of Pharmaceutical Technology at the Institute of Chemical Technology (Retired), Former Head of Department of Pharmaceutical Sciences and Technology, and Chairperson Research, Consultancy & Resource Mobilisation", "JURY", "General", "akamanchi@nivyam.com", "Password123!", 5, "/jury1.png"),
+        ("Prof. Y K Gupta", "President, AIIMS Jammu, Principal Advisor India, GARGIP Geneva, Former Dean and Head of Pharmacology, AIIMS, New Delhi", "JURY", "General", "gupta@nivyam.com", "Password123!", 6, "/jury2.png"),
+
+        // OPPI Healthcare Communications Award
+        ("Aman Gupta", "Managing Partner - Health Practice Asia Lead, FINN Partners", "JURY", "OPPI Healthcare Communications Award", "aman.gupta@finnpartners.com", "awards25", 7, null),
+        ("Dilip Yadav", "Founding Partner, First Partners", "JURY", "OPPI Healthcare Communications Award", "dilip@firstpartners.in", "awards25", 8, null),
+        ("Srikanth Srinivas", "Strategic Communications Consultant", "JURY", "OPPI Healthcare Communications Award", "srikanthsrinivas66@gmail.com", "awards25", 9, null),
+        ("Viveka Roychowdhury", "Editor, Express Pharma & Express Healthcare, Indian Express", "JURY", "OPPI Healthcare Communications Award", "viveka.r@expressindia.com", "awards25", 10, null),
+
+        // OPPI HR Award for Diversity & Inclusion
+        ("Deepa Shankar", "Founder - Authempic Consulting / Diversity & Inclusion Consultant", "JURY", "OPPI HR Award for Diversity & Inclusion", "deepa@authempic.com", "awards25", 11, null),
+        ("Dr Niru Kumar", "Founder & CEO, Ask Insight", "JURY", "OPPI HR Award for Diversity & Inclusion", "drniru@askinsights.com", "awards25", 12, null),
+        ("Karthik Ekambaram", "Co-founder and Head of Solutions, Avtar Group", "JURY", "OPPI HR Award for Diversity & Inclusion", "ek@avtarcc.com", "awards25", 13, null),
+        ("Roma Balwani", "Co-Founder, RB Foundation, Mentor| Independent Director | CEO & Brand Custodian, Indian Deaf Cricket Association, | Advisory Committee Member", "JURY", "OPPI HR Award for Diversity & Inclusion", "roma.balwani@outlook.com", "awards25", 14, null),
+        ("Sonica Aron", "CEO, Marching Sheep, Board Member, Gender@Work India Trust", "JURY", "OPPI HR Award for Diversity & Inclusion", "sonica@marchingsheep.com", "awards25", 15, null),
+
+        // OPPI HR Excellence Award
+        ("Ashwini D Prakash", "Managing Partner and Board Director, Singapore and India at Stanton Chase", "JURY", "OPPI HR Excellence Award", "ashwini.d@stantonchase.com", "awards25", 16, null),
+        ("Kavi Arasu", "Principal, Flyntrok Consulting", "JURY", "OPPI HR Excellence Award", "kavi@flyntrok.com", "awards25", 17, null),
+        ("Sanjay Banerjee", "Proprietor, Banerjee Consulting", "JURY", "OPPI HR Excellence Award", "banerjs.2000@gmail.com", "awards25", 18, null),
+        ("Shilpa Gentela", "Senior Client Partner, Korn Ferry", "JURY", "OPPI HR Excellence Award", "Shilpa.Gentela@KornFerry.com", "awards25", 19, null),
+
+        // Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product
+        ("Archana Jain", "CEO, PR Pundit Havas Red", "JURY", "Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product", "archana.j@prpundit.com", "awards25", 20, null),
+        ("Jitendra Tyagi", "Senior Advisor and independent consultant", "JURY", "Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product", "Tyagi.jitendra2@gmail.com", "awards25", 21, null),
+        ("Praful Akali", "Founder & MD, Medulla Communications Pvt. Ltd.", "JURY", "Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product", "praful@medulla.in", "awards25", 22, null),
+        ("Salil S. Kallianpur", "Founder & MD, ARKS Knowledge Consulting Pvt. Ltd.", "JURY", "Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product", "skallianpur@gmail.com", "awards25", 23, null),
+        ("Susan Josi", "Former MD, Havas Health & You , South East Asia & Middle East", "JURY", "Dr H R Nanji Memorial, OPPI Marketing Excellence Award: Existing Pharma Product & New Pharma Product", "sjosi0607@gmail.com", "awards25", 24, null),
+
+        // OPPI Medical Excellence Award
+        ("Dr Arun Bhatt", "Consultant – Clinical Research & Drug Development", "JURY", "OPPI Medical Excellence Award", "arun_dbhatt@hotmail.com", "awards25", 25, null),
+        ("Dr Milind Antani", "Nishith Desai Associates, Legal & Tax Counseling Worldwide", "JURY", "OPPI Medical Excellence Award", "milind.antani@nishithdesai.com", "awards25", 26, null),
+        ("Dr Rashmi Kulshrestha", "Founder and CEO, Regulatory Wisdom", "JURY", "OPPI Medical Excellence Award", "dr_rashmi@regulatorywisdom.com", "awards25", 27, null),
+        ("Dr Suresh Menon", "Director - Medical, Themis Medicare", "JURY", "OPPI Medical Excellence Award", "suresh.menon@themismedicare.com", "awards25", 28, null),
+        ("Dr. Purvish M. Parikh", "MD, DNB, FICP, PhD, ECMO, CPI, Medical Oncology & Hematology, Prof & Head of Clinical Hematology, MGMC&H, Jaipur", "JURY", "OPPI Medical Excellence Award", "purvish1@gmail.com", "awards25", 29, null),
+
+        // OPPI Sales Force Excellence Award
+        ("Ariz Rizvi", "Head – Health Risk Management, Aon", "JURY", "OPPI Sales Force Excellence Award", "ariz.rizvi@aon.com", "awards25", 30, null),
+        ("Gauri Pathak", "Country Service Line Leader, Healthcare, Ipsos", "JURY", "OPPI Sales Force Excellence Award", "Gauri.Pathak@ipsos.com", "awards25", 31, null),
+        ("Pawan Garg", "CEO-Volo Health", "JURY", "OPPI Sales Force Excellence Award", "pawangarg9@gmail.com", "awards25", 32, null),
+
+        // OPPI Sustainability Excellence Award
+        ("Dr. Pragnya Ram", "Group Executive President - CSR, Legacy Documentation & Archives, Aditya Birla Management Corporation Pvt. Ltd.", "JURY", "OPPI Sustainability Excellence Award", "pragnya.ram@adityabirla.com", "awards25", 33, null),
+        ("Ravi Menon", "Senior Business Leader and Professional - Pharmaceuticals/Healthcare", "JURY", "OPPI Sustainability Excellence Award", "menon.ravindranath@gmail.com", "awards25", 34, null),
+        ("Sanjiv Navangul", "Managing Director and CEO, Bharat Serums and Vaccines Limited", "JURY", "OPPI Sustainability Excellence Award", "sanjiv.navangul@bsvgroup.com", "awards25", 35, null),
+        ("Yugal Sikri", "Operating Advisor, TA Associates and Abu Dhabi Investment Authority (ADIA); Board Director and Former MD, RPG Life Sciences; Former India Region CEO, Ranbaxy", "JURY", "OPPI Sustainability Excellence Award", "yug.sikri@gmail.com", "awards25", 36, null),
+
+        // Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity
+        ("Dr Indu Bhushan", "President - iLEP, Former CEO Ayushman Bharat/National Health Authority", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "ibhushan6161@gmail.com", "awards25", 37, null),
+        ("Dr Ratna Devi", "CEO, DakshamA Health, Director, PAIR (Patient Academy for Innovation and Research), Steering Committee Member NCD Labs, WHO Geneva", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "ratna.devi@dakshamahealth.org", "awards25", 38, null),
+        ("Prasanna Shirol", "Co founder and Executive Director, Organization for Rare Diseases India (ORDI)", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "prasanna@ordindia.in", "awards25", 39, null),
+        ("Raj Shankar Ghosh", "Lead, Health Consultancy, Nangia & Co. LLP", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "raj.shankar.ghosh@outlook.com", "awards25", 40, null),
+        ("Ranjeeta Vinil", "Founder Director of Saarathi and Co Prometheus Healthcare Pvt. Ltd", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "Ranjeetavvinil@gmail.com", "awards25", 41, null),
+        ("Viji Venkatesh", "Member of the Board of Directors, The Max Foundation and Founder, Managing Trustee, Friends of Max", "JURY", "Ranjit Shahani Memorial, OPPI Award for Excellence in Patient Centricity", "venkatesh.viji@gmail.com", "awards25", 42, null)
     };
 
-    foreach (var su in seedUsers)
+    // Ensure Admin account exists
+    if (!db2.Users.Any(u => u.Email == "admin@nivyam.com"))
     {
-        if (!db2.Users.Any(u => u.Email == su.Email))
+        db2.Users.Add(new User { FirstName = "Admin", LastName = "User", Email = "admin@nivyam.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"), Role = "ADMIN", CreatedAt = DateTime.UtcNow });
+    }
+
+    // Sync Users table and PanelMembers table
+    var existingUsers = await db2.Users.ToListAsync();
+    var existingPanelMembers = await db2.PanelMembers.ToListAsync();
+
+    foreach (var item in fullSeedPanel)
+    {
+        var cleanEmail = item.Email.Trim();
+        // 1. Sync User table
+        var u = existingUsers.FirstOrDefault(x => x.Email.Equals(cleanEmail, StringComparison.OrdinalIgnoreCase));
+        if (u == null)
         {
-            db2.Users.Add(su);
-            Log.Information("Seeded user: {Email} ({Role})", su.Email, su.Role);
+            var nameParts = item.Name.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            var firstName = nameParts.Length > 0 ? nameParts[0] : item.Name;
+            var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+            db2.Users.Add(new User
+            {
+                FirstName = firstName,
+                LastName = lastName,
+                Email = cleanEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(item.Password),
+                Role = item.Type,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow
+            });
+            Log.Information("Created user account for jury: {Email} ({Role})", cleanEmail, item.Type);
+        }
+
+        // 2. Sync PanelMember table
+        var pm = existingPanelMembers.FirstOrDefault(x =>
+            (!string.IsNullOrEmpty(x.Email) && x.Email.Equals(cleanEmail, StringComparison.OrdinalIgnoreCase)) ||
+            x.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (pm == null)
+        {
+            db2.PanelMembers.Add(new PanelMember
+            {
+                Name = item.Name,
+                Role = item.Role,
+                Type = item.Type,
+                Category = item.Category,
+                Email = cleanEmail,
+                Password = null,
+                SortOrder = item.SortOrder,
+                ImagePath = item.ImagePath,
+                CreatedAt = DateTime.UtcNow
+            });
+            Log.Information("Added panel member: {Name} [{Category}]", item.Name, item.Category);
+        }
+        else
+        {
+            pm.Name = item.Name;
+            pm.Role = item.Role;
+            pm.Type = item.Type;
+            pm.Category = item.Category;
+            pm.Email = cleanEmail;
+            pm.Password = null;
+            pm.SortOrder = item.SortOrder;
+            if (!string.IsNullOrEmpty(item.ImagePath)) pm.ImagePath = item.ImagePath;
         }
     }
+
     await db2.SaveChangesAsync();
-
-    // 5. Seed default panel members if table is empty
-    if (!db2.PanelMembers.Any())
-    {
-        var seedPanel = new[]
-        {
-            new PanelMember { Name = "Dr. Prabhat Ranjan Mishra", Role = "Chief Scientist & Head, Pharmaceutics & Pharmacokinetics Division, CSIR-Central Drug Research Institute, Lucknow", Type = "VALIDATOR", ImagePath = "/validator.png", SortOrder = 1, Email = "validator@nivyam.com", Password = null },
-            new PanelMember { Name = "Dr. M. N. Welling", Role = "Advisor to President - Shri Vile Parle Kelavani Mandal (SVKM) & to Chancellor - Narsee Monjee Institute of Management Studies (NMIMS), Mumbai", Type = "PANEL_CHAIR", ImagePath = "/jury1.png", SortOrder = 2, Email = "panelchair@nivyam.com", Password = null },
-            new PanelMember { Name = "Shekhar C. Mande", Role = "FNA, FASc, FNASc, Distinguished Professor, Bioinformatics Centre Savitribai Phule Pune University, Pune & Honorary Distinguished Scientist National Centre for Cell Science, Pune", Type = "JURY", ImagePath = "/jury2.png", SortOrder = 3, Email = "jury@nivyam.com", Password = null },
-            new PanelMember { Name = "Prof. P. Balaram", Role = "(Former Director, IISc), DST-Yos Chair Professor National Center for Biological Sciences (NCBS), Bangalore", Type = "JURY", ImagePath = "/jury1.png", SortOrder = 4, Email = "balaram@nivyam.com", Password = null },
-            new PanelMember { Name = "Prof. K. G. Akamanchi", Role = "Professor of Pharmaceutical Technology at the Institute of Chemical Technology (Retired), Former Head of Department of Pharmaceutical Sciences and Technology, and Chairperson Research, Consultancy & Resource Mobilisation", Type = "JURY", ImagePath = "/jury1.png", SortOrder = 5, Email = "akamanchi@nivyam.com", Password = null },
-            new PanelMember { Name = "Prof. Y K Gupta", Role = "President, AIIMS Jammu, Principal Advisor India, GARGIP Geneva, Former Dean and Head of Pharmacology, AIIMS, New Delhi", Type = "JURY", ImagePath = "/jury2.png", SortOrder = 6, Email = "gupta@nivyam.com", Password = null }
-        };
-        db2.PanelMembers.AddRange(seedPanel);
-        await db2.SaveChangesAsync();
-        Log.Information("Seeded default panel members");
-    }
-    else
-    {
-        try
-        {
-            var pmsWithNoEmail = await db2.PanelMembers.Where(m => string.IsNullOrEmpty(m.Email)).ToListAsync();
-            if (pmsWithNoEmail.Any())
-            {
-                var seedPanelList = new[]
-                {
-                    new { Name = "Dr. Prabhat Ranjan Mishra", Email = "validator@nivyam.com" },
-                    new { Name = "Dr. M. N. Welling", Email = "panelchair@nivyam.com" },
-                    new { Name = "Shekhar C. Mande", Email = "jury@nivyam.com" },
-                    new { Name = "Prof. P. Balaram", Email = "balaram@nivyam.com" },
-                    new { Name = "Prof. K. G. Akamanchi", Email = "akamanchi@nivyam.com" },
-                    new { Name = "Prof. Y K Gupta", Email = "gupta@nivyam.com" }
-                };
-
-                foreach (var pm in pmsWithNoEmail)
-                {
-                    var matchingSeed = seedPanelList.FirstOrDefault(s => s.Name.Equals(pm.Name, StringComparison.OrdinalIgnoreCase));
-                    if (matchingSeed != null)
-                    {
-                        pm.Email = matchingSeed.Email;
-                        pm.Password = null;
-                        Log.Information("Restored email for panel member {Name} from seed list", pm.Name);
-                    }
-                    else
-                    {
-                        var matchingUser = await db2.Users.FirstOrDefaultAsync(u => u.FirstName.Equals(pm.Name, StringComparison.OrdinalIgnoreCase));
-                        if (matchingUser != null)
-                        {
-                            pm.Email = matchingUser.Email;
-                            pm.Password = null;
-                            Log.Information("Restored email for panel member {Name} from matching user {Email}", pm.Name, matchingUser.Email);
-                        }
-                    }
-                }
-                await db2.SaveChangesAsync();
-            }
-
-            // Clean up any lingering plaintext passwords in PanelMembers table
-            var pmsWithPassword = await db2.PanelMembers.Where(m => !string.IsNullOrEmpty(m.Password)).ToListAsync();
-            if (pmsWithPassword.Any())
-            {
-                foreach (var pm in pmsWithPassword)
-                {
-                    pm.Password = null;
-                }
-                await db2.SaveChangesAsync();
-                Log.Information("Cleared lingering plaintext passwords from panel_members table");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to sync missing panel member emails");
-        }
-    }
+    Log.Information("Panel members & User accounts synchronization complete");
 
     // 6. Seed default past winners if table is empty
     if (!db2.PastWinners.Any())
@@ -460,6 +501,7 @@ auth.MapPost("/register", async (RegisterDto dto, InnovationDbContext db,
         LastName = dto.Last_Name, 
         Dob = dto.Dob,
         Gender = dto.Gender,
+        Organisation = dto.Organisation,
         Email = dto.Email,
         Mobile = dto.Mobile, 
         PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
@@ -484,7 +526,7 @@ auth.MapPost("/register", async (RegisterDto dto, InnovationDbContext db,
 
     return Results.Ok(new { access_token = at, refresh_token = rt,
         user = new { id = user.Id, title = user.Title, first_name = user.FirstName, middle_name = user.MiddleName, last_name = user.LastName,
-            dob = user.Dob, gender = user.Gender, email = user.Email, mobile = user.Mobile, role = user.Role } });
+            dob = user.Dob, gender = user.Gender, organisation = user.Organisation, email = user.Email, mobile = user.Mobile, role = user.Role } });
 });
 
 auth.MapPost("/login", async (LoginDto dto, InnovationDbContext db, JwtService jwt,
@@ -509,7 +551,7 @@ auth.MapPost("/login", async (LoginDto dto, InnovationDbContext db, JwtService j
 
     return Results.Ok(new { access_token = at, refresh_token = rt,
         user = new { id = user.Id, title = user.Title, first_name = user.FirstName, middle_name = user.MiddleName, last_name = user.LastName,
-            dob = user.Dob, gender = user.Gender, email = user.Email, mobile = user.Mobile, role = user.Role } });
+            dob = user.Dob, gender = user.Gender, organisation = user.Organisation, email = user.Email, mobile = user.Mobile, role = user.Role } });
 });
 
 auth.MapPost("/forgot-password", async (ForgotPasswordDto dto, InnovationDbContext db, EmailService emailService, ICaptchaService captchaService, IValidator<ForgotPasswordDto> v) =>
@@ -603,6 +645,7 @@ app.MapGet("/public/panel-members", async (InnovationDbContext db) =>
             m.ImagePath,
             m.SortOrder,
             m.Email,
+            m.Category,
             m.CreatedAt
         })
         .ToListAsync();
@@ -687,7 +730,8 @@ api.MapGet("/application/mine", async (HttpContext ctx, InnovationDbContext db) 
             last_name = user.LastName,
             email = user.Email,
             mobile = user.Mobile,
-            gender = user.Gender
+            gender = user.Gender,
+            organisation = user.Organisation
         },
         personal_info = a.PersonalInfo == null ? null : new {
             award_category = a.PersonalInfo.CategoryOfWork,
@@ -769,12 +813,51 @@ api.MapDelete("/application/upload/{fileId}", async (int fileId, InnovationDbCon
 api.MapPost("/application/submit/{appId}", async (int appId, InnovationDbContext db, HttpContext ctx, AuditService audit, EmailService emailService) =>
 {
     var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
-    var a = await db.Applications.Include(x => x.User).FirstOrDefaultAsync(x => x.Id == appId && x.UserId == uid.Value);
+    var a = await db.Applications.Include(x => x.User).Include(x => x.PersonalInfo).FirstOrDefaultAsync(x => x.Id == appId && x.UserId == uid.Value);
     if (a == null) return Results.NotFound();
+
+    // Enforce "An OPPI member company - Only 1 entry per member company per category"
+    var companyName = (a.PersonalInfo?.CompanyName ?? a.User?.Organisation ?? "").Trim();
+    var category = (a.PersonalInfo?.CategoryOfWork ?? "").Trim();
+    if (!string.IsNullOrEmpty(companyName) && !string.IsNullOrEmpty(category))
+    {
+        var duplicateSubmission = await db.Applications
+            .Include(x => x.PersonalInfo)
+            .Include(x => x.User)
+            .Where(x => x.Id != appId && x.Status == "SUBMITTED")
+            .AnyAsync(x => 
+                ((x.PersonalInfo != null && x.PersonalInfo.CompanyName != null && x.PersonalInfo.CompanyName.Trim().ToLower() == companyName.ToLower()) ||
+                 (x.User != null && x.User.Organisation != null && x.User.Organisation.Trim().ToLower() == companyName.ToLower()))
+                &&
+                (x.PersonalInfo != null && x.PersonalInfo.CategoryOfWork != null && x.PersonalInfo.CategoryOfWork.Trim().ToLower() == category.ToLower())
+            );
+
+        if (duplicateSubmission)
+        {
+            return Results.BadRequest(new { 
+                message = $"An application has already been submitted for member company '{companyName}' in category '{category}'. Only one entry per member company per category is permitted." 
+            });
+        }
+    }
+
     a.Status = "SUBMITTED";
     a.SubmittedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
     await audit.LogAsync(uid, "SUBMIT_APP", "Application", appId, null, GetIp(ctx));
+
+    try
+    {
+        if (a.User != null)
+        {
+            var displayName = $"{a.User.FirstName} {a.User.LastName}".Trim();
+            await emailService.SendApplicationSubmissionEmailAsync(a.User.Email, displayName, a.Id);
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to send application submission confirmation email for App #{AppId}", a.Id);
+    }
+
     return Results.Ok(new { message = "Application submitted successfully" });
 });
 
@@ -890,17 +973,34 @@ api.MapGet("/application/review/{id}", async (int id, HttpContext ctx, Innovatio
         }
     }
 
+    var pInfo = await db.PersonalInfos.FirstOrDefaultAsync(x => x.ApplicationId == id);
+    var fileUploads = await db.FileUploads.Where(x => x.ApplicationId == id).ToListAsync();
+
     return Results.Ok(new {
         id = a.Id, status = a.Status, submitted_at = a.SubmittedAt,
         user_name = a.User?.FirstName + " " + a.User?.LastName,
         user_email = a.User?.Email,
         user_mobile = a.User?.Mobile,
-        applicant_detail = applicant == null ? null : new {
+        user_organisation = a.User?.Organisation,
+        personal_info = pInfo == null ? null : new {
+            award_category = pInfo.CategoryOfWork,
+            company_name = pInfo.CompanyName ?? a.User?.Organisation,
+            designation = pInfo.Designation,
+            company_brief = pInfo.CompanyBrief
+        },
+        file_uploads = fileUploads.Select(f => new {
+            f.Id, f.Section, f.FileName, f.FilePath, f.FileSize, f.FileType
+        }),
+        applicant_detail = applicant != null ? (object)new {
             applicant.PhotoPath, applicant.Title, applicant.FirstName, applicant.MiddleName, applicant.LastName,
             applicant.Dob, applicant.Gender, applicant.Email, applicant.Telephone, applicant.Mobile,
             applicant.Discipline, applicant.InstituteCategory, applicant.InstituteName
+        } : new {
+            PhotoPath = (string?)null, Title = a.User?.Title, FirstName = a.User?.FirstName, MiddleName = a.User?.MiddleName, LastName = a.User?.LastName,
+            Dob = a.User?.Dob, Gender = a.User?.Gender, Email = a.User?.Email, Telephone = (string?)null, Mobile = a.User?.Mobile,
+            Discipline = (string?)null, InstituteCategory = "OPPI Member Company", InstituteName = pInfo?.CompanyName ?? a.User?.Organisation ?? ""
         },
-        application_detail = appDetail == null ? null : new {
+        application_detail = appDetail != null ? (object)new {
             appDetail.Id, appDetail.Category, appDetail.BriefStatement, appDetail.SignificantContribution,
             appDetail.ImpactContribution, appDetail.HasPatent, appDetail.HasPublication, appDetail.CvFilePath, appDetail.CvFileName,
             appDetail.AuthCertFilePath, appDetail.AuthCertFileName,
@@ -932,6 +1032,19 @@ api.MapGet("/application/review/{id}", async (int id, HttpContext ctx, Innovatio
                     p.Id, p.Title, p.Type, p.HasAttachment, AttachmentPath = path, p.AttachmentFileName, p.IsPrimaryWriter, p.SortOrder
                 };
             })
+        } : new {
+            Id = a.Id,
+            Category = pInfo?.CategoryOfWork,
+            BriefStatement = pInfo?.CompanyBrief,
+            SignificantContribution = (string?)null,
+            ImpactContribution = (string?)null,
+            HasPatent = false,
+            HasPublication = false,
+            CvFilePath = (string?)null,
+            CvFileName = (string?)null,
+            AuthCertFilePath = (string?)null,
+            AuthCertFileName = (string?)null,
+            patents = new object[0]
         },
         validator_review = validatorReviewDto,
         jury_reviews = juryReviewsDto,
@@ -957,7 +1070,7 @@ api.MapGet("/admin/users", async (HttpContext ctx, InnovationDbContext db) =>
     var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
     var user = await db.Users.FindAsync(uid.Value);
     if (user?.Role != "ADMIN") return Results.Forbid();
-    var users = await db.Users.Select(u => new { u.Id, u.FirstName, u.LastName, u.Email, u.Mobile, u.Role, u.CreatedAt }).ToListAsync();
+    var users = await db.Users.Select(u => new { u.Id, u.FirstName, u.LastName, u.Email, u.Mobile, u.Organisation, u.Role, u.CreatedAt }).ToListAsync();
     return Results.Ok(users);
 });
 
@@ -975,24 +1088,44 @@ api.MapGet("/admin/applications", async (HttpContext ctx, InnovationDbContext db
     // Deduplicate by UserId so each user has a single application entry
     var uniqueApps = rawApps.GroupBy(a => a.UserId).Select(g => g.First()).ToList();
 
-    var apps = uniqueApps.Select(a => new {
-        a.Id, a.Status, a.SubmittedAt,
-        user_name = a.User.FirstName + " " + a.User.LastName,
-        user_email = a.User.Email,
-        applicant_name = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
-            .Select(ad => ad.FirstName + " " + ad.LastName).FirstOrDefault(),
-        applicant_email = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
-            .Select(ad => ad.Email).FirstOrDefault() ?? a.User.Email,
-        company = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
-            .Select(ad => ad.InstituteName).FirstOrDefault() ?? "",
-        institute_name = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
-            .Select(ad => ad.InstituteName).FirstOrDefault() ?? "",
-        category = db.ApplicationDetails.Where(apd => apd.Category != null && apd.ApplicationId == a.Id)
-            .Select(apd => apd.Category).FirstOrDefault(),
-        has_validator_review = db.ValidatorReviews.Any(vr => vr.ApplicationId == a.Id && !vr.IsDraft),
-        validator_score = db.ValidatorReviews.Where(vr => vr.ApplicationId == a.Id && !vr.IsDraft).Average(vr => (double?)vr.WeightedScore) ?? 0.0,
-        jury_approval_count = db.JuryReviews.Count(jr => jr.ApplicationId == a.Id),
-        average_score = db.JuryReviews.Where(jr => jr.ApplicationId == a.Id).Average(jr => (double?)jr.WeightedScore) ?? 0.0
+    var apps = uniqueApps.Select(a => {
+        var pInfo = db.PersonalInfos.FirstOrDefault(p => p.ApplicationId == a.Id);
+        var appName = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
+            .Select(ad => ad.FirstName + " " + ad.LastName).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(appName))
+            appName = $"{a.User.FirstName} {a.User.LastName}".Trim();
+
+        var appEmail = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
+            .Select(ad => ad.Email).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(appEmail))
+            appEmail = a.User.Email;
+
+        var comp = pInfo?.CompanyName;
+        if (string.IsNullOrWhiteSpace(comp))
+            comp = a.User.Organisation;
+        if (string.IsNullOrWhiteSpace(comp))
+            comp = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id).Select(ad => ad.InstituteName).FirstOrDefault() ?? "";
+
+        var cat = pInfo?.CategoryOfWork;
+        if (string.IsNullOrWhiteSpace(cat))
+            cat = db.ApplicationDetails.Where(apd => apd.Category != null && apd.ApplicationId == a.Id).Select(apd => apd.Category).FirstOrDefault();
+
+        return new {
+            a.Id, a.Status, a.SubmittedAt,
+            user_name = a.User.FirstName + " " + a.User.LastName,
+            user_email = a.User.Email,
+            applicant_name = appName,
+            applicant_email = appEmail,
+            company = comp,
+            institute_name = comp,
+            category = cat,
+            designation = pInfo?.Designation ?? "",
+            brief_description = pInfo?.CompanyBrief ?? "",
+            has_validator_review = db.ValidatorReviews.Any(vr => vr.ApplicationId == a.Id && !vr.IsDraft),
+            validator_score = db.ValidatorReviews.Where(vr => vr.ApplicationId == a.Id && !vr.IsDraft).Average(vr => (double?)vr.WeightedScore) ?? 0.0,
+            jury_approval_count = db.JuryReviews.Count(jr => jr.ApplicationId == a.Id),
+            average_score = db.JuryReviews.Where(jr => jr.ApplicationId == a.Id).Average(jr => (double?)jr.WeightedScore) ?? 0.0
+        };
     }).ToList();
 
     return Results.Ok(apps);

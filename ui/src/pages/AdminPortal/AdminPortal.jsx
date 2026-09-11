@@ -22,9 +22,21 @@ import {
   clearTokens,
   adminDeleteApplication
 } from '../../utils/api';
-import { generatePanelChairExcel } from '../../utils/panelChairExcel';
-import { exportValidatorApplicationsExcel, exportJuryApplicationsExcel, exportApplicationsExcel } from '../../utils/excelExport';
-import { LogOut, Download, Filter, Eye, EyeOff, Pencil, X, ChevronDown, Plus, Upload, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  exportValidatorApplicationsExcel,
+  exportJuryApplicationsExcel,
+  exportApplicationsExcel,
+  exportRegistrationsExcel,
+  exportDraftApplicationsExcel,
+  exportSubmissionsExcel
+} from '../../utils/excelExport';
+import {
+  exportRegistrationsWord,
+  exportDraftApplicationsWord,
+  exportSubmissionsDossierWord,
+  exportSingleApplicationDossierWord
+} from '../../utils/wordExport';
+import { LogOut, Download, Filter, Eye, EyeOff, Pencil, X, ChevronDown, Plus, Upload, Trash2, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import oppiLogo from '../../assets/OPPI-logo-black.png';
 import prabhatImg from '../../assets/Prabhat.png';
 import wellingImg from '../../assets/Welling.png';
@@ -87,6 +99,8 @@ const AdminPortal = () => {
   const [showUserFilterDropdown, setShowUserFilterDropdown] = useState(false);
   const [showAppFilterDropdown, setShowAppFilterDropdown] = useState(false);
   const [showExcelDropdown, setShowExcelDropdown] = useState(false);
+  const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
+  const [showUserExportDropdown, setShowUserExportDropdown] = useState(false);
 
   // Pagination
   const [appPage, setAppPage] = useState(1);
@@ -97,6 +111,8 @@ const AdminPortal = () => {
   const userDropdownRef = useRef(null);
   const appDropdownRef = useRef(null);
   const excelDropdownRef = useRef(null);
+  const appExportDropdownRef = useRef(null);
+  const userExportDropdownRef = useRef(null);
 
   // Panel Member Form States
   const [showPanelForm, setShowPanelForm] = useState(false);
@@ -197,6 +213,12 @@ const AdminPortal = () => {
       if (excelDropdownRef.current && !excelDropdownRef.current.contains(e.target)) {
         setShowExcelDropdown(false);
       }
+      if (appExportDropdownRef.current && !appExportDropdownRef.current.contains(e.target)) {
+        setShowAppExportDropdown(false);
+      }
+      if (userExportDropdownRef.current && !userExportDropdownRef.current.contains(e.target)) {
+        setShowUserExportDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -216,6 +238,18 @@ const AdminPortal = () => {
     return status === userFilter;
   });
 
+  const ANNUAL_AWARD_CATEGORIES = [
+    'OPPI Marketing Excellence Awards - Existing Pharma Product',
+    'OPPI Marketing Excellence Awards - New Pharma Product',
+    'OPPI Sales Force Excellence Award',
+    'OPPI HR Award - HR Excellence Award',
+    'OPPI HR Award - D&I Award',
+    'OPPI Healthcare Communications Award',
+    'OPPI Medical Excellence Award',
+    'OPPI Sustainability Excellence Award',
+    'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity'
+  ];
+
   const filteredApps = apps.filter(app => {
     if (appFilter === 'ALL') return true;
     if (appFilter === 'DRAFT') return app.status === 'DRAFT';
@@ -224,9 +258,7 @@ const AdminPortal = () => {
     if (appFilter === 'JURY') return app.status.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
     if (appFilter === 'PANEL_CHAIR') return app.status.startsWith('PANEL');
     if (appFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
-    if (appFilter === 'CAT_SCIENTIST') return app.category === 'OPPI Scientist of the Year';
-    if (appFilter === 'CAT_YOUNG') return app.category === 'OPPI Young Scientist of the Year';
-    if (appFilter === 'CAT_WOMAN') return app.category === 'OPPI Woman Scientist of the Year';
+    if (ANNUAL_AWARD_CATEGORIES.includes(appFilter)) return app.category === appFilter;
     return true;
   });
 
@@ -273,17 +305,17 @@ const AdminPortal = () => {
 
   // CSV download handlers
   const downloadUsersCSV = () => {
-    const headers = ['Date & Time Stamp', 'Name', 'Category', 'Institute Name', 'Email ID', 'Mobile', 'Status'];
+    const headers = ['Date & Time Stamp', 'Representative Name', 'Member Company', 'Email ID', 'Mobile', 'Nomination Category', 'Status'];
     const rows = filteredUsers.map((u) => {
       const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
       const statusLabel = !userApp ? 'Registered' : (userApp.status === 'DRAFT' ? 'Draft' : 'Submitted');
       return [
         formatDateTime(u.createdAt || u.created_at),
-        `${u.firstName} ${u.lastName}`,
-        userApp?.category || '—',
-        userApp?.institute_name || userApp?.instituteName || userApp?.company || '—',
+        `${u.firstName} ${u.lastName}`.trim(),
+        u.organisation || userApp?.company || userApp?.institute_name || '—',
         u.email,
         u.mobile || '',
+        userApp?.category || '—',
         statusLabel
       ];
     });
@@ -292,14 +324,14 @@ const AdminPortal = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `registered_users_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `OPPI_Annual_Awards_Registered_Users_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const downloadAppsCSV = () => {
-    const headers = ['Submit Date', 'Name', 'Email', 'Company', 'Status', 'Validator Score', 'Jury Score'];
+    const headers = ['Submit Date', 'App ID', 'Representative Name', 'Member Company', 'Award Category', 'Email', 'Status', 'Validator Score', 'Jury Score'];
     const rows = filteredApps.map(app => {
       let valScore = 'Pending';
       if (app.has_validator_review || (app.validator_score !== undefined && app.validator_score > 0)) {
@@ -319,9 +351,11 @@ const AdminPortal = () => {
 
       return [
         formatDate(app.submittedAt || app.submitted_at),
+        `#${app.id}`,
         app.applicant_name || app.user_name || 'Anonymous',
+        app.company || app.institute_name || '',
+        app.category || '',
         app.applicant_email || app.user_email || '',
-        app.company || '',
         app.status.replace('_', ' '),
         valScore,
         juryScore
@@ -332,10 +366,65 @@ const AdminPortal = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `submitted_applications_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `OPPI_Annual_Awards_Applications_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Multi-format export helpers for Applications
+  const handleExportFinalSubmissionsExcel = async () => {
+    setShowAppExportDropdown(false);
+    const submitted = apps.filter(a => a.status !== 'DRAFT');
+    await exportSubmissionsExcel(submitted);
+    setSuccess('Final Submissions Excel report downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  const handleExportDraftsExcel = async () => {
+    setShowAppExportDropdown(false);
+    const drafts = apps.filter(a => a.status === 'DRAFT');
+    await exportDraftApplicationsExcel(drafts);
+    setSuccess('Draft Applications Excel report downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  const handleExportAllAppsExcel = async () => {
+    setShowAppExportDropdown(false);
+    await exportApplicationsExcel(filteredApps, 'OPPI Annual Awards — Applications Report', 'OPPI_Annual_Awards_Applications');
+    setSuccess('Filtered applications Excel sheet downloaded successfully.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  const handleExportFinalSubmissionsWord = () => {
+    setShowAppExportDropdown(false);
+    const submitted = apps.filter(a => a.status !== 'DRAFT');
+    exportSubmissionsDossierWord(submitted);
+    setSuccess('Final Submissions Word Dossier downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  const handleExportDraftsWord = () => {
+    setShowAppExportDropdown(false);
+    const drafts = apps.filter(a => a.status === 'DRAFT');
+    exportDraftApplicationsWord(drafts);
+    setSuccess('Draft Applications Word Report downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  // Multi-format export helpers for Users
+  const handleExportUsersExcel = async () => {
+    setShowUserExportDropdown(false);
+    await exportRegistrationsExcel(filteredUsers, apps);
+    setSuccess('Registered Members Excel report downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
+  };
+
+  const handleExportUsersWord = () => {
+    setShowUserExportDropdown(false);
+    exportRegistrationsWord(filteredUsers, apps);
+    setSuccess('Registered Members Word Report downloaded.');
+    setTimeout(() => setSuccess(''), 3500);
   };
 
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -727,22 +816,24 @@ const AdminPortal = () => {
                             appFilter === 'JURY' ? 'Status: Jury Reviewed' :
                               appFilter === 'PANEL_CHAIR' ? 'Status: Panel Chair Reviewed' :
                                 appFilter === 'REJECTED' ? 'Status: Rejected' :
-                                  appFilter === 'CAT_SCIENTIST' ? 'OPPI Scientist of the Year' :
-                                    appFilter === 'CAT_YOUNG' ? 'OPPI Young Scientist of the Year' :
-                                      appFilter === 'CAT_WOMAN' ? 'OPPI Woman Scientist of the Year' : 'FILTER'}
+                                  ANNUAL_AWARD_CATEGORIES.includes(appFilter) ? appFilter : 'FILTER'}
                     </span>
                     <ChevronDown size={14} />
                   </button>
                   {showAppFilterDropdown && (
-                    <div className="filter-dropdown-menu">
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('ALL')}>All Applications</div>
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '420px', overflowY: 'auto' }}>
+                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('ALL')}><strong>All Applications</strong></div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('CAT_SCIENTIST')}>OPPI Scientist of the Year</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('CAT_YOUNG')}>OPPI Young Scientist of the Year</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('CAT_WOMAN')}>OPPI Woman Scientist of the Year</div>
+                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Filter By Category</div>
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <div key={cat} className="filter-menu-item" onClick={() => handleAppFilterChange(cat)}>
+                          {cat}
+                        </div>
+                      ))}
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('DRAFT')}>Draft</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('SUBMITTED')}>Submitted</div>
+                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Filter By Status</div>
+                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('SUBMITTED')}>Final Submissions</div>
+                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('DRAFT')}>Draft / Saved Applications</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('VALIDATOR')}>Validator Reviewed</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('JURY')}>Jury Reviewed</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('REJECTED')}>Rejected</div>
@@ -750,10 +841,32 @@ const AdminPortal = () => {
                   )}
                 </div>
 
-                <button className="btn-card-action download-btn" onClick={downloadAppsCSV}>
-                  <span>DOWNLOAD CSV</span>
-                  <Download size={14} />
-                </button>
+                {/* Multi-Format Export Dropdown */}
+                <div className="filter-dropdown-container" ref={appExportDropdownRef}>
+                  <button
+                    className="btn-card-action download-btn"
+                    onClick={() => setShowAppExportDropdown(!showAppExportDropdown)}
+                  >
+                    <span>EXPORT</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showAppExportDropdown && (
+                    <div className="filter-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '220px' }}>
+                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Excel Format (.xlsx)</div>
+                      <div className="filter-menu-item" onClick={handleExportFinalSubmissionsExcel}>Final Submissions (.xlsx)</div>
+                      <div className="filter-menu-item" onClick={handleExportDraftsExcel}>Draft Applications (.xlsx)</div>
+                      <div className="filter-menu-item" onClick={handleExportAllAppsExcel}>All Filtered Apps (.xlsx)</div>
+
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Word Format (.doc)</div>
+                      <div className="filter-menu-item" onClick={handleExportFinalSubmissionsWord}>Submissions Dossier (.doc)</div>
+                      <div className="filter-menu-item" onClick={handleExportDraftsWord}>Drafts Report (.doc)</div>
+
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      <div className="filter-menu-item" onClick={() => { setShowAppExportDropdown(false); downloadAppsCSV(); }}>Download CSV (.csv)</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -761,9 +874,9 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Institute Name</th>
+                    <th>Representative</th>
+                    <th>Award Category</th>
+                    <th>Member Company</th>
                     <th>Email ID</th>
                     <th>Status</th>
                     <th>Validator Score</th>
@@ -908,10 +1021,23 @@ const AdminPortal = () => {
                   )}
                 </div>
 
-                <button className="btn-card-action download-btn" onClick={downloadUsersCSV}>
-                  <span>DOWNLOAD</span>
-                  <Download size={14} />
-                </button>
+                {/* Multi-Format Export Dropdown for Users */}
+                <div className="filter-dropdown-container" ref={userExportDropdownRef}>
+                  <button
+                    className="btn-card-action download-btn"
+                    onClick={() => setShowUserExportDropdown(!showUserExportDropdown)}
+                  >
+                    <span>EXPORT</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showUserExportDropdown && (
+                    <div className="filter-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '220px' }}>
+                      <div className="filter-menu-item" onClick={handleExportUsersExcel}>Export Excel (.xlsx)</div>
+                      <div className="filter-menu-item" onClick={handleExportUsersWord}>Export Word (.doc)</div>
+                      <div className="filter-menu-item" onClick={() => { setShowUserExportDropdown(false); downloadUsersCSV(); }}>Export CSV (.csv)</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -920,9 +1046,9 @@ const AdminPortal = () => {
                 <thead>
                   <tr>
                     <th>Date & Time Stamp</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Institute Name</th>
+                    <th>Representative Name</th>
+                    <th>Member Company</th>
+                    <th>Nomination Category</th>
                     <th>Email ID</th>
                     <th>Mobile</th>
                     <th>Status</th>
@@ -955,8 +1081,8 @@ const AdminPortal = () => {
                         <tr key={u.id}>
                           <td>{formatDateTime(u.createdAt || u.created_at)}</td>
                           <td className="bold-text">{u.firstName} {u.lastName}</td>
+                          <td>{u.organisation || userApp?.company || userApp?.institute_name || '—'}</td>
                           <td>{userApp?.category || '—'}</td>
-                          <td>{userApp?.institute_name || userApp?.instituteName || userApp?.company || '—'}</td>
                           <td className="email-text">{u.email}</td>
                           <td>{u.mobile || '—'}</td>
                           <td>

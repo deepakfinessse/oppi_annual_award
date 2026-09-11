@@ -22,7 +22,7 @@ const categoryData = [
     tag: 'Marketing Excellence',
     icon: Award,
     eligibility: [
-      'An OPPI member company; only one entry per member company.',
+      'An OPPI member company; only one entry per member company per category.',
       'Recognizes outstanding strategic marketing, market entry execution, and commercial impact for a new pharmaceutical product introduced in the Indian market.',
       'The product launch must have occurred within the last 24 months.'
     ],
@@ -38,7 +38,7 @@ const categoryData = [
     tag: 'Marketing Excellence',
     icon: TrendingUp,
     eligibility: [
-      'An OPPI member company; only one entry per member company.',
+      'An OPPI member company; only one entry per member company per category.',
       'Applies to mature or established pharmaceutical products showing exceptional lifecycle management, campaign innovation, or market growth strategy in India.'
     ],
     judging: [
@@ -143,7 +143,7 @@ const categoryData = [
     tag: 'Patient Centricity',
     icon: Heart,
     eligibility: [
-      'An OPPI member company; only one entry per member company.',
+      'An OPPI member company; only one entry per member company per category.',
       'The initiative/strategy of the company re: patient centricity and its impact in India.'
     ],
     judging: [

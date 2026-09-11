@@ -1,8 +1,8 @@
 {
-  "name": "innovation",
+  "name": "annualawards",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://scientistawards.indiaoppi.com",
+  "homepage": "https://annualawards.indiaoppi.com",
   "type": "module",
   "scripts": {
     "dev": "vite",

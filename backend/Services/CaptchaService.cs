@@ -37,9 +37,14 @@ public class CaptchaService : ICaptchaService
             return false;
         }
 
+        // TestMode: skip Google verification entirely
+        var testMode = _config["ReCaptcha:TestMode"];
+        if (testMode?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
         var secretKey = _config["ReCaptcha:SecretKey"] 
                         ?? Environment.GetEnvironmentVariable("RECAPTCHA_SECRET_KEY") 
-                        ?? "6LcGZlgtAAAAAOsIS0MCKTyUDeep3WHVZz-YIi2n"; // Default fallback
+                        ?? "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WiykM"; // TEST MODE fallback
 
         try
         {

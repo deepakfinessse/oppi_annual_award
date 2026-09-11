@@ -41,7 +41,7 @@ public class EmailService
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>OPPI Scientist Award</title>
+    <title>OPPI Annual Awards</title>
 </head>
 <body style=""margin: 0; padding: 0; background-color: #f7f7f7; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"">
     <table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""background-color: #f7f7f7; padding: 20px 0;"">
@@ -100,7 +100,7 @@ public class EmailService
         var username = smtpSection["Username"] ?? "smtpindiaoppi@gmail.com";
         var password = smtpSection["Password"] ?? "jafkaniynuahfkbe";
         var senderEmail = smtpSection["SenderEmail"] ?? "smtpindiaoppi@gmail.com";
-        var senderName = smtpSection["SenderName"] ?? "OPPI Scientist Award";
+        var senderName = smtpSection["SenderName"] ?? "OPPI Annual Awards";
 
         int port = int.TryParse(portStr, out var p) ? p : 587;
         bool enableSsl = !bool.TryParse(enableSslStr, out var ssl) || ssl;
@@ -129,12 +129,12 @@ public class EmailService
     {
         try
         {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://scientistawards.indiaoppi.com";
+            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
             var loginLink = $"{frontendUrl}/login";
 
             string plainTextBody = $@"Dear {recipientName},
 
-Thank you for registering for the OPPI Scientist Award for the year 2026.
+Thank you for registering for the OPPI Annual Awards for the year 2026.
 
 To proceed with your application, please log in to the awards portal using your credentials:
 {loginLink}
@@ -150,7 +150,7 @@ Team - OPPI Awards";
 
             string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
-<p style=""margin: 0 0 20px 0;"">Thank you for registering for the <strong>OPPI Scientist Award for the year 2026</strong>.</p>
+<p style=""margin: 0 0 20px 0;"">Thank you for registering for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <p style=""margin: 0 0 20px 0;"">To proceed with your application, please log in to the awards portal using your credentials:</p>
 <p style=""margin: 0 0 25px 0; text-align: center;"">
     <a href=""{loginLink}"" target=""_blank"" style=""display: inline-block; padding: 12px 28px; background-color: #165baf; color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"">Log in to Awards Portal</a>
@@ -167,7 +167,7 @@ Team - OPPI Awards";
 <p style=""margin: 0 0 20px 0;"">We look forward to receiving your submission before the timelines.</p>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, "Registration Confirmation - OPPI Scientist Award 2026", plainTextBody, htmlContent);
+            await SendMailInternalAsync(recipientEmail, recipientName, "Registration Confirmation - OPPI Annual Awards 2026", plainTextBody, htmlContent);
         }
         catch (Exception ex)
         {
@@ -179,7 +179,7 @@ Team - OPPI Awards";
     {
         try
         {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://scientistawards.indiaoppi.com";
+            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
             var resetLink = $"{frontendUrl}/reset-password?email={Uri.EscapeDataString(recipientEmail)}&token={Uri.EscapeDataString(resetToken)}";
 
             string plainTextBody = $@"Dear {recipientName},
@@ -236,12 +236,12 @@ Team - OPPI Awards";
     {
         try
         {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://scientistawards.indiaoppi.com";
+            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
             var loginLink = $"{frontendUrl}/login";
 
             string plainTextBody = $@"Dear {recipientName},
 
-We have received your registration for the OPPI Scientist Award for the year 2026.
+We have received your registration for the OPPI Annual Awards for the year 2026.
 
 To proceed with your application, please login here: {loginLink}
 
@@ -256,7 +256,7 @@ Team - OPPI Awards";
 
             string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
-<p style=""margin: 0 0 20px 0;"">We have received your registration for the <strong>OPPI Scientist Award for the year 2026</strong>.</p>
+<p style=""margin: 0 0 20px 0;"">We have received your registration for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <p style=""margin: 0 0 20px 0;"">To proceed with your application, please login here:</p>
 <p style=""margin: 0 0 25px 0; text-align: center;"">
     <a href=""{loginLink}"" target=""_blank"" style=""display: inline-block; padding: 12px 28px; background-color: #165baf; color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"">Log in to Awards Portal</a>
@@ -287,25 +287,25 @@ Team - OPPI Awards";
         {
             string plainTextBody = $@"Dear {recipientName},
 
-Thank you for submitting your application for the OPPI Scientist Award for the year 2026.
+Thank you for submitting your application for the OPPI Annual Awards for the year 2026.
 
 Please note your application no. for future correspondence - {applicationId}
 
-We appreciate your participation and wish you continued success in the field of research.
+We appreciate your participation and wish you continued success.
 
 Warm regards,
 Team - OPPI Awards";
 
             string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
-<p style=""margin: 0 0 20px 0;"">Thank you for submitting your application for the <strong>OPPI Scientist Award for the year 2026</strong>.</p>
+<p style=""margin: 0 0 20px 0;"">Thank you for submitting your application for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <div style=""margin: 0 0 25px 0; font-size: 16px; color: #165baf; background-color: #f0f7ff; padding: 12px 18px; border-radius: 6px; border: 1px solid #d0e4ff; display: inline-block; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"">
     <strong>Application No:</strong> {applicationId}
 </div>
-<p style=""margin: 0 0 30px 0;"">We appreciate your participation and wish you continued success in the field of research.</p>
+<p style=""margin: 0 0 30px 0;"">We appreciate your participation and wish you continued success.</p>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, "Application Submission - OPPI Scientist Award 2026", plainTextBody, htmlContent);
+            await SendMailInternalAsync(recipientEmail, recipientName, "Application Submission - OPPI Annual Awards 2026", plainTextBody, htmlContent);
         }
         catch (Exception ex)
         {
