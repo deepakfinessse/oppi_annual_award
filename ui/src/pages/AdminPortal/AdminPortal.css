@@ -1111,3 +1111,78 @@
 .pagination-page-indicator strong {
   color: #0f172a;
 }
+
+/* Past Winners Figma Match Styles */
+.past-winner-pos-pill {
+  display: inline-block;
+  padding: 5px 16px;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-align: center;
+  min-width: 85px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.past-winner-caption-pill {
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: inherit;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-download-cyan {
+  background: #00a3e0;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 1.25rem;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 8px rgba(0, 163, 224, 0.25);
+}
+
+.btn-download-cyan:hover {
+  background: #028ec3;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(0, 163, 224, 0.35);
+}
+
+.btn-filter-pill-select {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-filter-pill-select:hover {
+  border-color: #00a3e0;
+  background: #f8fafc;
+}
+

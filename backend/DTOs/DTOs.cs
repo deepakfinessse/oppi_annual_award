@@ -174,9 +174,13 @@ public class PanelMemberDto
 public class PastWinnerDto
 {
     public int Year { get; set; }
-    public string Category { get; set; } = null!; // SCIENTIST OF THE YEAR, WOMAN SCIENTIST OF THE YEAR, etc.
+    public string? YearStr { get; set; }
+    public string Category { get; set; } = null!;
     public string Name { get; set; } = null!;
-    public string Description { get; set; } = null!; // affiliation
+    public string? Organisation { get; set; }
+    public string? Description { get; set; }
+    public string? Caption { get; set; }
+    public string? Position { get; set; }
     public string? ImagePath { get; set; }
     public string? Color { get; set; }
 }

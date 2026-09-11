@@ -253,9 +253,13 @@ public class PastWinner
 {
     public int Id { get; set; }
     public int Year { get; set; }
-    public string Category { get; set; } = null!; // SCIENTIST OF THE YEAR, WOMAN SCIENTIST OF THE YEAR, etc.
+    public string? YearStr { get; set; } // e.g. "2025-2026"
+    public string Category { get; set; } = null!; // Award category
     public string Name { get; set; } = null!;
-    public string Description { get; set; } = null!; // affiliation
+    public string? Organisation { get; set; }
+    public string Description { get; set; } = ""; // details
+    public string? Caption { get; set; }
+    public string? Position { get; set; } // Winner, 1st Runner up, 2nd Runner up
     public string? ImagePath { get; set; }
     public string? Color { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

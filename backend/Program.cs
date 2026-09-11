@@ -428,18 +428,87 @@ using (var scope = app.Services.CreateScope())
     await db2.SaveChangesAsync();
     Log.Information("Panel members & User accounts synchronization complete");
 
-    // 6. Seed default past winners if table is empty
-    if (!db2.PastWinners.Any())
+    // 6. Ensure schema columns and seed OPPI Annual Awards past winners
+    try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `organisation` VARCHAR(255) NULL;"); } catch {}
+    try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `position` VARCHAR(100) NULL;"); } catch {}
+    try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `caption` TEXT NULL;"); } catch {}
+    try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `year_str` VARCHAR(50) NULL;"); } catch {}
+
+    if (!db2.PastWinners.Any(w => w.Category.Contains("OPPI") || w.Category.Contains("Sustainability")))
     {
+        var existingOld = await db2.PastWinners.ToListAsync();
+        if (existingOld.Any(w => w.Category.Contains("SCIENTIST")))
+        {
+            db2.PastWinners.RemoveRange(existingOld);
+            await db2.SaveChangesAsync();
+        }
+
         var seedWinners = new[]
         {
-            new PastWinner { Year = 2025, Category = "SCIENTIST OF THE YEAR", Name = "Dr. Jyotirmayee Dash", Description = "Professor, Indian Association for The Cultivation of Sciences", ImagePath = "/winner1.png", Color = "#00468E" },
-            new PastWinner { Year = 2025, Category = "WOMAN SCIENTIST OF THE YEAR", Name = "Dr. Ellora Sen", Description = "PhD, Scientist VII, National Brain Research Centre, Haryana", ImagePath = "/winner2.png", Color = "#015FC3" },
-            new PastWinner { Year = 2025, Category = "YOUNG SCIENTIST OF THE YEAR", Name = "Dr. Vinaykumar Kanchupalli", Description = "DST Inspire Faculty, NIPER, Hyderabad", ImagePath = "/winner3.png", Color = "#0075EF" }
+            new PastWinner { 
+                Year = 2026, 
+                YearStr = "2025-2026", 
+                Category = "OPPI Sustainability Excellence Award", 
+                Name = "Shrey", 
+                Organisation = "Company name 123", 
+                Position = "Winner", 
+                Caption = "Excellence in eco-friendly pharmaceutical manufacturing operations and green energy adoption.",
+                Description = "Excellence in eco-friendly pharmaceutical manufacturing operations and green energy adoption.",
+                ImagePath = "/winner1.png", 
+                Color = "#00a3e0" 
+            },
+            new PastWinner { 
+                Year = 2026, 
+                YearStr = "2025-2026", 
+                Category = "OPPI Sustainability Excellence Award", 
+                Name = "Shivam", 
+                Organisation = "Company name 123", 
+                Position = "1st Runner up", 
+                Caption = "Outstanding breakthrough in sustainable supply chain and biodegradable packaging solutions.",
+                Description = "Outstanding breakthrough in sustainable supply chain and biodegradable packaging solutions.",
+                ImagePath = "/winner2.png", 
+                Color = "#f97316" 
+            },
+            new PastWinner { 
+                Year = 2024, 
+                YearStr = "2023-2024", 
+                Category = "OPPI Sustainability Excellence Award", 
+                Name = "Amandeep", 
+                Organisation = "Company name 124", 
+                Position = "Winner", 
+                Caption = "Significant reduction in carbon footprint across global formulation and distribution facilities.",
+                Description = "Significant reduction in carbon footprint across global formulation and distribution facilities.",
+                ImagePath = "/winner3.png", 
+                Color = "#00a3e0" 
+            },
+            new PastWinner { 
+                Year = 2026, 
+                YearStr = "2025-2026", 
+                Category = "OPPI Marketing Excellence Awards - Existing Pharma Product", 
+                Name = "Priya Sharma", 
+                Organisation = "Novartis India", 
+                Position = "Winner", 
+                Caption = "Exemplary brand strategy and patient-centric multi-channel engagement in cardiovascular health.",
+                Description = "Exemplary brand strategy and patient-centric multi-channel engagement in cardiovascular health.",
+                ImagePath = "/winner1.png", 
+                Color = "#00a3e0" 
+            },
+            new PastWinner { 
+                Year = 2026, 
+                YearStr = "2025-2026", 
+                Category = "OPPI Sales Force Excellence Award", 
+                Name = "Rajesh Verma", 
+                Organisation = "Sanofi India", 
+                Position = "Winner", 
+                Caption = "Demonstrated top-tier sales execution, digital detailing adoption, and HCP territory coverage.",
+                Description = "Demonstrated top-tier sales execution, digital detailing adoption, and HCP territory coverage.",
+                ImagePath = "/winner2.png", 
+                Color = "#00a3e0" 
+            }
         };
         db2.PastWinners.AddRange(seedWinners);
         await db2.SaveChangesAsync();
-        Log.Information("Seeded default past winners");
+        Log.Information("Seeded default OPPI Annual Awards past winners");
     }
 }
 
@@ -1673,25 +1742,33 @@ api.MapPost("/admin/past-winners", async (PastWinnerDto dto, InnovationDbContext
     var user = await db.Users.FindAsync(uid.Value);
     if (user?.Role != "ADMIN") return Results.Forbid();
 
-    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Description) || string.IsNullOrWhiteSpace(dto.Category) || dto.Year <= 0)
+    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Category))
     {
-        return Results.BadRequest(new { message = "Name, Description, Category and Year are required." });
+        return Results.BadRequest(new { message = "Name and Category are required." });
     }
 
-    int currentYear = DateTime.UtcNow.Year;
-    if (dto.Year > currentYear)
+    var yearStr = dto.YearStr?.Trim();
+    var yearVal = dto.Year;
+    if (!string.IsNullOrEmpty(yearStr) && yearVal <= 0)
     {
-        return Results.BadRequest(new { message = $"Award Year cannot be in the future (maximum allowed is {currentYear})." });
+        var firstPart = yearStr.Split(new[] { '-', '/', ' ' }, StringSplitOptions.RemoveEmptyEntries)[0];
+        if (int.TryParse(firstPart, out int parsed)) yearVal = parsed;
     }
+    if (yearVal <= 0) yearVal = DateTime.UtcNow.Year;
+    if (string.IsNullOrEmpty(yearStr)) yearStr = yearVal.ToString();
 
     var winner = new PastWinner
     {
-        Year = dto.Year,
+        Year = yearVal,
+        YearStr = yearStr,
         Category = dto.Category,
         Name = dto.Name,
-        Description = dto.Description,
+        Organisation = dto.Organisation,
+        Description = dto.Description ?? dto.Caption ?? "",
+        Caption = dto.Caption ?? dto.Description ?? "",
+        Position = string.IsNullOrWhiteSpace(dto.Position) ? "Winner" : dto.Position,
         ImagePath = dto.ImagePath,
-        Color = dto.Color,
+        Color = dto.Color ?? "#00a3e0",
         CreatedAt = DateTime.UtcNow
     };
 
@@ -1709,23 +1786,31 @@ api.MapPut("/admin/past-winners/{id}", async (int id, PastWinnerDto dto, Innovat
     var winner = await db.PastWinners.FindAsync(id);
     if (winner == null) return Results.NotFound();
 
-    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Description) || string.IsNullOrWhiteSpace(dto.Category) || dto.Year <= 0)
+    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Category))
     {
-        return Results.BadRequest(new { message = "Name, Description, Category and Year are required." });
+        return Results.BadRequest(new { message = "Name and Category are required." });
     }
 
-    int currentYear = DateTime.UtcNow.Year;
-    if (dto.Year > currentYear)
+    var yearStr = dto.YearStr?.Trim();
+    var yearVal = dto.Year;
+    if (!string.IsNullOrEmpty(yearStr) && yearVal <= 0)
     {
-        return Results.BadRequest(new { message = $"Award Year cannot be in the future (maximum allowed is {currentYear})." });
+        var firstPart = yearStr.Split(new[] { '-', '/', ' ' }, StringSplitOptions.RemoveEmptyEntries)[0];
+        if (int.TryParse(firstPart, out int parsed)) yearVal = parsed;
     }
+    if (yearVal <= 0) yearVal = winner.Year;
+    if (string.IsNullOrEmpty(yearStr)) yearStr = winner.YearStr ?? yearVal.ToString();
 
-    winner.Year = dto.Year;
+    winner.Year = yearVal;
+    winner.YearStr = yearStr;
     winner.Category = dto.Category;
     winner.Name = dto.Name;
-    winner.Description = dto.Description;
+    winner.Organisation = dto.Organisation;
+    winner.Description = dto.Description ?? dto.Caption ?? "";
+    winner.Caption = dto.Caption ?? dto.Description ?? "";
+    winner.Position = string.IsNullOrWhiteSpace(dto.Position) ? "Winner" : dto.Position;
     winner.ImagePath = dto.ImagePath;
-    winner.Color = dto.Color;
+    winner.Color = dto.Color ?? "#00a3e0";
 
     await db.SaveChangesAsync();
     return Results.Ok(new { message = "Past winner updated successfully", winner });

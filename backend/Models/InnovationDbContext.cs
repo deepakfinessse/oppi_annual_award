@@ -264,9 +264,13 @@ public class InnovationDbContext : DbContext
             e.ToTable("past_winners");
             e.Property(x => x.Id).HasColumnName("id");
             e.Property(x => x.Year).HasColumnName("year");
-            e.Property(x => x.Category).HasColumnName("category").HasMaxLength(100);
+            e.Property(x => x.YearStr).HasColumnName("year_str").HasMaxLength(50);
+            e.Property(x => x.Category).HasColumnName("category").HasMaxLength(150);
             e.Property(x => x.Name).HasColumnName("name").HasMaxLength(150);
+            e.Property(x => x.Organisation).HasColumnName("organisation").HasMaxLength(255);
             e.Property(x => x.Description).HasColumnName("description").HasColumnType("text");
+            e.Property(x => x.Caption).HasColumnName("caption").HasColumnType("text");
+            e.Property(x => x.Position).HasColumnName("position").HasMaxLength(100);
             e.Property(x => x.ImagePath).HasColumnName("image_path");
             e.Property(x => x.Color).HasColumnName("color").HasMaxLength(50);
             e.Property(x => x.CreatedAt).HasColumnName("created_at");

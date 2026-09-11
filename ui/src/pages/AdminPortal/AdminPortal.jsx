@@ -44,6 +44,7 @@ import shekharImg from '../../assets/Shekhar.png';
 import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
+import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
 import './AdminPortal.css';
 
 const formatDate = (dateStr) => {
@@ -128,17 +129,27 @@ const AdminPortal = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Past Winners Form States
+  // Past Winners Form & Filter States
   const [showWinnerForm, setShowWinnerForm] = useState(false);
   const [editingWinner, setEditingWinner] = useState(null);
   const [selectedExistingApplicant, setSelectedExistingApplicant] = useState('');
   const [winnerYear, setWinnerYear] = useState(new Date().getFullYear());
-  const [winnerCategory, setWinnerCategory] = useState('SCIENTIST OF THE YEAR');
+  const [winnerYearStr, setWinnerYearStr] = useState('2025-2026');
+  const [winnerCategory, setWinnerCategory] = useState('OPPI Sustainability Excellence Award');
   const [winnerName, setWinnerName] = useState('');
+  const [winnerOrganisation, setWinnerOrganisation] = useState('');
+  const [winnerPosition, setWinnerPosition] = useState('Winner');
+  const [winnerCaption, setWinnerCaption] = useState('');
   const [winnerDescription, setWinnerDescription] = useState('');
   const [winnerImagePath, setWinnerImagePath] = useState('');
-  const [winnerColor, setWinnerColor] = useState('#00468E');
+  const [winnerColor, setWinnerColor] = useState('#00a3e0');
   const [uploadingWinnerImage, setUploadingWinnerImage] = useState(false);
+
+  // Past Winners Filter States
+  const [winnerFilterYear, setWinnerFilterYear] = useState('ALL');
+  const [winnerFilterCategory, setWinnerFilterCategory] = useState('ALL');
+  const [showWinnerYearDropdown, setShowWinnerYearDropdown] = useState(false);
+  const [showWinnerCatDropdown, setShowWinnerCatDropdown] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -273,6 +284,22 @@ const AdminPortal = () => {
     setUserPage(1);
     setShowUserFilterDropdown(false);
   };
+
+  const displayedWinners = pastWinners.filter(w => {
+    if (winnerFilterYear !== 'ALL') {
+      const matchYear = (w.yearStr && w.yearStr === winnerFilterYear) || (String(w.year) === String(winnerFilterYear));
+      if (!matchYear) return false;
+    }
+    if (winnerFilterCategory !== 'ALL') {
+      if (w.category !== winnerFilterCategory) return false;
+    }
+    return true;
+  });
+
+  const availableWinnerYears = Array.from(new Set(pastWinners.map(w => w.yearStr || String(w.year)).filter(Boolean)));
+  if (!availableWinnerYears.includes('2025-2026')) availableWinnerYears.unshift('2025-2026');
+  if (!availableWinnerYears.includes('2024-2025')) availableWinnerYears.push('2024-2025');
+  if (!availableWinnerYears.includes('2023-2024')) availableWinnerYears.push('2023-2024');
 
   const totalAppPages = Math.ceil(filteredApps.length / appPageSize) || 1;
   const paginatedApps = filteredApps.slice((appPage - 1) * appPageSize, appPage * appPageSize);
@@ -594,11 +621,15 @@ const AdminPortal = () => {
     setEditingWinner(null);
     setSelectedExistingApplicant('');
     setWinnerYear(new Date().getFullYear());
-    setWinnerCategory('SCIENTIST OF THE YEAR');
+    setWinnerYearStr('2025-2026');
+    setWinnerCategory(ANNUAL_AWARD_CATEGORIES[7] || ANNUAL_AWARD_CATEGORIES[0]);
     setWinnerName('');
+    setWinnerOrganisation('');
+    setWinnerPosition('Winner');
+    setWinnerCaption('');
     setWinnerDescription('');
     setWinnerImagePath('');
-    setWinnerColor('#00468E');
+    setWinnerColor('#00a3e0');
     setError('');
     setSuccess('');
     setFieldErrors({});
@@ -608,12 +639,16 @@ const AdminPortal = () => {
   const handleOpenWinnerEdit = (w) => {
     setEditingWinner(w);
     setSelectedExistingApplicant('');
-    setWinnerYear(w.year);
-    setWinnerCategory(w.category);
-    setWinnerName(w.name);
-    setWinnerDescription(w.description);
+    setWinnerYear(w.year || new Date().getFullYear());
+    setWinnerYearStr(w.yearStr || (w.year ? `${w.year - 1}-${w.year}` : '2025-2026'));
+    setWinnerCategory(w.category || ANNUAL_AWARD_CATEGORIES[0]);
+    setWinnerName(w.name || '');
+    setWinnerOrganisation(w.organisation || '');
+    setWinnerPosition(w.position || 'Winner');
+    setWinnerCaption(w.caption || w.description || '');
+    setWinnerDescription(w.description || w.caption || '');
     setWinnerImagePath(w.imagePath || '');
-    setWinnerColor(w.color || '#00468E');
+    setWinnerColor(w.color || (w.position === '1st Runner up' ? '#f97316' : '#00a3e0'));
     setError('');
     setSuccess('');
     setFieldErrors({});
@@ -644,18 +679,12 @@ const AdminPortal = () => {
     setSuccess('');
     setFieldErrors({});
 
-    const currentYear = new Date().getFullYear();
     const validationErrors = {};
     if (!winnerName || !winnerName.trim()) {
-      validationErrors.name = "Winner's Full Name is required.";
+      validationErrors.name = "Winner's Name is required.";
     }
-    if (!winnerYear) {
-      validationErrors.year = 'Award Year is required.';
-    } else if (parseInt(winnerYear) > currentYear) {
-      validationErrors.year = `Award Year cannot be in the future (max ${currentYear}).`;
-    }
-    if (!winnerDescription || !winnerDescription.trim()) {
-      validationErrors.description = 'Winner description is required.';
+    if (!winnerYearStr || !winnerYearStr.trim()) {
+      validationErrors.yearStr = 'Award Year / Session is required (e.g. 2025-2026).';
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -663,13 +692,23 @@ const AdminPortal = () => {
       return;
     }
 
+    let parsedYear = 2026;
+    const yearMatches = winnerYearStr.match(/\d{4}/g);
+    if (yearMatches && yearMatches.length > 0) {
+      parsedYear = parseInt(yearMatches[yearMatches.length - 1]);
+    }
+
     const payload = {
-      year: parseInt(winnerYear) || 2025,
+      year: parsedYear,
+      yearStr: winnerYearStr.trim(),
       category: winnerCategory,
-      name: winnerName,
-      description: winnerDescription,
+      name: winnerName.trim(),
+      organisation: winnerOrganisation.trim() || '—',
+      caption: winnerCaption.trim() || winnerDescription.trim() || '',
+      position: winnerPosition || 'Winner',
+      description: winnerDescription.trim() || winnerCaption.trim() || '',
       imagePath: winnerImagePath,
-      color: winnerColor
+      color: winnerColor || (winnerPosition === '1st Runner up' ? '#f97316' : '#00a3e0')
     };
 
     setLoading(true);
@@ -679,7 +718,7 @@ const AdminPortal = () => {
         setSuccess('Winner details updated successfully.');
       } else {
         await adminCreatePastWinner(payload);
-        setSuccess('Winner created successfully.');
+        setSuccess('New past winner added successfully.');
       }
       setShowWinnerForm(false);
       const list = await getPublicPastWinners();
@@ -690,6 +729,29 @@ const AdminPortal = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadPastWinnersCSV = () => {
+    const winnersToExport = displayedWinners;
+    const headers = ['S. No.', 'Organisation', 'Name', 'Caption', 'Category', 'Year', 'Position'];
+    const rows = winnersToExport.map((w, idx) => [
+      String(idx + 1).padStart(2, '0'),
+      `"${(w.organisation || '').replace(/"/g, '""')}"`,
+      `"${(w.name || '').replace(/"/g, '""')}"`,
+      `"${(w.caption || w.description || '').replace(/"/g, '""')}"`,
+      `"${(w.category || '').replace(/"/g, '""')}"`,
+      `"${(w.yearStr || w.year || '').replace(/"/g, '""')}"`,
+      `"${(w.position || 'Winner').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `OPPI_Past_Winners_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDeleteWinner = (winner) => {
@@ -716,8 +778,8 @@ const AdminPortal = () => {
         setPastWinners(list || []);
       }
     } catch (err) {
-      console.error(`Failed to delete ${type.toLowerCase()}:`, err);
-      setError(err.message || `Failed to delete ${type.toLowerCase()}.`);
+      console.error('Failed to delete item:', err);
+      setError(err.message || 'Failed to delete record.');
     } finally {
       setLoading(false);
     }
@@ -725,6 +787,7 @@ const AdminPortal = () => {
 
   const getResolvedImage = (path, type = 'JURY') => {
     if (!path || (typeof path === 'string' && !path.trim())) {
+      if (type === 'WINNER') return ceremonyPhoto;
       if (type === 'VALIDATOR') return prabhatImg;
       if (type === 'PANEL_CHAIR') return wellingImg;
       return shekharImg;
@@ -733,6 +796,7 @@ const AdminPortal = () => {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
       return path;
     }
+    if (path.includes('winner') || type === 'WINNER') return ceremonyPhoto;
     if (path.includes('Prabhat') || path.includes('validator.png')) return prabhatImg;
     if (path.includes('Welling') || path.includes('jury1.png')) return wellingImg;
     if (path.includes('Shekhar') || path.includes('jury2.png')) return shekharImg;
@@ -1174,15 +1238,115 @@ const AdminPortal = () => {
             </div>
           </div>
 
-          {/* Card 4: Website Past Winners */}
+          {/* Card 4: Annual Awards Past Winners (Figma Design) */}
           <div className="dashboard-card">
-            <div className="card-header-bar">
-              <h3 className="card-title">Website Past Winners({String(pastWinners.length).padStart(2, '0')})</h3>
+            <div className="card-header-bar" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <h3 className="card-title" style={{ margin: 0, fontSize: '1.45rem', fontWeight: '800', color: '#0f172a' }}>
+                  Annual Awards Past Winners
+                </h3>
+                <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>
+                  {winnerFilterCategory !== 'ALL' ? winnerFilterCategory : 'OPPI Annual Awards Past Winners'}
+                </span>
+              </div>
 
-              <div className="card-actions">
-                <button className="btn-card-action download-btn" onClick={handleOpenWinnerCreate}>
+              <div className="card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                {/* YEARS Filter Dropdown */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowWinnerYearDropdown(!showWinnerYearDropdown);
+                      setShowWinnerCatDropdown(false);
+                    }}
+                  >
+                    <span>{winnerFilterYear === 'ALL' ? 'YEARS' : winnerFilterYear}</span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {showWinnerYearDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '150px', right: 0, zIndex: 100 }}>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${winnerFilterYear === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setWinnerFilterYear('ALL'); setShowWinnerYearDropdown(false); }}
+                      >
+                        All Years
+                      </button>
+                      {availableWinnerYears.map(yr => (
+                        <button
+                          key={yr}
+                          type="button"
+                          className={`filter-dropdown-item ${winnerFilterYear === yr ? 'active' : ''}`}
+                          onClick={() => { setWinnerFilterYear(yr); setShowWinnerYearDropdown(false); }}
+                        >
+                          {yr}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* CATEGORY Filter Dropdown */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowWinnerCatDropdown(!showWinnerCatDropdown);
+                      setShowWinnerYearDropdown(false);
+                    }}
+                  >
+                    <span style={{ maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {winnerFilterCategory === 'ALL' ? 'CATEGORY' : winnerFilterCategory}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {showWinnerCatDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '380px', overflowY: 'auto' }}>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setWinnerFilterCategory('ALL'); setShowWinnerCatDropdown(false); }}
+                      >
+                        All Categories
+                      </button>
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`filter-dropdown-item ${winnerFilterCategory === cat ? 'active' : ''}`}
+                          onClick={() => { setWinnerFilterCategory(cat); setShowWinnerCatDropdown(false); }}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Cyan DOWNLOAD Button */}
+                <button
+                  type="button"
+                  className="btn-download-cyan"
+                  onClick={downloadPastWinnersCSV}
+                  title="Download Past Winners CSV"
+                >
+                  <span>DOWNLOAD</span>
+                  <Download size={14} />
+                </button>
+
+                {/* Add Winner Button */}
+                <button
+                  type="button"
+                  className="btn-card-action download-btn"
+                  onClick={handleOpenWinnerCreate}
+                  style={{ padding: '0.55rem 1.1rem', fontSize: '12px' }}
+                >
                   <Plus size={14} />
-                  <span>Add Winner Record</span>
+                  <span>Add Winner</span>
                 </button>
               </div>
             </div>
@@ -1191,60 +1355,91 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
-                    <th>Year</th>
-                    <th>Photo</th>
+                    <th style={{ width: '60px' }}>S. No.</th>
+                    <th>Organisation</th>
                     <th>Name</th>
+                    <th style={{ width: '80px', textAlign: 'center' }}>Photo</th>
+                    <th>Caption</th>
                     <th>Category</th>
-                    <th>Color</th>
-                    <th>Affiliation / Description</th>
-                    <th>Actions</th>
+                    <th style={{ width: '110px' }}>Year</th>
+                    <th style={{ width: '130px', textAlign: 'center' }}>Position</th>
+                    <th style={{ width: '110px', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && pastWinners.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-loading">Loading winners...</td>
+                      <td colSpan="9" className="table-loading">Loading winners...</td>
                     </tr>
-                  ) : pastWinners.length === 0 ? (
+                  ) : displayedWinners.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-empty">No past winners configured.</td>
+                      <td colSpan="9" className="table-empty">No winners found matching filters.</td>
                     </tr>
                   ) : (
-                    pastWinners.map(w => (
-                      <tr key={w.id}>
-                        <td className="bold-text text-orange">{w.year}</td>
-                        <td>
-                          <img
-                            src={getResolvedImage(w.imagePath)}
-                            alt={w.name}
-                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #ddd' }}
-                          />
-                        </td>
-                        <td className="bold-text">{w.name}</td>
-                        <td>
-                          <span className="oppi-badge-pill badge-user" style={{ color: '#0b5fa5', background: '#e0f2fe' }}>
+                    displayedWinners.map((w, idx) => {
+                      const isRunnerUp = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
+                      const posColor = isRunnerUp ? '#f97316' : (w.color || '#00a3e0');
+                      return (
+                        <tr key={w.id}>
+                          <td className="bold-text" style={{ color: '#64748b' }}>
+                            {String(idx + 1).padStart(2, '0')}
+                          </td>
+                          <td className="bold-text" style={{ color: '#0f172a' }}>
+                            {w.organisation || '—'}
+                          </td>
+                          <td className="bold-text" style={{ color: '#0f172a' }}>
+                            {w.name}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <img
+                              src={getResolvedImage(w.imagePath, 'WINNER')}
+                              alt={w.name}
+                              style={{ width: '48px', height: '32px', borderRadius: '4px', objectFit: 'cover', border: '1px solid #cbd5e1', verticalAlign: 'middle' }}
+                            />
+                          </td>
+                          <td>
+                            <div className="past-winner-caption-pill" title={w.caption || w.description}>
+                              {w.caption || w.description || '—'}
+                            </div>
+                          </td>
+                          <td style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>
                             {w.category}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: w.color || '#00468E', border: '1px solid #cbd5e1', display: 'inline-block' }} />
-                            <span style={{ fontSize: '0.85rem', fontFamily: 'monospace', fontWeight: '600', color: '#475569' }}>
-                              {w.color || '#00468E'}
+                          </td>
+                          <td style={{ fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>
+                            {w.yearStr || w.year}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span
+                              className="past-winner-pos-pill"
+                              style={{ backgroundColor: posColor }}
+                            >
+                              {w.position || 'Winner'}
                             </span>
-                          </div>
-                        </td>
-                        <td className="email-text" style={{ maxWidth: '300px', whiteSpace: 'normal' }}>
-                          {w.description}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className="action-btn-view" onClick={() => handleOpenWinnerEdit(w)}>Edit</button>
-                            <button className="action-btn-delete" onClick={() => handleDeleteWinner(w)}>Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                className="action-btn-view"
+                                style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}
+                                onClick={() => handleOpenWinnerEdit(w)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="action-btn-delete"
+                                style={{ padding: '0.3rem 0.5rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                onClick={() => handleDeleteWinner(w)}
+                                title="Delete Winner"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1542,20 +1737,17 @@ const AdminPortal = () => {
                       const val = e.target.value;
                       setSelectedExistingApplicant(val);
                       if (val) {
-                        const selectedApp = apps.find(a => String(a.Id) === String(val));
+                        const selectedApp = apps.find(a => String(a.Id || a.id) === String(val));
                         if (selectedApp) {
                           const name = selectedApp.applicant_name || selectedApp.user_name || '';
-                          const category = selectedApp.category || '';
-                          let winnerCat = 'SCIENTIST OF THE YEAR';
-                          if (category.toUpperCase().includes('WOMAN')) winnerCat = 'WOMAN SCIENTIST OF THE YEAR';
-                          else if (category.toUpperCase().includes('YOUNG')) winnerCat = 'YOUNG SCIENTIST OF THE YEAR';
-
+                          const category = selectedApp.category || ANNUAL_AWARD_CATEGORIES[0];
                           const institute = selectedApp.company || '';
-                          const desc = institute ? `Scientist at ${institute}` : '';
 
                           if (name) setWinnerName(name);
-                          setWinnerCategory(winnerCat);
-                          if (desc) setWinnerDescription(desc);
+                          if (category) setWinnerCategory(category);
+                          if (institute) setWinnerOrganisation(institute);
+                          setWinnerCaption(`Excellence in ${category}`);
+                          setWinnerDescription(`Excellence in ${category}`);
                         }
                       }
                     }}
@@ -1577,7 +1769,7 @@ const AdminPortal = () => {
 
                 <div className="modal-form-row">
                   <div className={`modal-form-group ${fieldErrors.name ? 'has-error' : ''}`}>
-                    <label>Winner's Full Name <span className="req">*</span></label>
+                    <label>Winner's Name <span className="req">*</span></label>
                     <input
                       type="text"
                       value={winnerName}
@@ -1585,27 +1777,21 @@ const AdminPortal = () => {
                         setWinnerName(e.target.value);
                         if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: null }));
                       }}
-                      placeholder="Dr. Winner Name"
+                      placeholder="e.g. Shrey"
                       required
                     />
                     {fieldErrors.name && <span className="field-error-message">⚠️ {fieldErrors.name}</span>}
                   </div>
 
-                  <div className={`modal-form-group ${fieldErrors.year ? 'has-error' : ''}`}>
-                    <label>Award Year <span className="req">*</span></label>
+                  <div className="modal-form-group">
+                    <label>Organisation / Company <span className="req">*</span></label>
                     <input
-                      type="number"
-                      value={winnerYear}
-                      onChange={(e) => {
-                        setWinnerYear(e.target.value);
-                        if (fieldErrors.year) setFieldErrors(prev => ({ ...prev, year: null }));
-                      }}
-                      placeholder={String(new Date().getFullYear())}
+                      type="text"
+                      value={winnerOrganisation}
+                      onChange={(e) => setWinnerOrganisation(e.target.value)}
+                      placeholder="e.g. Company name 123"
                       required
-                      min="2000"
-                      max={new Date().getFullYear()}
                     />
-                    {fieldErrors.year && <span className="field-error-message">⚠️ {fieldErrors.year}</span>}
                   </div>
                 </div>
 
@@ -1613,9 +1799,44 @@ const AdminPortal = () => {
                   <div className="modal-form-group">
                     <label>Award Category <span className="req">*</span></label>
                     <select value={winnerCategory} onChange={(e) => setWinnerCategory(e.target.value)}>
-                      <option value="SCIENTIST OF THE YEAR">Scientist of the Year</option>
-                      <option value="WOMAN SCIENTIST OF THE YEAR">Woman Scientist of the Year</option>
-                      <option value="YOUNG SCIENTIST OF THE YEAR">Young Scientist of the Year</option>
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={`modal-form-group ${fieldErrors.yearStr ? 'has-error' : ''}`}>
+                    <label>Award Year / Session <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      value={winnerYearStr}
+                      onChange={(e) => {
+                        setWinnerYearStr(e.target.value);
+                        if (fieldErrors.yearStr) setFieldErrors(prev => ({ ...prev, yearStr: null }));
+                      }}
+                      placeholder="2025-2026"
+                      required
+                    />
+                    {fieldErrors.yearStr && <span className="field-error-message">⚠️ {fieldErrors.yearStr}</span>}
+                  </div>
+                </div>
+
+                <div className="modal-form-row">
+                  <div className="modal-form-group">
+                    <label>Position <span className="req">*</span></label>
+                    <select
+                      value={winnerPosition}
+                      onChange={(e) => {
+                        const pos = e.target.value;
+                        setWinnerPosition(pos);
+                        if (pos === '1st Runner up') setWinnerColor('#f97316');
+                        else if (pos === 'Winner') setWinnerColor('#00a3e0');
+                      }}
+                    >
+                      <option value="Winner">Winner</option>
+                      <option value="1st Runner up">1st Runner up</option>
+                      <option value="2nd Runner up">2nd Runner up</option>
+                      <option value="Special Recognition">Special Recognition</option>
                     </select>
                   </div>
 
@@ -1624,7 +1845,7 @@ const AdminPortal = () => {
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <input
                         type="color"
-                        value={winnerColor || '#00468E'}
+                        value={winnerColor || '#00a3e0'}
                         onChange={(e) => setWinnerColor(e.target.value)}
                         style={{ width: '40px', height: '38px', padding: '2px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
@@ -1632,11 +1853,21 @@ const AdminPortal = () => {
                         type="text"
                         value={winnerColor}
                         onChange={(e) => setWinnerColor(e.target.value)}
-                        placeholder="#00468E"
+                        placeholder="#00a3e0"
                         style={{ flex: 1 }}
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="modal-form-group full-width">
+                  <label>Caption / Short Highlight</label>
+                  <input
+                    type="text"
+                    value={winnerCaption}
+                    onChange={(e) => setWinnerCaption(e.target.value)}
+                    placeholder="e.g. Excellence in eco-friendly pharmaceutical manufacturing operations"
+                  />
                 </div>
 
                 <div className="modal-form-row">
@@ -1657,25 +1888,20 @@ const AdminPortal = () => {
                   </div>
                 </div>
 
-                <div className={`modal-form-group full-width ${fieldErrors.description ? 'has-error' : ''}`}>
-                  <label>Designation &amp; Affiliation Description <span className="req">*</span></label>
+                <div className="modal-form-group full-width">
+                  <label>Detailed Description</label>
                   <textarea
                     value={winnerDescription}
-                    onChange={(e) => {
-                      setWinnerDescription(e.target.value);
-                      if (fieldErrors.description) setFieldErrors(prev => ({ ...prev, description: null }));
-                    }}
-                    placeholder="PhD, Professor or Head of department at institute/university name..."
+                    onChange={(e) => setWinnerDescription(e.target.value)}
+                    placeholder="Additional details regarding the achievement or category impact..."
                     rows="3"
-                    required
                   />
-                  {fieldErrors.description && <span className="field-error-message">⚠️ {fieldErrors.description}</span>}
                 </div>
 
                 {winnerImagePath && (
                   <div className="modal-upload-preview">
                     <img
-                      src={getResolvedImage(winnerImagePath)}
+                      src={getResolvedImage(winnerImagePath, 'WINNER')}
                       alt="Preview"
                       className="modal-avatar-preview"
                     />
@@ -1689,7 +1915,7 @@ const AdminPortal = () => {
                     className="btn-save-item"
                     disabled={uploadingWinnerImage || loading}
                   >
-                    {loading ? 'Saving...' : 'Save Winner'}
+                    {loading ? 'Saving...' : (editingWinner ? 'Update Winner' : 'Add Winner')}
                   </button>
                   <button
                     type="button"
