@@ -102,6 +102,7 @@ public class JuryApprovalDto
     public int TeamStrengthScore { get; set; }
     public int BusinessPlanScore { get; set; }
     public int ImpactScore { get; set; }
+    public double? WeightedScore { get; set; }
     public string? Comments { get; set; }
 }
 

@@ -297,12 +297,12 @@ using (var scope = app.Services.CreateScope())
     // 4. Seed and synchronize default panel members and user accounts
     var fullSeedPanel = new (string Name, string Role, string Type, string Category, string Email, string Password, int SortOrder, string? ImagePath)[]
     {
-        ("Dr. Prabhat Ranjan Mishra", "Chief Scientist & Head, Pharmaceutics & Pharmacokinetics Division, CSIR-Central Drug Research Institute, Lucknow", "VALIDATOR", "General", "validator@nivyam.com", "Password123!", 1, "/validator.png"),
-        ("Dr. M. N. Welling", "Advisor to President - Shri Vile Parle Kelavani Mandal (SVKM) & to Chancellor - Narsee Monjee Institute of Management Studies (NMIMS), Mumbai", "PANEL_CHAIR", "General", "panelchair@nivyam.com", "Password123!", 2, "/jury1.png"),
-        ("Shekhar C. Mande", "FNA, FASc, FNASc, Distinguished Professor, Bioinformatics Centre Savitribai Phule Pune University, Pune & Honorary Distinguished Scientist National Centre for Cell Science, Pune", "JURY", "General", "jury@nivyam.com", "Password123!", 3, "/jury2.png"),
-        ("Prof. P. Balaram", "(Former Director, IISc), DST-Yos Chair Professor National Center for Biological Sciences (NCBS), Bangalore", "JURY", "General", "balaram@nivyam.com", "Password123!", 4, "/jury1.png"),
-        ("Prof. K. G. Akamanchi", "Professor of Pharmaceutical Technology at the Institute of Chemical Technology (Retired), Former Head of Department of Pharmaceutical Sciences and Technology, and Chairperson Research, Consultancy & Resource Mobilisation", "JURY", "General", "akamanchi@nivyam.com", "Password123!", 5, "/jury1.png"),
-        ("Prof. Y K Gupta", "President, AIIMS Jammu, Principal Advisor India, GARGIP Geneva, Former Dean and Head of Pharmacology, AIIMS, New Delhi", "JURY", "General", "gupta@nivyam.com", "Password123!", 6, "/jury2.png"),
+        // ("Dr. Prabhat Ranjan Mishra", "Chief Scientist & Head, Pharmaceutics & Pharmacokinetics Division, CSIR-Central Drug Research Institute, Lucknow", "VALIDATOR", "General", "validator@nivyam.com", "Password123!", 1, "/validator.png"),
+        // ("Dr. M. N. Welling", "Advisor to President - Shri Vile Parle Kelavani Mandal (SVKM) & to Chancellor - Narsee Monjee Institute of Management Studies (NMIMS), Mumbai", "PANEL_CHAIR", "General", "panelchair@nivyam.com", "Password123!", 2, "/jury1.png"),
+        // ("Shekhar C. Mande", "FNA, FASc, FNASc, Distinguished Professor, Bioinformatics Centre Savitribai Phule Pune University, Pune & Honorary Distinguished Scientist National Centre for Cell Science, Pune", "JURY", "General", "jury@nivyam.com", "Password123!", 3, "/jury2.png"),
+        // ("Prof. P. Balaram", "(Former Director, IISc), DST-Yos Chair Professor National Center for Biological Sciences (NCBS), Bangalore", "JURY", "General", "balaram@nivyam.com", "Password123!", 4, "/jury1.png"),
+        // ("Prof. K. G. Akamanchi", "Professor of Pharmaceutical Technology at the Institute of Chemical Technology (Retired), Former Head of Department of Pharmaceutical Sciences and Technology, and Chairperson Research, Consultancy & Resource Mobilisation", "JURY", "General", "akamanchi@nivyam.com", "Password123!", 5, "/jury1.png"),
+        // ("Prof. Y K Gupta", "President, AIIMS Jammu, Principal Advisor India, GARGIP Geneva, Former Dean and Head of Pharmacology, AIIMS, New Delhi", "JURY", "General", "gupta@nivyam.com", "Password123!", 6, "/jury2.png"),
 
         // OPPI Healthcare Communications Award
         ("Aman Gupta", "Managing Partner - Health Practice Asia Lead, FINN Partners", "JURY", "OPPI Healthcare Communications Award", "aman.gupta@finnpartners.com", "awards25", 7, null),
@@ -474,6 +474,62 @@ app.UseAuthorization();
 
 static int? GetUid(HttpContext c) { var s = c.User.FindFirst(ClaimTypes.NameIdentifier)?.Value; return int.TryParse(s, out var id) ? id : null; }
 static string GetIp(HttpContext c) => c.Connection.RemoteIpAddress?.ToString() ?? "?";
+
+static bool IsJuryCategoryMatch(string? juryCategory, string? appCategory)
+{
+    if (string.IsNullOrWhiteSpace(juryCategory) || 
+        juryCategory.Equals("General", StringComparison.OrdinalIgnoreCase) || 
+        juryCategory.Equals("All", StringComparison.OrdinalIgnoreCase))
+        return true;
+
+    if (string.IsNullOrWhiteSpace(appCategory))
+        return false;
+
+    var jc = juryCategory.ToLowerInvariant();
+    var ac = appCategory.ToLowerInvariant();
+
+    if (jc == ac) return true;
+
+    // Marketing (covers both New & Existing products)
+    if ((jc.Contains("marketing") || jc.Contains("nanji")) &&
+        (ac.Contains("marketing") || ac.Contains("nanji")))
+        return true;
+
+    // HR Diversity & Inclusion
+    if ((jc.Contains("diversity") || jc.Contains("d&i") || jc.Contains("dni")) &&
+        (ac.Contains("diversity") || ac.Contains("d&i") || ac.Contains("dni")))
+        return true;
+
+    // HR Excellence (must not match D&I)
+    if ((jc.Contains("hr excellence") || jc.Contains("hr award")) &&
+        (ac.Contains("hr excellence") || ac.Contains("hr award")) &&
+        !ac.Contains("diversity") && !ac.Contains("d&i") && !ac.Contains("dni"))
+        return true;
+
+    // Healthcare Communications
+    if (jc.Contains("communication") && ac.Contains("communication"))
+        return true;
+
+    // Medical Excellence
+    if (jc.Contains("medical") && ac.Contains("medical"))
+        return true;
+
+    // Sales Force Excellence
+    if (jc.Contains("sales") && ac.Contains("sales"))
+        return true;
+
+    // Sustainability
+    if (jc.Contains("sustainab") && ac.Contains("sustainab"))
+        return true;
+
+    // Patient Centricity
+    if ((jc.Contains("patient") || jc.Contains("shahani")) &&
+        (ac.Contains("patient") || ac.Contains("shahani")))
+        return true;
+
+    return false;
+}
+
 
 // ========== AUTH ==========
 var auth = app.MapGroup("/auth").RequireRateLimiting("auth");
@@ -758,11 +814,93 @@ api.MapGet("/application/mine", async (HttpContext ctx, InnovationDbContext db) 
     });
 });
 
+api.MapGet("/application/{appId}", async (int appId, HttpContext ctx, InnovationDbContext db) =>
+{
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
+    var a = await db.Applications.Include(x => x.User)
+        .Include(x => x.PersonalInfo)
+        .Include(x => x.FileUploads)
+        .FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
+
+    if (a == null) return Results.NotFound(new { message = "Application not found" });
+
+    var targetUser = a.User ?? currentUser;
+    var pInfo = a.PersonalInfo;
+    var appDetail = await db.ApplicationDetails.FirstOrDefaultAsync(x => x.ApplicationId == a.Id);
+    var applicant = await db.ApplicantDetails.FirstOrDefaultAsync(x => x.ApplicationId == a.Id);
+
+    var category = pInfo?.CategoryOfWork;
+    if (string.IsNullOrWhiteSpace(category))
+        category = appDetail?.Category;
+
+    var company = pInfo?.CompanyName;
+    if (string.IsNullOrWhiteSpace(company))
+        company = targetUser?.Organisation;
+    if (string.IsNullOrWhiteSpace(company))
+        company = applicant?.InstituteName;
+
+    var repName = "";
+    if (applicant != null && (!string.IsNullOrWhiteSpace(applicant.FirstName) || !string.IsNullOrWhiteSpace(applicant.LastName)))
+    {
+        repName = $"{applicant.FirstName} {applicant.LastName}".Trim();
+    }
+    if (string.IsNullOrWhiteSpace(repName) && targetUser != null)
+    {
+        repName = $"{targetUser.FirstName} {targetUser.LastName}".Trim();
+    }
+
+    var email = applicant?.Email;
+    if (string.IsNullOrWhiteSpace(email))
+        email = targetUser?.Email;
+
+    var mobile = applicant?.Mobile;
+    if (string.IsNullOrWhiteSpace(mobile))
+        mobile = targetUser?.Mobile;
+
+    var gender = applicant?.Gender;
+    if (string.IsNullOrWhiteSpace(gender))
+        gender = targetUser?.Gender ?? "Male";
+
+    var designation = pInfo?.Designation;
+
+    var brief = pInfo?.CompanyBrief;
+    if (string.IsNullOrWhiteSpace(brief))
+        brief = appDetail?.BriefStatement;
+
+    return Results.Ok(new {
+        id = a.Id,
+        status = a.Status,
+        submitted_at = a.SubmittedAt,
+        user = new {
+            first_name = targetUser?.FirstName ?? "",
+            last_name = targetUser?.LastName ?? "",
+            email = email ?? "",
+            mobile = mobile ?? "",
+            gender = gender ?? "Male",
+            organisation = company ?? ""
+        },
+        personal_info = new {
+            award_category = category ?? "",
+            company_name = company ?? "",
+            representative_name = repName ?? "",
+            designation = designation ?? "",
+            company_brief = brief ?? ""
+        },
+        file_uploads = a.FileUploads.Select(f => new { f.Id, f.Section, f.FileName, f.FilePath, f.FileSize, f.FileType })
+    });
+});
+
 api.MapPost("/application/save/{appId}", async (int appId, HttpContext ctx, ApplicationSaveDto dto, InnovationDbContext db) =>
 {
     var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
     var a = await db.Applications.Include(x => x.PersonalInfo)
-        .FirstOrDefaultAsync(x => x.Id == appId && x.UserId == uid.Value);
+        .FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
     if (a == null) return Results.NotFound();
 
     if (a.PersonalInfo == null) {
@@ -773,6 +911,28 @@ api.MapPost("/application/save/{appId}", async (int appId, HttpContext ctx, Appl
     a.PersonalInfo.CompanyName = dto.OrganisationName;
     a.PersonalInfo.Designation = dto.Designation;
     a.PersonalInfo.CompanyBrief = dto.BriefDescription;
+
+    var appDetail = await db.ApplicationDetails.FirstOrDefaultAsync(x => x.ApplicationId == appId);
+    if (appDetail != null)
+    {
+        appDetail.Category = dto.AwardCategory;
+        appDetail.BriefStatement = dto.BriefDescription;
+    }
+
+    var applicant = await db.ApplicantDetails.FirstOrDefaultAsync(x => x.ApplicationId == appId);
+    if (applicant != null)
+    {
+        if (!string.IsNullOrWhiteSpace(dto.RepresentativeName))
+        {
+            var parts = dto.RepresentativeName.Trim().Split(' ', 2);
+            applicant.FirstName = parts[0];
+            applicant.LastName = parts.Length > 1 ? parts[1] : "";
+        }
+        if (!string.IsNullOrWhiteSpace(dto.EmailId)) applicant.Email = dto.EmailId;
+        if (!string.IsNullOrWhiteSpace(dto.MobileNumber)) applicant.Mobile = dto.MobileNumber;
+        if (!string.IsNullOrWhiteSpace(dto.OrganisationName)) applicant.InstituteName = dto.OrganisationName;
+        if (!string.IsNullOrWhiteSpace(dto.Gender)) applicant.Gender = dto.Gender;
+    }
 
     await db.SaveChangesAsync();
     return Results.Ok(new { message = "Application saved successfully" });
@@ -788,6 +948,15 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
     var uploadedFiles = new List<object>();
     foreach (var file in files)
     {
+        if (section == "video" && file.Length > 10 * 1024 * 1024)
+        {
+            return Results.BadRequest(new { message = $"Video file '{file.FileName}' exceeds maximum allowed size of 10 MB." });
+        }
+        if (section == "document" && file.Length > 5 * 1024 * 1024)
+        {
+            return Results.BadRequest(new { message = $"Document file '{file.FileName}' exceeds maximum allowed size of 5 MB." });
+        }
+
         var ext = Path.GetExtension(file.FileName).ToLower();
         var uniqueName = $"{Guid.NewGuid()}{ext}";
         var fUrl = await storage.UploadFileAsync(file, appId.ToString(), uniqueName);
@@ -813,7 +982,10 @@ api.MapDelete("/application/upload/{fileId}", async (int fileId, InnovationDbCon
 api.MapPost("/application/submit/{appId}", async (int appId, InnovationDbContext db, HttpContext ctx, AuditService audit, EmailService emailService) =>
 {
     var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
-    var a = await db.Applications.Include(x => x.User).Include(x => x.PersonalInfo).FirstOrDefaultAsync(x => x.Id == appId && x.UserId == uid.Value);
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
+    var a = await db.Applications.Include(x => x.User).Include(x => x.PersonalInfo).FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
     if (a == null) return Results.NotFound();
 
     // Enforce "An OPPI member company - Only 1 entry per member company per category"
@@ -1145,6 +1317,7 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
         var allApplications = await db.Applications.ToListAsync();
         var appDetails = await db.ApplicationDetails.ToListAsync();
         var applicantDetails = await db.ApplicantDetails.ToListAsync();
+        var personalInfos = await db.PersonalInfos.ToListAsync();
         var allReviews = await db.JuryReviews.ToListAsync();
 
         var panelJuries = allPanelMembers
@@ -1170,7 +1343,8 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
                 id = primaryId,
                 userIds = ids,
                 name = pm.Name,
-                email = pm.Email ?? ""
+                email = pm.Email ?? "",
+                category = pm.Category ?? ""
             });
         }
 
@@ -1183,12 +1357,13 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
                     id = ju.Id,
                     userIds = new List<int> { ju.Id },
                     name = ((ju.Title != null ? ju.Title + " " : "") + (ju.FirstName ?? "") + (string.IsNullOrWhiteSpace(ju.LastName) ? "" : " " + ju.LastName)).Trim(),
-                    email = ju.Email
+                    email = ju.Email,
+                    category = ""
                 });
             }
         }
 
-        var approvedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "VALIDATOR_APPROVED", "UNDER_JURY_REVIEW", "JURY_APPROVED", "PANEL_APPROVED" };
+        var approvedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SUBMITTED", "VALIDATOR_APPROVED", "UNDER_JURY_REVIEW", "JURY_APPROVED", "PANEL_APPROVED" };
         var appsList = allApplications
             .Where(a => (!string.IsNullOrEmpty(a.Status) && (approvedStatuses.Contains(a.Status) || a.Status.EndsWith("_APPROVED", StringComparison.OrdinalIgnoreCase))))
             .ToList();
@@ -1196,6 +1371,7 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
         var apps = appsList.Select(a => {
             var appDet = appDetails.FirstOrDefault(ad => ad.ApplicationId == a.Id);
             var applDet = applicantDetails.FirstOrDefault(ad => ad.ApplicationId == a.Id);
+            var pInfo = personalInfos.FirstOrDefault(pi => pi.ApplicationId == a.Id);
             var appUser = allUsers.FirstOrDefault(u => u.Id == a.UserId);
 
             string name = "Applicant #" + a.Id;
@@ -1208,7 +1384,7 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
                 name = ((appUser.FirstName ?? "") + " " + (appUser.LastName ?? "")).Trim();
             }
 
-            string category = appDet?.Category ?? applDet?.Discipline ?? "OPPI Scientist of the Year";
+            string category = pInfo?.CategoryOfWork ?? appDet?.Category ?? applDet?.Discipline ?? "OPPI Annual Awards";
 
             return new {
                 id = a.Id,
@@ -1805,8 +1981,19 @@ api.MapGet("/jury/applications", async (HttpContext ctx, InnovationDbContext db)
     var user = await db.Users.FindAsync(uid.Value);
     if (user?.Role != "JURY" && user?.Role != "ADMIN") return Results.Forbid();
 
+    // Determine category assigned to this jury member (if JURY role)
+    string? assignedCategory = null;
+    if (user.Role == "JURY")
+    {
+        var cleanEmail = (user.Email ?? "").Trim();
+        var allPanel = await db.PanelMembers.ToListAsync();
+        var pm = allPanel.FirstOrDefault(p =>
+            !string.IsNullOrEmpty(p.Email) && p.Email.Trim().Equals(cleanEmail, StringComparison.OrdinalIgnoreCase));
+        assignedCategory = pm?.Category;
+    }
+
     var apps = await db.Applications.Include(a => a.User)
-        .Where(a => a.Status != "DRAFT" && a.Status != "SUBMITTED" && a.Status != "VALIDATOR_REJECTED")
+        .Where(a => a.Status != "DRAFT" && a.Status != "VALIDATOR_REJECTED")
         .Select(a => new {
             a.Id, a.Status, a.SubmittedAt,
             user_name = a.User.FirstName + " " + a.User.LastName,
@@ -1820,16 +2007,20 @@ api.MapGet("/jury/applications", async (HttpContext ctx, InnovationDbContext db)
                 ?? "",
             institute_name = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
                 .Select(ad => ad.InstituteName).FirstOrDefault() ?? "",
-            category = db.ApplicationDetails.Where(apd => apd.ApplicationId == a.Id)
-                .Select(apd => apd.Category).FirstOrDefault()
+            category = db.PersonalInfos.Where(pi => pi.ApplicationId == a.Id).Select(pi => pi.CategoryOfWork).FirstOrDefault()
+                ?? db.ApplicationDetails.Where(apd => apd.ApplicationId == a.Id).Select(apd => apd.Category).FirstOrDefault()
+                ?? ""
         })
         .ToListAsync();
+
+    // Filter by jury assigned category if JURY role
+    var filteredApps = apps.Where(a => IsJuryCategoryMatch(assignedCategory, a.category)).ToList();
 
     var juryReviews = await db.JuryReviews
         .Where(jr => jr.JuryId == uid.Value)
         .ToDictionaryAsync(jr => jr.ApplicationId);
 
-    var result = apps.Select(a => {
+    var result = filteredApps.Select(a => {
         var hasReview = juryReviews.TryGetValue(a.Id, out var jr);
         return new {
             a.Id, a.Status, a.SubmittedAt,
@@ -1857,12 +2048,23 @@ api.MapPost("/jury/save-draft/{appId}", async (int appId, JuryApprovalDto dto, I
 
     var a = await db.Applications.FindAsync(appId);
     if (a == null) return Results.NotFound();
-    if (a.Status != "VALIDATOR_APPROVED" && a.Status != "UNDER_JURY_REVIEW" && a.Status != "JURY_APPROVED")
+    if (a.Status != "SUBMITTED" && a.Status != "VALIDATOR_APPROVED" && a.Status != "UNDER_JURY_REVIEW" && a.Status != "JURY_APPROVED")
     {
         return Results.BadRequest(new { message = "Application is not in a valid state for jury review." });
     }
 
-    if (dto.InnovationIpScore < 0 || dto.InnovationIpScore > 30 ||
+    double weightedScore = dto.WeightedScore.HasValue && dto.WeightedScore.Value >= 0
+        ? Math.Round(dto.WeightedScore.Value, 2)
+        : (dto.InnovationIpScore + dto.TeamStrengthScore + dto.BusinessPlanScore + dto.ImpactScore);
+
+    if (dto.WeightedScore.HasValue)
+    {
+        if (dto.WeightedScore.Value < 0 || dto.WeightedScore.Value > 100)
+        {
+            return Results.BadRequest(new { message = "Total score must be between 0 and 100." });
+        }
+    }
+    else if (dto.InnovationIpScore < 0 || dto.InnovationIpScore > 30 ||
         dto.TeamStrengthScore < 0 || dto.TeamStrengthScore > 25 ||
         dto.BusinessPlanScore < 0 || dto.BusinessPlanScore > 25 ||
         dto.ImpactScore < 0 || dto.ImpactScore > 20)
@@ -1871,7 +2073,6 @@ api.MapPost("/jury/save-draft/{appId}", async (int appId, JuryApprovalDto dto, I
     }
 
     var jr = await db.JuryReviews.FirstOrDefaultAsync(x => x.ApplicationId == appId && x.JuryId == uid.Value);
-    double weightedScore = dto.InnovationIpScore + dto.TeamStrengthScore + dto.BusinessPlanScore + dto.ImpactScore;
     
     if (jr == null)
     {
@@ -1912,20 +2113,29 @@ api.MapPost("/jury/approve/{appId}", async (int appId, JuryApprovalDto dto, Inno
     if (user?.Role != "JURY") return Results.Forbid();
 
     var a = await db.Applications.FindAsync(appId); if (a == null) return Results.NotFound();
-    if (a.Status != "VALIDATOR_APPROVED" && a.Status != "UNDER_JURY_REVIEW" && a.Status != "JURY_APPROVED")
+    if (a.Status != "SUBMITTED" && a.Status != "VALIDATOR_APPROVED" && a.Status != "UNDER_JURY_REVIEW" && a.Status != "JURY_APPROVED")
     {
         return Results.BadRequest(new { message = "Application is not in a valid state for jury review." });
     }
 
-    if (dto.InnovationIpScore < 0 || dto.InnovationIpScore > 30 ||
+    double weightedScore = dto.WeightedScore.HasValue && dto.WeightedScore.Value >= 0
+        ? Math.Round(dto.WeightedScore.Value, 2)
+        : (dto.InnovationIpScore + dto.TeamStrengthScore + dto.BusinessPlanScore + dto.ImpactScore);
+
+    if (dto.WeightedScore.HasValue)
+    {
+        if (dto.WeightedScore.Value < 0 || dto.WeightedScore.Value > 100)
+        {
+            return Results.BadRequest(new { message = "Total score must be between 0 and 100." });
+        }
+    }
+    else if (dto.InnovationIpScore < 0 || dto.InnovationIpScore > 30 ||
         dto.TeamStrengthScore < 0 || dto.TeamStrengthScore > 25 ||
         dto.BusinessPlanScore < 0 || dto.BusinessPlanScore > 25 ||
         dto.ImpactScore < 0 || dto.ImpactScore > 20)
     {
         return Results.BadRequest(new { message = "Scores must be within valid limits (Innovation: 0-30, Approach: 0-25, Nature Innovation: 0-25, Credentials: 0-20)." });
     }
-
-    double weightedScore = dto.InnovationIpScore + dto.TeamStrengthScore + dto.BusinessPlanScore + dto.ImpactScore;
 
     var jr = await db.JuryReviews.FirstOrDefaultAsync(x => x.ApplicationId == appId && x.JuryId == uid.Value);
     if (jr == null)

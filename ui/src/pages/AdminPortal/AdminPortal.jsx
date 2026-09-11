@@ -331,23 +331,16 @@ const AdminPortal = () => {
   };
 
   const downloadAppsCSV = () => {
-    const headers = ['Submit Date', 'App ID', 'Representative Name', 'Member Company', 'Award Category', 'Email', 'Status', 'Validator Score', 'Jury Score'];
+    const headers = ['Submit Date', 'App ID', 'Representative Name', 'Member Company', 'Award Category', 'Email', 'Status', 'Jury Score'];
     const rows = filteredApps.map(app => {
-      let valScore = 'Pending';
-      if (app.has_validator_review || (app.validator_score !== undefined && app.validator_score > 0)) {
-        valScore = app.validator_score.toFixed(2);
-      } else if (app.status === 'VALIDATOR_REJECTED') {
-        valScore = 'Rejected';
-      } else if (app.status === 'DRAFT') {
-        valScore = '—';
-      } else if (['VALIDATOR_APPROVED', 'UNDER_JURY_REVIEW', 'JURY_APPROVED', 'JURY_REJECTED', 'PANEL_APPROVED', 'PANEL_REJECTED'].includes(app.status)) {
-        valScore = 'Approved';
-      }
-
       let juryScore = '—';
-      if (app.status === 'VALIDATOR_APPROVED') juryScore = 'Pending';
-      else if (['UNDER_JURY_REVIEW', 'JURY_APPROVED', 'PANEL_APPROVED', 'PANEL_REJECTED'].includes(app.status)) juryScore = app.average_score.toFixed(2);
-      else if (app.status === 'JURY_REJECTED') juryScore = 'Rejected';
+      if (app.average_score > 0) {
+        juryScore = app.average_score.toFixed(2);
+      } else if (app.status === 'SUBMITTED' || app.status === 'UNDER_JURY_REVIEW' || app.status === 'VALIDATOR_APPROVED') {
+        juryScore = 'Pending';
+      } else if (app.status === 'JURY_REJECTED') {
+        juryScore = 'Rejected';
+      }
 
       return [
         formatDate(app.submittedAt || app.submitted_at),
@@ -357,7 +350,6 @@ const AdminPortal = () => {
         app.category || '',
         app.applicant_email || app.user_email || '',
         app.status.replace('_', ' '),
-        valScore,
         juryScore
       ];
     });
@@ -812,11 +804,10 @@ const AdminPortal = () => {
                     <span>
                       {appFilter === 'DRAFT' ? 'Status: Draft' :
                         appFilter === 'SUBMITTED' ? 'Status: Submitted' :
-                          appFilter === 'VALIDATOR' ? 'Status: Validator Reviewed' :
-                            appFilter === 'JURY' ? 'Status: Jury Reviewed' :
-                              appFilter === 'PANEL_CHAIR' ? 'Status: Panel Chair Reviewed' :
-                                appFilter === 'REJECTED' ? 'Status: Rejected' :
-                                  ANNUAL_AWARD_CATEGORIES.includes(appFilter) ? appFilter : 'FILTER'}
+                          appFilter === 'JURY' ? 'Status: Jury Reviewed' :
+                            appFilter === 'PANEL_CHAIR' ? 'Status: Panel Chair Reviewed' :
+                              appFilter === 'REJECTED' ? 'Status: Rejected' :
+                                ANNUAL_AWARD_CATEGORIES.includes(appFilter) ? appFilter : 'FILTER'}
                     </span>
                     <ChevronDown size={14} />
                   </button>
@@ -834,7 +825,6 @@ const AdminPortal = () => {
                       <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Filter By Status</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('SUBMITTED')}>Final Submissions</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('DRAFT')}>Draft / Saved Applications</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('VALIDATOR')}>Validator Reviewed</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('JURY')}>Jury Reviewed</div>
                       <div className="filter-menu-item" onClick={() => handleAppFilterChange('REJECTED')}>Rejected</div>
                     </div>
@@ -879,7 +869,6 @@ const AdminPortal = () => {
                     <th>Member Company</th>
                     <th>Email ID</th>
                     <th>Status</th>
-                    <th>Validator Score</th>
                     <th>Jury Score</th>
                     <th>Actions</th>
                   </tr>
@@ -887,38 +876,22 @@ const AdminPortal = () => {
                 <tbody>
                   {loading && apps.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="table-loading">Loading applications...</td>
+                      <td colSpan="7" className="table-loading">Loading applications...</td>
                     </tr>
                   ) : filteredApps.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="table-empty">No submitted applications found.</td>
+                      <td colSpan="7" className="table-empty">No submitted applications found.</td>
                     </tr>
                   ) : (
                     paginatedApps.map((app) => {
-                      let valScore = 'Pending';
-                      let valClass = 'pending';
-                      if (app.has_validator_review || (app.validator_score !== undefined && app.validator_score > 0)) {
-                        valScore = `${app.validator_score.toFixed(1)}/100`;
-                        valClass = 'score';
-                      } else if (app.status === 'VALIDATOR_REJECTED') {
-                        valScore = 'Rejected';
-                        valClass = 'rejected';
-                      } else if (app.status === 'DRAFT') {
-                        valScore = '—';
-                        valClass = 'none';
-                      } else if (['VALIDATOR_APPROVED', 'UNDER_JURY_REVIEW', 'JURY_APPROVED', 'JURY_REJECTED', 'PANEL_APPROVED', 'PANEL_REJECTED'].includes(app.status)) {
-                        valScore = 'Approved';
-                        valClass = 'approved';
-                      }
-
                       let juryScore = '—';
                       let juryClass = 'none';
-                      if (app.status === 'VALIDATOR_APPROVED') {
-                        juryScore = 'Pending';
-                        juryClass = 'pending';
-                      } else if (['UNDER_JURY_REVIEW', 'JURY_APPROVED', 'PANEL_APPROVED', 'PANEL_REJECTED'].includes(app.status)) {
+                      if (app.average_score > 0) {
                         juryScore = `${app.average_score.toFixed(1)}/100`;
                         juryClass = 'score';
+                      } else if (app.status === 'SUBMITTED' || app.status === 'UNDER_JURY_REVIEW' || app.status === 'VALIDATOR_APPROVED') {
+                        juryScore = 'Pending';
+                        juryClass = 'pending';
                       } else if (app.status === 'JURY_REJECTED') {
                         juryScore = 'Rejected';
                         juryClass = 'rejected';
@@ -936,9 +909,6 @@ const AdminPortal = () => {
                             </span>
                           </td>
                           <td>
-                            <span className={`score-status status-text-${valClass}`}>{valScore}</span>
-                          </td>
-                          <td>
                             <span className={`score-status status-text-${juryClass}`}>{juryScore}</span>
                           </td>
                           <td>
@@ -950,10 +920,6 @@ const AdminPortal = () => {
                               <button className="action-btn-view" onClick={() => navigate(`/application?appId=${app.id}`)}>
                                 <Pencil size={14} />
                                 <span>Edit</span>
-                              </button>
-                              <button className="action-btn-delete" onClick={() => handleDeleteApp(app.id)}>
-                                <Trash2 size={14} />
-                                <span>Delete</span>
                               </button>
                             </div>
                           </td>
@@ -1126,17 +1092,7 @@ const AdminPortal = () => {
             </div>
           </div>
 
-          <div className="dashboard-title-row">
-            {/* <h1>Admin</h1> */}
-            <button
-              className="btn-excel-primary-top"
-              onClick={handleDownloadPanelChairExcel}
-              disabled={downloadingExcel}
-            >
-              <Download size={18} />
-              <span>{downloadingExcel ? 'GENERATING EXCEL...' : 'FINAL EXCEL FOR PANEL CHAIR'}</span>
-            </button>
-          </div>
+
 
           {/* Card 3: Website Panel Members */}
           <div className="dashboard-card">
@@ -1321,41 +1277,6 @@ const AdminPortal = () => {
                     </span>
                   </div>
 
-                  {/* Validator Reviews breakdown */}
-                  {selectedAppDetail.validator_review && selectedAppDetail.validator_review.length > 0 && (
-                    <div className="modal-reviews-section">
-                      <h3>Validator Review Score Breakdown ({selectedAppDetail.validator_review.length} reviews)</h3>
-                      <div className="table-wrapper">
-                        <table className="modal-reviews-table">
-                          <thead>
-                            <tr>
-                              <th>Validator</th>
-                              <th>Significance/Impact</th>
-                              <th>Approach</th>
-                              <th>Nature Innovation</th>
-                              <th>Credentials</th>
-                              <th>Total Score</th>
-                              <th>Comments</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedAppDetail.validator_review.map((r, i) => (
-                              <tr key={i}>
-                                <td className="bold-text">{r.validator_name}</td>
-                                <td>{r.innovationIpScore}/30</td>
-                                <td>{r.teamStrengthScore}/25</td>
-                                <td>{r.businessPlanScore}/25</td>
-                                <td>{r.impactScore}/20</td>
-                                <td className="modal-score-highlight">{r.weightedScore}/100</td>
-                                <td className="comment-text-cell">{r.comments || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Jury Reviews breakdown */}
                   {selectedAppDetail.jury_reviews && selectedAppDetail.jury_reviews.length > 0 && (
                     <div className="modal-reviews-section">
@@ -1382,7 +1303,19 @@ const AdminPortal = () => {
                                 <td>{r.businessPlanScore}/25</td>
                                 <td>{r.impactScore}/20</td>
                                 <td className="modal-score-highlight">{r.weightedScore}/100</td>
-                                <td className="comment-text-cell">{r.comments || '—'}</td>
+                                <td className="comment-text-cell">
+                                  {(() => {
+                                    if (!r.comments) return '—';
+                                    if (r.comments.startsWith('{')) {
+                                      try {
+                                        return JSON.parse(r.comments).remarks || r.comments;
+                                      } catch (e) {
+                                        return r.comments;
+                                      }
+                                    }
+                                    return r.comments;
+                                  })()}
+                                </td>
                               </tr>
                             ))}
                           </tbody>

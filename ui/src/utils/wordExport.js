@@ -272,8 +272,8 @@ export const exportSubmissionsDossierWord = (submittedApps = []) => {
           <tr>
             <td class="label">Application Status</td>
             <td class="field-val"><span class="badge badge-submitted">${app.status}</span></td>
-            <td class="label">Jury / Validator Score</td>
-            <td class="field-val">${app.average_score > 0 ? app.average_score.toFixed(2) : (app.validator_score > 0 ? app.validator_score.toFixed(2) : 'Under Review')}</td>
+            <td class="label">Jury Score</td>
+            <td class="field-val">${app.average_score > 0 ? app.average_score.toFixed(2) : 'Under Review'}</td>
           </tr>
           ${app.brief_description ? `
           <tr>

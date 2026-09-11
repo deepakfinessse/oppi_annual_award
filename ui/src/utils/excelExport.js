@@ -109,13 +109,21 @@ const downloadWorkbook = async (workbook, fileName) => {
  */
 const prepareAppRowData = (app) => {
   const rev = app.review || {};
-  const score1 = typeof rev.innovationIpScore === 'number' ? rev.innovationIpScore : null;
-  const score2 = typeof rev.teamStrengthScore === 'number' ? rev.teamStrengthScore : null;
-  const score3 = typeof rev.businessPlanScore === 'number' ? rev.businessPlanScore : null;
-  const score4 = typeof rev.impactScore === 'number' ? rev.impactScore : null;
-
-  const hasScores = score1 !== null || score2 !== null || score3 !== null || score4 !== null;
-  const totalScore = hasScores ? ((score1 || 0) + (score2 || 0) + (score3 || 0) + (score4 || 0)) : '—';
+  let totalScore = '—';
+  if (app.average_score !== undefined && app.average_score > 0) {
+    totalScore = Number(app.average_score.toFixed(2));
+  } else if (typeof app.score === 'number' && app.score > 0) {
+    totalScore = Number(app.score.toFixed(2));
+  } else {
+    const score1 = typeof rev.innovationIpScore === 'number' ? rev.innovationIpScore : null;
+    const score2 = typeof rev.teamStrengthScore === 'number' ? rev.teamStrengthScore : null;
+    const score3 = typeof rev.businessPlanScore === 'number' ? rev.businessPlanScore : null;
+    const score4 = typeof rev.impactScore === 'number' ? rev.impactScore : null;
+    const hasScores = score1 !== null || score2 !== null || score3 !== null || score4 !== null;
+    if (hasScores) {
+      totalScore = (score1 || 0) + (score2 || 0) + (score3 || 0) + (score4 || 0);
+    }
+  }
 
   return {
     id: app.id,

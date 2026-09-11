@@ -76,7 +76,7 @@ const ApplicationPreview = ({ appId }) => {
 
   return (
     <div className="app-preview-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+      {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
         <h3 className="preview-app-title" style={{ margin: 0 }}>Application ID: #{appId ? String(appId).padStart(2, '0') : ''}</h3>
         <button
           className="btn-card-action download-btn"
@@ -86,7 +86,7 @@ const ApplicationPreview = ({ appId }) => {
           <FileText size={15} />
           <span>Export Word Dossier</span>
         </button>
-      </div>
+      </div> */}
 
       {/* SECTION 1 - NOMINATION & COMPANY DETAILS */}
       <div className="preview-section-card">
