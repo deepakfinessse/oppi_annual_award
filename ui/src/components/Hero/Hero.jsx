@@ -63,7 +63,15 @@ const Hero = () => {
             </Link>
           </div>
 
-          <p className="submit-entry-text">Submit the entry before</p>
+          <div className="deadline-wrapper">
+            <div className="deadline-line"></div>
+            <p className="deadline-text">
+              Submit the entry before
+            </p>
+            <div className="deadline-line"></div>
+          </div>
+
+          {/* <p className="submit-entry-text">Submit the entry before</p> */}
 
           {/* Countdown Timer Block */}
           <div className="hero-countdown-wrapper">

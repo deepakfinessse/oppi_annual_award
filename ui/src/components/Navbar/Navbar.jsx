@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, ArrowRight } from "lucide-react";
 import oppiLogo from "../../assets/Oppi-logo.png";
 import { isLoggedIn, getUser, clearTokens, logout } from "../../utils/api";
 import "./Navbar.css";
@@ -163,28 +163,11 @@ const Navbar = () => {
             </button>
           ) : (
             /* Show countdown and apply button on dashboard OR when not logged in */
-            <div className="nav-cta">
-              <div
-                className="countdown-row"
-                aria-label={`${daysLeft} days to go`}
-              >
-                <div className="countdown-chip">
-                  {daysStr.split("").map((digit, idx) => (
-                    <span key={idx} className="countdown-digit">
-                      {digit}
-                    </span>
-                  ))}
-                </div>
-                <div className="countdown-copy">
-                  <span className="countdown-label">Days</span>
-                  <span className="countdown-label-sub">to go</span>
-                </div>
-              </div>
-
-              <Link to={loggedIn ? "/login" : "/login"} className="apply-pill" onClick={handleLinkClick}>
-                {loggedIn ? "Apply before 12th Sept" : "Apply before 12th Sept"}
-              </Link>
-            </div>
+          <div className="nav-action">
+            <Link to="/login" className="apply-btn" onClick={() => setIsMobileMenuOpen(false)}>
+              APPLY NOW <ArrowRight width={23} height={18} />
+            </Link>
+          </div>
           )}
         </div>
 

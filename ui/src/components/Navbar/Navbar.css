@@ -61,7 +61,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2.25rem;
+  gap: clamp(1.5rem, 3vw, 3.5rem);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -69,34 +69,63 @@
 }
 
 .nav-links li a {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #171717;
+  color: #000000;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
   position: relative;
   text-decoration: none;
 }
 
-.nav-links li a:hover {
+.nav-links li a:not(.apply-btn):hover {
   color: #0d5ea6;
 }
 
-.nav-links li a::after {
+.nav-links li a:not(.apply-btn)::after {
   content: '';
   position: absolute;
+  bottom: -4px;
   left: 0;
-  bottom: -0.45rem;
-  width: 100%;
+  width: 0;
   height: 2px;
-  transform: scaleX(0);
-  transform-origin: left center;
   background: #0d5ea6;
-  transition: transform 0.25s ease;
+  transition: width 0.3s ease;
 }
 
-.nav-links li a:hover::after {
-  transform: scaleX(1);
+.nav-links li a:not(.apply-btn):hover::after {
+  width: 100%;
+}
+
+.apply-btn::after {
+  display: none;
+}
+
+.apply-btn {
+  padding: 0.85rem 1.9rem;
+  background: #149FE7;
+  color: #ffffff;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0px 4px 10px 0px #00000040;
+  border: 3px solid #FFFFFF;
+  font-family: Poppins;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 100%;
+  letter-spacing: 0px;
+}
+
+.apply-btn:hover {
+  background: linear-gradient(90deg, #6ADAE5 0%, #1264B9 100%);
+  color: #ffffff;
+}
+
+.apply-btn svg {
+  stroke-width: 2.5px;
 }
 
 .nav-cta {
@@ -198,21 +227,19 @@
 
   .nav-links {
     position: absolute;
-    top: calc(100% + 0.75rem);
+    top: 100%;
     left: 0;
     right: 0;
     width: 100%;
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--white);
     flex-direction: column;
-    padding: 1.5rem;
-    gap: 1.2rem;
-    box-shadow: 0 18px 30px rgba(8, 55, 112, 0.12);
-    border-radius: 24px;
-    transform: translateY(-8px);
+    padding: 2rem;
+    gap: 1.5rem;
+    box-shadow: var(--shadow);
+    transform: translateY(-100px);
     opacity: 0;
     pointer-events: none;
     transition: var(--transition);
-    flex: initial;
   }
 
   .nav-links.active {

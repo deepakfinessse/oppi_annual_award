@@ -54,6 +54,28 @@
   margin-bottom: 1.75rem;
 }
 
+.deadline-line {
+  flex: 1;
+  height: 1px;
+  background-color: white;
+}
+
+.deadline-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 450px;
+}
+
+.deadline-text {
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .submit-entry-text {
   font-size: 15px;
   font-weight: 500;
@@ -66,25 +88,28 @@
 .annual-apply-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  background: #25bbec;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  padding: 0.8rem 2.25rem;
-  border-radius: 999px;
+  gap: 0.5rem;
+  background: #149FE7;
+  color: white;
+  padding: 0.8rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 20px;
   text-decoration: none;
-  box-shadow: 0 10px 28px rgba(0, 100, 160, 0.35);
-  transition: all 0.25s ease;
-  letter-spacing: 0.04em;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+  margin-bottom: 2.5rem;
+  border: 3px solid #ffffff;
+  cursor: pointer;
+  letter-spacing: 1px;
+  font-family: Poppins;
+  line-height: 100%;
+  letter-spacing: 0px;
 }
 
 .annual-apply-pill:hover {
-  background: #ffffff;
-  color: #0b72c4;
+  background: linear-gradient(90deg, #6ADAE5 0%, #149FE7 100%);
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* Individual Glassmorphism Countdown Cards matching Figma */
@@ -141,6 +166,20 @@
   line-height: 1;
   margin: 0 0.25rem;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 480px) {
+
+  .deadline-wrapper {
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .deadline-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
 }
 
 @media (max-width: 768px) {
