@@ -6,7 +6,7 @@
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  background-image: url('../../assets/exact-figma-bg.png?v=2') !important;
+  background-image: url('../../assets/annual-hero-bg.jpg') !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -98,23 +98,24 @@
 
 /* Left Image Section - Vibrant Blue Container with Golden Trophy */
 .register-image-section {
-  flex: 0 0 380px;
-  width: 380px;
+  flex: 0 0 373px;
+  width: 373px;
   position: relative;
-  background: linear-gradient(160deg, #00a4e4 0%, #007bbd 100%);
+  background-image: url('../../assets/login-banner-green-hex.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* background-position: center; */
   display: flex;
   align-items: center;
-  justify-content: center;
   overflow: hidden;
-  padding: 1.5rem;
 }
 
 .register-trophy {
   width: 100%;
-  height: auto;
-  max-height: 480px;
+  height: 100%;
   object-fit: contain;
-  z-index: 1;
+  object-position: bottom center;
 }
 
 /* Right Form Section */

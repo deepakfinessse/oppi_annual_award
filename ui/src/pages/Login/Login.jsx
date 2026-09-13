@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { login, saveTokens } from '../../utils/api';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import trophyImg from '../../assets/login-trophy-figma.png';
 import oppiLogo from '../../assets/Oppi-logo.png';
-import exactFigmaBg from '../../assets/exact-figma-bg.png';
+import exactFigmaBg from '../../assets/annual-hero-bg.jpg';
 import Captcha from '../../components/Captcha/Captcha';
 import './Login.css';
+import arrowIcon from '../../assets/Vector.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -115,9 +116,9 @@ const Login = () => {
           </div>
 
           <div className="header-logout-section">
-            <Link to="/" className="header-back-pill">
-              <span>Back to home</span>
-              <ArrowRight size={16} />
+            <Link to="/" className="btn-back-home">
+              BACK TO HOME
+              <img src={arrowIcon} width={16} height={16} alt="" />
             </Link>
           </div>
         </header>
@@ -190,20 +191,19 @@ const Login = () => {
                   )}
                 </div>
 
+                <Captcha onChange={setCaptchaData} errors={fieldErrors} trigger={captchaTrigger} />
+
                 <div className="form-options">
                   <label className="remember-me">
                     <input type="checkbox" id="remember" />
                     <span>Remember me</span>
                   </label>
-                  <Link to="/forgot-password" className="green-link">
+                  <Link to="/forgot-password" className="forgot-password">
                     Forgot Password?
                   </Link>
                 </div>
 
-                <div className="form-actions-row">
-                  <div className="captcha-wrapper">
-                    <Captcha onChange={setCaptchaData} errors={fieldErrors} trigger={captchaTrigger} />
-                  </div>
+                <div className="form-footer">
                   <button type="submit" className="btn-login" disabled={isSubmitting}>
                     {isSubmitting ? 'LOGGING IN...' : 'LOG IN'}
                   </button>

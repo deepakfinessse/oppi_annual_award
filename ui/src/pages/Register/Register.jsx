@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Info, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Info } from 'lucide-react';
 import trophyImg from '../../assets/login-trophy-figma.png';
 import oppiLogo from '../../assets/Oppi-logo.png';
-import exactFigmaBg from '../../assets/exact-figma-bg.png';
+import exactFigmaBg from '../../assets/annual-hero-bg.jpg';
 import { register, saveTokens } from '../../utils/api';
 import Captcha from '../../components/Captcha/Captcha';
 import './Register.css';
+import arrowIcon from '../../assets/Vector.png';
 
 const ORGANISATIONS = [
   'AbbVie India',
@@ -165,9 +166,9 @@ const Register = () => {
             <img src={oppiLogo} alt="OPPI Logo" className="header-logo-img" />
           </div>
           <div className="header-logout-section">
-            <Link to="/" className="header-back-pill">
-              <span>Back to home</span>
-              <ArrowRight size={16} />
+            <Link to="/" className="btn-back-home">
+              BACK TO HOME
+              <img src={arrowIcon} width={16} height={16} alt="" />
             </Link>
           </div>
         </header>
@@ -277,7 +278,6 @@ const Register = () => {
                     </label>
                     <div className={`mobile-input-group ${fieldErrors.mobileNumber ? 'input-error' : ''}`}>
                       <div className="country-code-selector">
-                        <span className="flag-icon">🇮🇳</span>
                         <span className="code-value">+91</span>
                       </div>
                       <input
