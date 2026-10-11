@@ -1,0 +1,112 @@
+name: Deploy Oppi Annual Award
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Build React App
+        run: |
+          cd ui
+          npm install
+          npm run build
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 10.0
+
+      - name: Publish .NET API
+        run: |
+          cd backend
+          dotnet restore
+          dotnet publish -c Release -o publish
+
+      - name: Verify builds exist
+        run: |
+          ls ui/dist
+          ls backend/publish
+
+      # Clean ONLY this app's temp folders on the VM
+      - name: Prepare temp folders
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_SSH_KEY }}
+          script: |
+            rm -rf /home/avian/deploy_tmp/annual
+            mkdir -p /home/avian/deploy_tmp/annual/web /home/avian/deploy_tmp/annual/api
+
+      # NOTE: scp-action runs in Docker, so use key: (raw secret), not key_path:
+      - name: Copy Frontend to VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_SSH_KEY }}
+          port: 22
+          source: "ui/dist/*"
+          target: "/home/avian/deploy_tmp/annual/web"
+          strip_components: 2
+
+      - name: Copy Backend to VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_SSH_KEY }}
+          port: 22
+          source: "backend/publish/*"
+          target: "/home/avian/deploy_tmp/annual/api"
+          strip_components: 2
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_SSH_KEY }}
+          script: |
+            set -e
+            APP=/var/www/oppi_annual_award
+
+            echo "Stopping annual API only..."
+            sudo systemctl stop oppi-annual-api || true
+
+            echo "Syncing frontend..."
+            sudo rsync -a --delete /home/avian/deploy_tmp/annual/web/ $APP/web/
+
+            echo "Syncing backend (keeping uploads and prod config)..."
+            sudo mkdir -p $APP/api/wwwroot/uploads
+            sudo rsync -a --delete \
+              --exclude 'wwwroot/uploads' \
+              --exclude 'appsettings.Production.json' \
+              /home/avian/deploy_tmp/annual/api/ $APP/api/
+
+            echo "Fixing permissions..."
+            sudo chown -R www-data:www-data $APP
+            sudo chmod -R 755 $APP
+
+            echo "Starting service..."
+            sudo systemctl start oppi-annual-api
+            sleep 3
+            sudo systemctl is-active --quiet oppi-annual-api
+
+            echo "Reloading nginx (validated first)..."
+            sudo nginx -t && sudo systemctl reload nginx
+
+            rm -rf /home/avian/deploy_tmp/annual
