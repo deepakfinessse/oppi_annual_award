@@ -1,5 +1,5 @@
 .annual-awards-section {
-  padding: 5rem 0;
+  /* padding: 5rem 0; */
   background: #ffffff;
 }
 
@@ -19,15 +19,13 @@
 }
 
 .annual-awards-title .highlight-year {
-  background: linear-gradient(135deg, #1282db 0%, #0861ab 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #149FE7;
 }
 
 .annual-awards-desc {
   font-size: 17px;
   line-height: 1.65;
-  color: #4a5568;
+  color: black;
   max-width: 620px;
 }
 

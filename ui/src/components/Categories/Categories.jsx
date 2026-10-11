@@ -15,7 +15,15 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
+import arrow from '../../assets/arrow.png';
 import moleculeBg from '../../assets/molecule-bg-pattern.png';
+import excelent from '../../assets/excelent.png';
+import seller from '../../assets/seller.png';
+import hr from '../../assets/hr.png';
+import comm from '../../assets/comm.png';
+import healthcare from '../../assets/healthcare.png';
+import sustainability from '../../assets/sustainability.png';
+import surgery from '../../assets/surgery-room.png';
 import './Categories.css';
 
 const categoryData = [
@@ -23,7 +31,7 @@ const categoryData = [
     id: 'c1',
     title: 'OPPI Marketing Excellence Award: Existing Pharma Product',
     tag: 'Marketing Excellence',
-    icon: TrendingUp,
+    icon: excelent,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -73,7 +81,7 @@ const categoryData = [
     id: 'c2',
     title: 'OPPI Marketing Excellence Award: New Pharma Product',
     tag: 'Marketing Excellence',
-    icon: Award,
+    icon: excelent,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -122,8 +130,8 @@ const categoryData = [
   {
     id: 'c3',
     title: 'OPPI Sales Force Excellence Award',
-    tag: 'Sales Force',
-    icon: Users,
+    tag: '',
+    icon: seller,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -147,7 +155,7 @@ const categoryData = [
     id: 'c4',
     title: 'OPPI HR Award - HR Excellence',
     tag: 'HR Excellence',
-    icon: UserCheck,
+    icon: hr,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -172,7 +180,7 @@ const categoryData = [
     id: 'c5',
     title: 'OPPI HR Award – D&I Award (Diversity & Inclusion)',
     tag: 'Diversity & Inclusion',
-    icon: HeartHandshake,
+    icon: hr,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -204,7 +212,7 @@ const categoryData = [
     id: 'c6',
     title: 'OPPI Healthcare Communications Award',
     tag: 'Communications',
-    icon: MessageSquare,
+    icon: comm,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -253,7 +261,7 @@ const categoryData = [
     id: 'c7',
     title: 'OPPI Medical Excellence Award',
     tag: 'Medical Affairs',
-    icon: Stethoscope,
+    icon: healthcare,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -299,7 +307,7 @@ const categoryData = [
     id: 'c8',
     title: 'OPPI Sustainability Excellence Award',
     tag: 'Sustainability',
-    icon: Leaf,
+    icon: sustainability,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -392,7 +400,7 @@ const categoryData = [
     id: 'c9',
     title: 'Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
     tag: 'Patient Centricity',
-    icon: Heart,
+    icon: surgery,
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
@@ -506,7 +514,7 @@ const Categories = () => {
               return (
                 <div key={idx} className="criteria-row-item">
                   <span className="criteria-row-icon-wrap">
-                    <CheckCircle2 size={16} className="criteria-row-check" />
+                    <img src={arrow} size={16} className="criteria-row-check" />
                   </span>
                   <span className="criteria-row-text">{item}</span>
                 </div>
@@ -598,10 +606,9 @@ const Categories = () => {
               >
                 <div className="category-card-top">
                   <div className="category-icon-box">
-                    <IconComp size={22} className="cat-green-icon" />
+                    <img className="cat-green-icon" src={IconComp} alt={cat.title} />
                   </div>
-                  <div>
-                    <span className="category-card-tag">{cat.tag}</span>
+                  <div className="category-icon-text">
                     <h3 className="category-card-title">{cat.title}</h3>
                   </div>
                 </div>
@@ -635,7 +642,8 @@ const Categories = () => {
               >
                 {/* Detail Box Top Bar */}
                 <div className="detail-box-top-bar">
-                  <div className="detail-box-icon-and-title">
+                  <p>Ranjit Shahani Memorial Award For Excellence In Patient Centricity</p>
+                  {/* <div className="detail-box-icon-and-title">
                     <div className="detail-box-icon-wrap">
                       <SelectedIcon size={24} className="detail-cat-icon" />
                     </div>
@@ -647,7 +655,7 @@ const Categories = () => {
                   <a href="/application" className="detail-apply-link-btn">
                     <span>Apply / Nominate</span>
                     <ArrowRight size={15} />
-                  </a>
+                  </a> */}
                 </div>
 
                 {/* Tabs */}

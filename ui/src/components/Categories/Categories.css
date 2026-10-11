@@ -1,5 +1,5 @@
 .categories-section {
-  padding: 5rem 0;
+  padding: 2rem 0;
   background-color: #eaf7fd;
   background-size: cover;
   background-position: center;
@@ -13,17 +13,19 @@
 .categories-title {
   font-size: 44px;
   font-weight: 800;
-  color: #0b72c4;
+  color: #149FE7;
   margin-bottom: 0.75rem;
+  text-align: center;
 }
 
 .categories-subtitle {
   font-size: 16px;
-  color: #526478;
+  color: black;
   max-width: 720px;
   margin: 0 auto;
   font-weight: 500;
   line-height: 1.5;
+  text-align: center;
 }
 
 /* 3x3 Grid */
@@ -38,7 +40,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 8px 24px rgba(11, 114, 196, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid #389B2E;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -60,15 +62,20 @@
   margin-bottom: 1.5rem;
 }
 
+.category-icon-text {
+  margin: auto;
+}
+
 .category-icon-box {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
+  width: 83px;
+  height: 81px;
+  min-width: 83px;
   border-radius: 12px;
   background: rgba(16, 185, 129, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(133.6deg, #0BA8F9 0%, #25BD15 100%);
 }
 
 .cat-green-icon {
@@ -137,8 +144,9 @@
   gap: 1.5rem;
   flex-wrap: wrap;
   padding-bottom: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  color: #149FE7;
+  font-size: 25px;
+  font-weight: 600;
 }
 
 .detail-box-icon-and-title {
@@ -227,7 +235,7 @@
 }
 
 .detail-tab-pill.active {
-  background: #0b72c4;
+  background: #149FE7;
   color: #ffffff;
   border-color: #0b72c4;
   box-shadow: 0 4px 12px rgba(11, 114, 196, 0.25);

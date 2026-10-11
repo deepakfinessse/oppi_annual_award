@@ -1,36 +1,38 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { forgotPassword } from '../../utils/api';
-import Captcha from '../../components/Captcha/Captcha';
-import oppiLogo from '../../assets/Oppi-logo.png';
-import trophyImg from '../../assets/Trophy4.webp';
-import arrowIcon from '../../assets/Vector.png';
-import './ForgotPassword.css';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { forgotPassword } from "../../utils/api";
+import Captcha from "../../components/Captcha/Captcha";
+import oppiLogo from "../../assets/Oppi-logo.png";
+// import trophyImg from "../../assets/Trophy4.webp";
+import trophyImg from '../../assets/login-trophy-figma.png';
+import arrowIcon from "../../assets/Vector.png";
+import "./ForgotPassword.css";
+import exactFigmaBg from "../../assets/annual-hero-bg.jpg";
 
 const ForgotPassword = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [captchaData, setCaptchaData] = useState({ id: '', captchaAnswer: '' });
+  const [captchaData, setCaptchaData] = useState({ id: "", captchaAnswer: "" });
   const [captchaTrigger, setCaptchaTrigger] = useState(0);
 
   const handleRequestOtp = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
+    setError("");
+    setSuccessMsg("");
     setFieldErrors({});
     setIsSubmitting(true);
 
     const errors = {};
     if (!email) {
-      errors.email = 'Email Id is required';
+      errors.email = "Email Id is required";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = 'Please enter a valid email address';
+      errors.email = "Please enter a valid email address";
     }
     if (!captchaData.captchaAnswer || !captchaData.captchaAnswer.trim()) {
-      errors.captcha = 'Please complete the reCAPTCHA challenge';
+      errors.captcha = "Please complete the reCAPTCHA challenge";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -40,19 +42,31 @@ const ForgotPassword = () => {
     }
 
     try {
-      const response = await forgotPassword(email, captchaData.id, captchaData.captchaAnswer);
-      setSuccessMsg(response.message || 'A password reset link has been sent to your email.');
-      setEmail('');
+      const response = await forgotPassword(
+        email,
+        captchaData.id,
+        captchaData.captchaAnswer,
+      );
+      setSuccessMsg(
+        response.message ||
+          "A password reset link has been sent to your email.",
+      );
+      setEmail("");
     } catch (err) {
-      console.error('Request reset link failed:', err);
-      const msg = err.message || '';
-      if (msg.toLowerCase().includes('captcha')) {
+      console.error("Request reset link failed:", err);
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("captcha")) {
         setFieldErrors({ captcha: msg });
-        setCaptchaTrigger(prev => prev + 1);
-      } else if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('user')) {
+        setCaptchaTrigger((prev) => prev + 1);
+      } else if (
+        msg.toLowerCase().includes("email") ||
+        msg.toLowerCase().includes("user")
+      ) {
         setFieldErrors({ email: msg });
       } else {
-        setError(msg || 'Failed to request reset link. Please check your email.');
+        setError(
+          msg || "Failed to request reset link. Please check your email.",
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -62,12 +76,20 @@ const ForgotPassword = () => {
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (fieldErrors.email) {
-      setFieldErrors(prev => ({ ...prev, email: '' }));
+      setFieldErrors((prev) => ({ ...prev, email: "" }));
     }
   };
 
   return (
-    <div className="login-page forgot-password-page">
+    <div
+      className="login-page forgot-password-page"
+      style={{
+        backgroundImage: `url(${exactFigmaBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       {/* Background molecule network pattern */}
       <div className="molecule-network-bg"></div>
 
@@ -83,13 +105,20 @@ const ForgotPassword = () => {
           </div>
 
           <div className="header-logout-section">
+            <Link to="/" className="btn-back-home">
+              BACK TO HOME
+              <img src={arrowIcon} width={16} height={16} alt="" />
+            </Link>
+          </div>
+
+          {/* <div className="header-logout-section">
             <Link to="/" className="header-logout-btn text-decoration-none">
               <span className="logout-text-part">BACK TO HOME</span>
               <div className="logout-icon-part">
                 <img src={arrowIcon} width={16} height={16} alt="" />
               </div>
             </Link>
-          </div>
+          </div> */}
         </header>
 
         {/* Forgot Password Split Card */}
@@ -97,20 +126,31 @@ const ForgotPassword = () => {
           <div className="login-card">
             {/* Left Image Section */}
             <div className="login-image-section">
-              <img src={trophyImg} alt="OPPI Excellence in Innovation Award" className="login-trophy" />
+              <img
+                src={trophyImg}
+                alt="OPPI Excellence in Innovation Award"
+                className="login-trophy"
+              />
             </div>
 
             {/* Right Form Section */}
             <div className="login-form-section">
               <div className="login-header">
                 <h2>Forgot Password</h2>
-                <p>Enter your registered email address below, and we'll email you a link to reset your password.</p>
+                <p>
+                  Enter your registered email address below, and we'll email you
+                  a link to reset your password.
+                </p>
               </div>
 
               {error && <div className="form-error">{error}</div>}
               {successMsg && <div className="form-success">{successMsg}</div>}
 
-              <form onSubmit={handleRequestOtp} className="login-form" noValidate>
+              <form
+                onSubmit={handleRequestOtp}
+                className="login-form"
+                noValidate
+              >
                 <div className="form-group">
                   <label>
                     Email Id <span className="required">*</span>
@@ -118,7 +158,7 @@ const ForgotPassword = () => {
                   <input
                     type="email"
                     placeholder="Enter your email address"
-                    className={fieldErrors.email ? 'input-error' : ''}
+                    className={fieldErrors.email ? "input-error" : ""}
                     value={email}
                     onChange={handleEmailChange}
                     required
@@ -129,11 +169,19 @@ const ForgotPassword = () => {
                   )}
                 </div>
 
-                <Captcha onChange={setCaptchaData} errors={fieldErrors} trigger={captchaTrigger} />
+                <Captcha
+                  onChange={setCaptchaData}
+                  errors={fieldErrors}
+                  trigger={captchaTrigger}
+                />
 
                 <div className="form-footer">
-                  <button type="submit" className="btn-login" disabled={isSubmitting}>
-                    {isSubmitting ? 'SENDING LINK...' : 'SEND RESET LINK'}
+                  <button
+                    type="submit"
+                    className="btn-login"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "SENDING LINK..." : "SEND RESET LINK"}
                   </button>
                   <div className="back-to-login">
                     <Link to="/login" className="register-link">

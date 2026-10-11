@@ -46,12 +46,11 @@
 .jury-category-pill {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #d4e7f5;
+  border-bottom: 1px solid #1A6513;
   color: #0f172a;
   font-size: 13px;
   font-weight: 600;
   padding: 0.65rem 1.25rem;
-  border-radius: 9999px;
   cursor: pointer;
   text-align: center;
   transition: all 0.2s ease;

@@ -5,7 +5,7 @@ import './AnnualAwards.css';
 
 const AnnualAwards = () => {
   return (
-    <section className="annual-awards-section section-padding">
+    <section className="annual-awards-section">
       <div className="container">
         <div className="annual-awards-grid">
           <motion.div 
@@ -19,7 +19,7 @@ const AnnualAwards = () => {
               Annual Awards <span className="highlight-year">2027</span>
             </h2>
             <p className="annual-awards-desc">
-              The Annual Awards acknowledge drivers, innovators and professionals who amend excellence across relevant categories. Over the years, the Annual Awards have become a gold standard in the pharmaceutical industry. They will be presented at the 58th Annual Day celebrations.
+              The Annual Awards acknowledge drivers, innovators and professionals who amend excellence across relevant categories. <br></br><br></br> Over the years, the Annual Awards have become a gold standard in the pharmaceutical industry. They will be presented at the 58th Annual Day celebrations.
             </p>
           </motion.div>
 

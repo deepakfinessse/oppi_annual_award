@@ -7,7 +7,7 @@ const Stats = () => {
     { value: '9', label: 'Award Categories' },
     { value: '37', label: 'Jury Members' },
     { value: '26+', label: 'Years of Excellence' },
-    { value: '500+', label: 'Past Honorees' },
+    { value: '500+', label: 'Past Nominees' },
   ];
 
   return (

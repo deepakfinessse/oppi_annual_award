@@ -24,16 +24,16 @@
 
 .stat-num {
   font-size: 48px;
-  font-weight: 800;
-  color: #0b72c4;
+  font-weight: 500;
+  color: #149FE7;
   line-height: 1;
   margin-bottom: 0.4rem;
 }
 
 .stat-txt {
   font-size: 15px;
-  font-weight: 600;
-  color: #4a5568;
+  font-weight: 500;
+  color: black;
   margin: 0;
   line-height: 1.3;
 }
