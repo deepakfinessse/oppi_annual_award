@@ -1,19 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Award, 
-  TrendingUp, 
-  Users, 
-  UserCheck, 
-  HeartHandshake, 
-  MessageSquare, 
-  Stethoscope, 
-  Leaf, 
-  Heart,
   ChevronRight,
-  CheckCircle2,
   Sparkles,
-  ArrowRight
 } from 'lucide-react';
 import arrow from '../../assets/arrow.png';
 import moleculeBg from '../../assets/molecule-bg-pattern.png';
