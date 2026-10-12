@@ -23,7 +23,7 @@ import exactFigmaBg from '../../assets/exact-figma-bg.png';
 import Footer from '../../components/Footer/Footer';
 import './ApplicationForm.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5003';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://oppi.nivyam.com/api';
 
 const AWARD_CATEGORIES = [
   'OPPI Marketing Excellence Awards - Existing Pharma Product',
