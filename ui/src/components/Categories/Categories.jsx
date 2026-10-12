@@ -4,7 +4,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import arrow from '../../assets/arrow.png';
+import arrow from '../../assets/Arrow.png';
 import moleculeBg from '../../assets/molecule-bg-pattern.png';
 import excelent from '../../assets/excelent.png';
 import seller from '../../assets/seller.png';
