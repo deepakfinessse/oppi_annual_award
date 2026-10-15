@@ -83,9 +83,20 @@ export const logout = () =>
   }).then(handle);
 
 // ── Application lifecycle ─────────────────────────────────────────────
-export const createApplication = () =>
-  fetch(`${BASE_URL}/application/create`, {
+export const createApplication = (force = false) =>
+  fetch(`${BASE_URL}/application/create${force ? '?force=true' : ''}`, {
     method: 'POST',
+    headers: getHeaders(),
+  }).then(handle);
+
+export const getMySubmissions = () =>
+  fetch(`${BASE_URL}/application/my-submissions`, {
+    headers: getHeaders(),
+  }).then(handle);
+
+export const deleteMyApplication = (appId) =>
+  fetch(`${BASE_URL}/application/${appId}`, {
+    method: 'DELETE',
     headers: getHeaders(),
   }).then(handle);
 

@@ -72,8 +72,26 @@ builder.Services.AddRateLimiter(o => {
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(o => {
-    o.AddPolicy("Dev", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-    o.AddPolicy("Prod", p => p.WithOrigins(allowedOrigins.Split(',')).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+    o.AddPolicy("AllowAllOrigins", p => p
+        .SetIsOriginAllowed(origin => {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            try {
+                var uri = new Uri(origin);
+                if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || 
+                    uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                if (uri.Host.EndsWith("indiaoppi.com", StringComparison.OrdinalIgnoreCase) || 
+                    uri.Host.EndsWith("nivyam.com", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                var list = allowedOrigins.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x));
+                return list.Contains(origin, StringComparer.OrdinalIgnoreCase);
+            } catch {
+                return false;
+            }
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
 
 var app = builder.Build();
@@ -528,15 +546,16 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseSerilogRequestLogging();
 app.UseSwagger(); 
 app.UseSwaggerUI();
-if (app.Environment.IsDevelopment()) {
-    // app.UseSwagger(); 
-    // app.UseSwaggerUI(); 
-    app.UseCors("Dev"); 
+app.UseCors("AllowAllOrigins");
+
+// Avoid HTTPS redirect on localhost / dev to prevent CORS preflight redirect errors
+if (!app.Environment.IsDevelopment() && !app.Environment.EnvironmentName.Equals("Development", StringComparison.OrdinalIgnoreCase)) {
+    // Only redirect if not running on local HTTP port 5003
+    var urls = builder.Configuration["Urls"] ?? "";
+    if (!urls.Contains("localhost") && !urls.Contains("127.0.0.1") && !urls.Contains("5003")) {
+        app.UseHttpsRedirection();
+    }
 }
-else {
-    app.UseCors("Prod"); 
-}
-app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -809,18 +828,40 @@ auth.MapGet("/me", async (HttpContext ctx, InnovationDbContext db) =>
 // ========== APPLICATION ==========
 var api = app.MapGroup("").RequireAuthorization().RequireRateLimiting("api");
 
-api.MapPost("/application/create", async (HttpContext ctx, InnovationDbContext db, AuditService audit) =>
+api.MapPost("/application/create", async (HttpContext ctx, InnovationDbContext db, AuditService audit, bool? force) =>
 {
     try
     {
         var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
-        var existing = await db.Applications.FirstOrDefaultAsync(a => a.UserId == uid.Value);
-        if (existing != null)
+        var user = await db.Users.FindAsync(uid.Value);
+
+        // If not forcing a new application, check if user has an existing DRAFT to resume
+        if (force != true)
         {
-            return Results.Ok(new { id = existing.Id, status = existing.Status });
+            var existingDraft = await db.Applications
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync(a => a.UserId == uid.Value && a.Status == "DRAFT");
+            if (existingDraft != null)
+            {
+                return Results.Ok(new { id = existingDraft.Id, status = existingDraft.Status });
+            }
         }
+
         var a = new Application { UserId = uid.Value, Status = "DRAFT", CreatedAt = DateTime.UtcNow };
-        db.Applications.Add(a); await db.SaveChangesAsync();
+        db.Applications.Add(a);
+        await db.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(user?.Organisation))
+        {
+            var pInfo = new PersonalInfo
+            {
+                ApplicationId = a.Id,
+                CompanyName = user.Organisation
+            };
+            db.PersonalInfos.Add(pInfo);
+            await db.SaveChangesAsync();
+        }
+
         await audit.LogAsync(uid, "CREATE_APP", "Application", a.Id, null, GetIp(ctx));
         return Results.Ok(new { id = a.Id, status = a.Status });
     }
@@ -831,13 +872,108 @@ api.MapPost("/application/create", async (HttpContext ctx, InnovationDbContext d
     }
 });
 
+api.MapGet("/application/my-submissions", async (HttpContext ctx, InnovationDbContext db) =>
+{
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var user = await db.Users.FindAsync(uid.Value);
+
+    var apps = await db.Applications
+        .Include(x => x.PersonalInfo)
+        .Where(x => x.UserId == uid.Value)
+        .OrderByDescending(x => x.SubmittedAt ?? x.CreatedAt)
+        .ToListAsync();
+
+    var list = apps.Select(a => {
+        var category = a.PersonalInfo?.CategoryOfWork ?? "";
+        var nominee = a.PersonalInfo?.CompanyName;
+        if (string.IsNullOrWhiteSpace(nominee)) nominee = user?.Organisation ?? "";
+
+        string submittedDateStr;
+        if (a.SubmittedAt.HasValue)
+        {
+            submittedDateStr = a.SubmittedAt.Value.ToString("dd MMM yyyy");
+        }
+        else if (a.Status == "SUBMITTED")
+        {
+            submittedDateStr = a.CreatedAt.ToString("dd MMM yyyy");
+        }
+        else
+        {
+            submittedDateStr = "Draft";
+        }
+
+        return new {
+            id = a.Id,
+            submission_id = a.Id.ToString("D8"),
+            status = a.Status,
+            category = category,
+            nominee_name = nominee,
+            submitted_on = submittedDateStr,
+            submitted_at = a.SubmittedAt,
+            created_at = a.CreatedAt
+        };
+    });
+
+    return Results.Ok(list);
+});
+
+api.MapDelete("/application/{appId}", async (int appId, InnovationDbContext db, IStorageService storage, HttpContext ctx, AuditService audit) =>
+{
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
+    var a = await db.Applications.FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
+    if (a == null) return Results.NotFound(new { message = "Application not found" });
+
+    // Delete PersonalInfo
+    var personalInfo = await db.PersonalInfos.FirstOrDefaultAsync(x => x.ApplicationId == appId);
+    if (personalInfo != null) db.PersonalInfos.Remove(personalInfo);
+
+    // Delete CompanyReach
+    var companyReach = await db.CompanyReaches.FirstOrDefaultAsync(x => x.ApplicationId == appId);
+    if (companyReach != null) db.CompanyReaches.Remove(companyReach);
+
+    // Delete CompanyDetail
+    var companyDetail = await db.CompanyDetails.FirstOrDefaultAsync(x => x.ApplicationId == appId);
+    if (companyDetail != null) db.CompanyDetails.Remove(companyDetail);
+
+    // Delete FileUploads and files
+    var fileUploads = await db.FileUploads.Where(x => x.ApplicationId == appId).ToListAsync();
+    foreach (var fu in fileUploads)
+    {
+        if (!string.IsNullOrWhiteSpace(fu.FilePath))
+        {
+            await storage.DeleteFileAsync(fu.FilePath);
+        }
+    }
+    db.FileUploads.RemoveRange(fileUploads);
+
+    // Delete Reviews
+    var juryReviews = await db.JuryReviews.Where(x => x.ApplicationId == appId).ToListAsync();
+    db.JuryReviews.RemoveRange(juryReviews);
+
+    var validatorReviews = await db.ValidatorReviews.Where(x => x.ApplicationId == appId).ToListAsync();
+    db.ValidatorReviews.RemoveRange(validatorReviews);
+
+    // Delete Application
+    db.Applications.Remove(a);
+    await db.SaveChangesAsync();
+
+    await audit.LogAsync(uid.Value, "DELETE_APPLICATION", "Application", appId, null, GetIp(ctx));
+    return Results.Ok(new { message = "Application deleted successfully" });
+});
+
 api.MapGet("/application/mine", async (HttpContext ctx, InnovationDbContext db) =>
 {
     var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
     var user = await db.Users.FindAsync(uid.Value);
     var a = await db.Applications.Include(x => x.PersonalInfo).Include(x => x.CompanyReach)
         .Include(x => x.CompanyDetail).Include(x => x.FileUploads)
-        .FirstOrDefaultAsync(x => x.UserId == uid.Value);
+        .Where(x => x.UserId == uid.Value)
+        .OrderByDescending(x => x.Status == "DRAFT")
+        .ThenByDescending(x => x.CreatedAt)
+        .FirstOrDefaultAsync();
 
     if (a == null)
     {

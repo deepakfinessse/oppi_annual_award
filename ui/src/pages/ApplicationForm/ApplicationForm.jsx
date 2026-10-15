@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { clearTokens, getHeaders, getUser, getFileUrl } from '../../utils/api';
+import {
+  clearTokens,
+  getHeaders,
+  getUser,
+  getFileUrl,
+  getMySubmissions,
+  createApplication,
+  deleteMyApplication
+} from '../../utils/api';
 import {
   FileText,
   Video,
@@ -15,7 +23,13 @@ import {
   ArrowLeft,
   ExternalLink,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  ArrowRight,
+  List,
+  Plus,
+  FileEdit,
+  Loader2
 } from 'lucide-react';
 import JSZip from 'jszip';
 import oppiLogo from '../../assets/Oppi-logo.png';
@@ -23,7 +37,7 @@ import exactFigmaBg from '../../assets/exact-figma-bg.png';
 import Footer from '../../components/Footer/Footer';
 import './ApplicationForm.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://oppi.nivyam.com/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const AWARD_CATEGORIES = [
   'OPPI Marketing Excellence Awards - Existing Pharma Product',
@@ -117,11 +131,18 @@ const ApplicationForm = () => {
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [appStatus, setAppStatus] = useState('DRAFT');
-  const [viewMode, setViewMode] = useState('form'); // 'form' | 'preview'
+  const [viewMode, setViewMode] = useState('dashboard'); // 'dashboard' | 'form' | 'preview'
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
+  // Submissions state
+  const [submissions, setSubmissions] = useState([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true);
+  const [isStartingNew, setIsStartingNew] = useState(false);
+  const [isEditingSubmitted, setIsEditingSubmitted] = useState(false);
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, submission: null, isDeleting: false });
+
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-  const isReadOnly = appStatus === 'SUBMITTED' && !isAdmin;
+  const isReadOnly = appStatus === 'SUBMITTED' && !isAdmin && !isEditingSubmitted;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -133,65 +154,177 @@ const ApplicationForm = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    // Fetch application data
-    const loadApplication = async () => {
-      try {
-        const endpoint = queryAppId
-          ? `${BASE_URL}/application/${queryAppId}`
-          : `${BASE_URL}/application/mine`;
+  const loadSubmissions = async () => {
+    setIsLoadingSubmissions(true);
+    try {
+      const subs = await getMySubmissions();
+      const list = Array.isArray(subs) ? subs : [];
+      setSubmissions(list);
+      return list;
+    } catch (err) {
+      console.error('Failed to load submissions:', err);
+      return [];
+    } finally {
+      setIsLoadingSubmissions(false);
+    }
+  };
 
-        const res = await fetch(endpoint, {
-          headers: getHeaders(),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAppId(data.id);
-          const currentStatus = data.status || 'DRAFT';
-          setAppStatus(currentStatus);
+  const loadApplication = async (targetId) => {
+    try {
+      const endpoint = targetId
+        ? `${BASE_URL}/application/${targetId}`
+        : `${BASE_URL}/application/mine`;
 
-          // If already submitted and not admin in edit mode, open directly in preview mode
-          if (currentStatus === 'SUBMITTED' && !isAdmin) {
-            setViewMode('preview');
-          } else {
-            setViewMode('form');
-          }
+      const res = await fetch(endpoint, {
+        headers: getHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppId(data.id);
+        const currentStatus = data.status || 'DRAFT';
+        setAppStatus(currentStatus);
 
-          if (data.user && !queryAppId) {
-            setCurrentUser(data.user);
-          }
-
-          const repName = data.personal_info?.representative_name ||
-            (data.user ? `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() : '');
-
-          const rawCat = data.personal_info?.award_category || '';
-          const matchedCategory = normalizeCategory(rawCat);
-
-          setFormData({
-            awardCategory: matchedCategory,
-            organisationName: data.personal_info?.company_name || data.user?.organisation || '',
-            representativeName: repName,
-            designation: data.personal_info?.designation || '',
-            gender: data.user?.gender || 'Male',
-            emailId: data.user?.email || '',
-            mobileNumber: data.user?.mobile || '',
-            briefDescription: data.personal_info?.company_brief || '',
-          });
-
-          if (data.file_uploads) {
-            const docs = data.file_uploads.filter(f => f.Section === 'document' || f.section === 'document');
-            const vids = data.file_uploads.filter(f => f.Section === 'video' || f.section === 'video');
-            setDocumentFiles(docs);
-            setVideoFiles(vids);
-          }
+        if (data.user && !targetId) {
+          setCurrentUser(data.user);
         }
-      } catch (err) {
-        console.error('Failed to load application:', err);
+
+        const repName = data.personal_info?.representative_name ||
+          (data.user ? `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() : '');
+
+        const rawCat = data.personal_info?.award_category || '';
+        const matchedCategory = normalizeCategory(rawCat);
+
+        setFormData({
+          awardCategory: matchedCategory,
+          organisationName: data.personal_info?.company_name || data.user?.organisation || '',
+          representativeName: repName,
+          designation: data.personal_info?.designation || '',
+          gender: data.user?.gender || 'Male',
+          emailId: data.user?.email || '',
+          mobileNumber: data.user?.mobile || '',
+          briefDescription: data.personal_info?.company_brief || '',
+        });
+
+        if (data.file_uploads) {
+          const docs = data.file_uploads.filter(f => f.Section === 'document' || f.section === 'document');
+          const vids = data.file_uploads.filter(f => f.Section === 'video' || f.section === 'video');
+          setDocumentFiles(docs);
+          setVideoFiles(vids);
+        }
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to load application:', err);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      const subs = await loadSubmissions();
+      const modeParam = searchParams.get('mode');
+      const newParam = searchParams.get('new');
+
+      if (queryAppId) {
+        await loadApplication(queryAppId);
+        setViewMode(modeParam === 'preview' ? 'preview' : 'form');
+      } else if (newParam === '1') {
+        await handleStartNewNomination();
+      } else {
+        // By default, show the Figma dashboard
+        setViewMode('dashboard');
       }
     };
 
-    loadApplication();
+    init();
   }, [queryAppId]);
+
+  const handleStartNewNomination = async () => {
+    setIsStartingNew(true);
+    setMessage({ type: '', text: '' });
+    try {
+      const res = await createApplication(true);
+      if (res && res.id) {
+        setAppId(res.id);
+        setAppStatus('DRAFT');
+        setIsEditingSubmitted(false);
+        setFormData({
+          awardCategory: '',
+          organisationName: currentUser?.organisation || '',
+          representativeName: `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim(),
+          designation: '',
+          gender: currentUser?.gender || 'Male',
+          emailId: currentUser?.email || '',
+          mobileNumber: currentUser?.mobile || '',
+          briefDescription: '',
+        });
+        setDocumentFiles([]);
+        setVideoFiles([]);
+        setViewMode('form');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err) {
+      console.error('Failed to start new nomination:', err);
+      setMessage({ type: 'error', text: err.message || 'Failed to initialize nomination form.' });
+    } finally {
+      setIsStartingNew(false);
+    }
+  };
+
+  const handleEditSubmission = async (selectedId) => {
+    setMessage({ type: '', text: '' });
+    setIsEditingSubmitted(true);
+    await loadApplication(selectedId);
+    setViewMode('form');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const confirmDeleteSubmission = async () => {
+    if (!deleteModalState.submission) return;
+    setDeleteModalState(prev => ({ ...prev, isDeleting: true }));
+    try {
+      await deleteMyApplication(deleteModalState.submission.id);
+      await loadSubmissions();
+      if (appId === deleteModalState.submission.id) {
+        setAppId(null);
+      }
+      setDeleteModalState({ isOpen: false, submission: null, isDeleting: false });
+    } catch (err) {
+      console.error('Failed to delete submission:', err);
+      alert(err.message || 'Failed to delete submission. Please try again.');
+      setDeleteModalState(prev => ({ ...prev, isDeleting: false }));
+    }
+  };
+
+  const formatSubmissionId = (sub) => {
+    if (!sub) return '—';
+    if (sub.submission_id) return sub.submission_id;
+    if (sub.id) return String(sub.id).padStart(8, '0');
+    return '—';
+  };
+
+  const formatSubmittedDate = (sub) => {
+    if (!sub) return '—';
+    if (sub.submitted_on && sub.submitted_on !== 'Draft') return sub.submitted_on;
+    if (sub.submitted_at) {
+      try {
+        const d = new Date(sub.submitted_at);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch (e) {}
+    }
+    if (sub.created_at) {
+      try {
+        const d = new Date(sub.created_at);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch (e) {}
+    }
+    return '—';
+  };
+
+  // Find categories user already submitted for
+  const submittedCategories = submissions
+    .filter(s => s.status === 'SUBMITTED' && s.id !== appId)
+    .map(s => (s.category || '').toLowerCase().trim());
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -318,15 +451,16 @@ const ApplicationForm = () => {
       await saveApplicationData();
 
       // Submit application
-      const res = await fetch(`${BASE_URL}/application/submit/${appId}`, {
-        method: 'POST',
-        headers: getHeaders(),
-      });
+        const res = await fetch(`${BASE_URL}/application/submit/${appId}`, {
+          method: 'POST',
+          headers: getHeaders(),
+        });
 
-      if (res.ok) {
-        setAppStatus('SUBMITTED');
-        setShowSubmitModal(true);
-      } else {
+        if (res.ok) {
+          setAppStatus('SUBMITTED');
+          await loadSubmissions();
+          setShowSubmitModal(true);
+        } else {
         const data = await res.json();
         setMessage({ type: 'error', text: data.message || 'Failed to submit application.' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -530,6 +664,19 @@ const ApplicationForm = () => {
           </div>
 
           <div className="header-actions">
+            {viewMode !== 'dashboard' && (
+              <button
+                type="button"
+                onClick={() => {
+                  loadSubmissions();
+                  setViewMode('dashboard');
+                }}
+                className="btn-header-pill btn-dashboard-nav"
+              >
+                <List size={15} />
+                <span>MY SUBMISSIONS</span>
+              </button>
+            )}
             <Link to="/change-password" className="btn-header-pill btn-change-pwd">
               <Lock size={15} />
               <span>CHANGE PASSWORD</span>
@@ -541,17 +688,140 @@ const ApplicationForm = () => {
           </div>
         </header>
 
-        {/* Page Title */}
-        <div className="app-page-title-section">
-          <h1 className="app-page-title">
-            {viewMode === 'preview' ? '' : 'Application'}
-          </h1>
-        </div>
+        {/* Dashboard View - Exact Figma Match */}
+        {viewMode === 'dashboard' ? (
+          <div className="submissions-dashboard-container">
+            {message.text && (
+              <div className={`alert-banner ${message.type}`}>
+                {message.text}
+              </div>
+            )}
 
-        {/* ============================================================ */}
-        {/* PREVIEW AND SUBMIT VIEW (Exact Figma Design) */}
-        {/* ============================================================ */}
-        {viewMode === 'preview' ? (
+            {/* Card 1: Nomination Form */}
+            <div className="nomination-form-card">
+              <div className="card-info-left">
+                <div className="card-icon-badge">
+                  <FileEdit size={24} />
+                </div>
+                <div className="card-text-block">
+                  <h3>Nomination Form</h3>
+                  <p>Submit a new nomination for recognition.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-start-nomination"
+                onClick={handleStartNewNomination}
+                disabled={isStartingNew}
+              >
+                <span>{isStartingNew ? 'Starting...' : 'Start Nomination'}</span>
+                <ArrowRight size={18} />
+              </button>
+            </div>
+
+            {/* Card 2: My Submissions */}
+            <div className="my-submissions-card">
+              <div className="card-info-left">
+                <div className="card-icon-badge">
+                  <List size={24} />
+                </div>
+                <div className="card-text-block">
+                  <h3>My Submissions</h3>
+                  <p>View the list of nominations you have already submitted.</p>
+                </div>
+              </div>
+
+              <div className="submissions-table-container">
+                {isLoadingSubmissions ? (
+                  <div className="loading-submissions-state">
+                    <Loader2 size={24} className="animate-spin" />
+                    <span>Loading your nominations...</span>
+                  </div>
+                ) : submissions.length === 0 ? (
+                  <div className="empty-submissions-state">
+                    <FileText size={36} color="#94a3b8" />
+                    <p>No nominations submitted yet.</p>
+                    <button
+                      type="button"
+                      className="btn-start-nomination"
+                      style={{ marginTop: '0.5rem' }}
+                      onClick={handleStartNewNomination}
+                      disabled={isStartingNew}
+                    >
+                      <span>Start Nomination</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <table className="submissions-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '16%' }}>Submission ID</th>
+                        <th style={{ width: '24%' }}>Nominee Name</th>
+                        <th style={{ width: '36%' }}>Category</th>
+                        <th style={{ width: '14%' }}>Submitted On</th>
+                        <th style={{ width: '10%' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {submissions.map((sub) => (
+                        <tr key={sub.id}>
+                          <td className="submission-id-text">{formatSubmissionId(sub)}</td>
+                          <td className="nominee-name-text">{sub.nominee_name || 'Nominee Name Pvt. Ltd.'}</td>
+                          <td className="category-text">{sub.category || '—'}</td>
+                          <td className="submitted-on-text">{formatSubmittedDate(sub)}</td>
+                          <td>
+                            <div className="table-actions">
+                              <button
+                                type="button"
+                                className="btn-table-edit"
+                                onClick={() => handleEditSubmission(sub.id)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-table-delete"
+                                onClick={() => setDeleteModalState({ isOpen: true, submission: sub, isDeleting: false })}
+                                title="Delete nomination"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btn-back-to-dashboard"
+              onClick={() => {
+                loadSubmissions();
+                setViewMode('dashboard');
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Back to My Submissions</span>
+            </button>
+
+            {/* Page Title */}
+            <div className="app-page-title-section">
+              <h1 className="app-page-title">
+                {viewMode === 'preview' ? '' : 'Application'}
+              </h1>
+            </div>
+
+            {/* ============================================================ */}
+            {/* PREVIEW AND SUBMIT VIEW (Exact Figma Design) */}
+            {/* ============================================================ */}
+            {viewMode === 'preview' ? (
           <div className="application-card preview-card-figma">
             {/* Header row matching Figma */}
             <div className="preview-header-row">
@@ -805,16 +1075,23 @@ const ApplicationForm = () => {
                     <div className="dropdown-options-menu">
                       {AWARD_CATEGORIES.map((cat, idx) => {
                         const isSelected = formData.awardCategory === cat;
+                        const isAlreadySubmitted = submittedCategories.includes(cat.toLowerCase().trim());
                         return (
                           <div
                             key={idx}
-                            className={`dropdown-option-row ${isSelected ? 'selected' : ''}`}
+                            className={`dropdown-option-row ${isSelected ? 'selected' : ''} ${isAlreadySubmitted ? 'disabled-option' : ''}`}
                             onClick={() => {
+                              if (isAlreadySubmitted) return;
                               setFormData(prev => ({ ...prev, awardCategory: cat }));
                               setIsCategoryDropdownOpen(false);
                             }}
                           >
-                            <span className="dropdown-option-text">{cat}</span>
+                            <div className="option-text-wrapper">
+                              <span className="dropdown-option-text">{cat}</span>
+                              {isAlreadySubmitted && (
+                                <span className="cat-submitted-badge">Already Submitted</span>
+                              )}
+                            </div>
                             {isSelected && <Check size={16} className="dropdown-check-icon" />}
                           </div>
                         );
@@ -1132,6 +1409,8 @@ const ApplicationForm = () => {
             </form>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Submission Success Modal */}
@@ -1157,13 +1436,54 @@ const ApplicationForm = () => {
               </button>
               <button
                 type="button"
-                className="btn-modal-exit"
+                className="btn-modal-view-submissions"
                 onClick={() => {
                   setShowSubmitModal(false);
-                  navigate(isAdmin ? '/admin' : '/');
+                  loadSubmissions();
+                  setViewMode('dashboard');
                 }}
               >
-                {isAdmin ? 'Exit to Admin' : 'Exit to Home'}
+                <span>View My Submissions</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalState.isOpen && (
+        <div className="submission-modal-backdrop">
+          <div className="submission-modal-box delete-confirm-modal-box">
+            <div className="submission-modal-icon delete-icon-badge">
+              <AlertCircle size={46} color="#dc2626" />
+            </div>
+            <h3 className="submission-modal-title">Delete Submission?</h3>
+            <p className="submission-modal-desc">
+              Are you sure you want to delete submission #{formatSubmissionId(deleteModalState.submission)}?
+              {deleteModalState.submission?.category && (
+                <span style={{ display: 'block', marginTop: '6px', fontWeight: 600, color: '#0f172a' }}>
+                  Category: {deleteModalState.submission.category}
+                </span>
+              )}
+              This action cannot be undone and will remove all uploaded files.
+            </p>
+            <div className="submission-modal-actions">
+              <button
+                type="button"
+                className="btn-modal-exit"
+                onClick={() => setDeleteModalState({ isOpen: false, submission: null, isDeleting: false })}
+                disabled={deleteModalState.isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-modal-confirm-delete"
+                onClick={confirmDeleteSubmission}
+                disabled={deleteModalState.isDeleting}
+              >
+                {deleteModalState.isDeleting ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>
