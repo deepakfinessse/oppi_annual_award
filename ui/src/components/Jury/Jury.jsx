@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPublicPanelMembers, getFileUrl } from '../../utils/api';
 
@@ -366,6 +366,24 @@ const matchesCategory = (memberCat, targetCat) => {
   return m === t || m.includes(t);
 };
 
+const normalizeCleanName = (str) => {
+  return (str || '')
+    .toLowerCase()
+    .replace(/\b(dr|prof|mr|mrs|ms)\b/g, '')
+    .replace(/[^a-z0-9]/g, '');
+};
+
+// Pre-compute fallback default images map from static definitions by clean name
+const DEFAULT_IMAGES_MAP = DEFAULT_JURY_MEMBERS.reduce((acc, m) => {
+  const cleanName = normalizeCleanName(m.name);
+  const exactCleanName = (m.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (m.defaultImage) {
+    if (cleanName) acc[cleanName] = m.defaultImage;
+    if (exactCleanName) acc[exactCleanName] = m.defaultImage;
+  }
+  return acc;
+}, {});
+
 const Jury = () => {
   const [panelMembers, setPanelMembers] = useState(DEFAULT_JURY_MEMBERS);
   const [activeCategory, setActiveCategory] = useState('Patient Centricity');
@@ -375,42 +393,48 @@ const Jury = () => {
       try {
         const data = await getPublicPanelMembers();
         if (data && data.length > 0) {
-          // Strictly only include members with the JURY role
+          // Strictly only include members with the JURY role from the database
           const juryOnly = data.filter(m => {
             const roleType = (m.type || m.Type || '').toUpperCase();
             return roleType === 'JURY' || roleType === 'JURY_MEMBER';
           });
 
           if (juryOnly.length > 0) {
-            // Merge with default dataset so existing pictures/names are retained
-            const normalize = (str) => (str || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
-            const merged = [...DEFAULT_JURY_MEMBERS];
-            juryOnly.forEach(apiMember => {
-              const idx = merged.findIndex(def => 
-                normalize(def.name) === normalize(apiMember.name)
-              );
-              if (idx >= 0) {
-                merged[idx] = { 
-                  ...merged[idx], 
-                  ...apiMember,
-                  // If API has imagePath use it, else keep defaultImage
-                  defaultImage: apiMember.imagePath ? null : merged[idx].defaultImage 
-                };
-              } else {
-                merged.push(apiMember);
-              }
-            });
-            setPanelMembers(merged);
+            // The database is the single source of truth:
+            // Do not merge with default array so name edits or deletes in admin never cause duplicates
+            juryOnly.sort((a, b) => (a.sortOrder || a.sort_order || 999) - (b.sortOrder || b.sort_order || 999));
+            setPanelMembers(juryOnly);
           }
         }
       } catch (err) {
-        console.error('Failed to load panel members:', err);
+        console.warn('Failed to load panel members from API, using default fallback:', err);
       }
     };
     fetchMembers();
   }, []);
 
-  const currentMembers = panelMembers.filter(m => matchesCategory(m.category, activeCategory));
+  const currentMembers = useMemo(() => {
+    const filtered = panelMembers.filter(m => matchesCategory(m.category, activeCategory));
+
+    // Permanent deduplication guard: never allow duplicates even if DB or admin has duplicate entries
+    const seenIds = new Set();
+    const seenNames = new Set();
+    const unique = [];
+
+    for (const m of filtered) {
+      const cleanId = m.id ? String(m.id) : null;
+      const cleanName = normalizeCleanName(m.name);
+
+      if (cleanId && seenIds.has(cleanId)) continue;
+      if (cleanName && seenNames.has(cleanName)) continue;
+
+      if (cleanId) seenIds.add(cleanId);
+      if (cleanName) seenNames.add(cleanName);
+      unique.push(m);
+    }
+
+    return unique;
+  }, [panelMembers, activeCategory]);
 
   const getResolvedImage = (member, idx) => {
     const path = member?.imagePath;
@@ -423,6 +447,17 @@ const Jury = () => {
       return getFileUrl(path);
     }
     if (member?.defaultImage) return member.defaultImage;
+
+    // Check if we have a default static image for this member by normalized clean name
+    const cleanName = normalizeCleanName(member?.name);
+    const exactCleanName = (member?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cleanName && DEFAULT_IMAGES_MAP[cleanName]) {
+      return DEFAULT_IMAGES_MAP[cleanName];
+    }
+    if (exactCleanName && DEFAULT_IMAGES_MAP[exactCleanName]) {
+      return DEFAULT_IMAGES_MAP[exactCleanName];
+    }
+
     return DEFAULT_AVATARS[idx % DEFAULT_AVATARS.length];
   };
 
