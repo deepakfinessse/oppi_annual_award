@@ -888,18 +888,17 @@ api.MapGet("/application/my-submissions", async (HttpContext ctx, InnovationDbCo
         var nominee = a.PersonalInfo?.CompanyName;
         if (string.IsNullOrWhiteSpace(nominee)) nominee = user?.Organisation ?? "";
 
-        string submittedDateStr;
-        if (a.SubmittedAt.HasValue)
+        string submittedDateStr = "—";
+        if (a.Status != "DRAFT")
         {
-            submittedDateStr = a.SubmittedAt.Value.ToString("dd MMM yyyy");
-        }
-        else if (a.Status == "SUBMITTED")
-        {
-            submittedDateStr = a.CreatedAt.ToString("dd MMM yyyy");
-        }
-        else
-        {
-            submittedDateStr = "Draft";
+            if (a.SubmittedAt.HasValue)
+            {
+                submittedDateStr = a.SubmittedAt.Value.ToString("dd MMM yyyy");
+            }
+            else if (a.Status == "SUBMITTED")
+            {
+                submittedDateStr = a.CreatedAt.ToString("dd MMM yyyy");
+            }
         }
 
         return new {

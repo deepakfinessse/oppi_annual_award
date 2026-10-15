@@ -305,20 +305,38 @@ const ApplicationForm = () => {
 
   const formatSubmittedDate = (sub) => {
     if (!sub) return '—';
-    if (sub.submitted_on && sub.submitted_on !== 'Draft') return sub.submitted_on;
+    // Only show submitted date for submitted applications!
+    const isSubmitted = sub.status && sub.status !== 'DRAFT';
+    if (!isSubmitted) return '—';
+
+    if (sub.submitted_on && sub.submitted_on !== 'Draft' && sub.submitted_on !== '—') {
+      return sub.submitted_on;
+    }
     if (sub.submitted_at) {
       try {
         const d = new Date(sub.submitted_at);
         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
       } catch (e) {}
     }
-    if (sub.created_at) {
-      try {
-        const d = new Date(sub.created_at);
-        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-      } catch (e) {}
-    }
     return '—';
+  };
+
+  const formatStatus = (status) => {
+    if (!status || status === 'DRAFT') return 'Draft';
+    if (status === 'SUBMITTED') return 'Submitted';
+    if (status === 'UNDER_JURY_REVIEW') return 'Under Review';
+    if (status.includes('APPROVED')) return 'Approved';
+    if (status.includes('REJECTED')) return 'Rejected';
+    return status.replace(/_/g, ' ');
+  };
+
+  const getStatusBadgeClass = (status) => {
+    const s = (status || 'DRAFT').toLowerCase();
+    if (s === 'draft') return 'status-badge-draft';
+    if (s === 'submitted') return 'status-badge-submitted';
+    if (s.includes('approved')) return 'status-badge-approved';
+    if (s.includes('rejected')) return 'status-badge-rejected';
+    return 'status-badge-review';
   };
 
   // Find categories user already submitted for
@@ -756,10 +774,11 @@ const ApplicationForm = () => {
                   <table className="submissions-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '16%' }}>Submission ID</th>
-                        <th style={{ width: '24%' }}>Nominee Name</th>
-                        <th style={{ width: '36%' }}>Category</th>
-                        <th style={{ width: '14%' }}>Submitted On</th>
+                        <th style={{ width: '15%' }}>Submission ID</th>
+                        <th style={{ width: '22%' }}>Nominee Name</th>
+                        <th style={{ width: '28%' }}>Category</th>
+                        <th style={{ width: '13%' }}>Status</th>
+                        <th style={{ width: '12%' }}>Submitted On</th>
                         <th style={{ width: '10%' }}>Action</th>
                       </tr>
                     </thead>
@@ -769,6 +788,11 @@ const ApplicationForm = () => {
                           <td className="submission-id-text">{formatSubmissionId(sub)}</td>
                           <td className="nominee-name-text">{sub.nominee_name || 'Nominee Name Pvt. Ltd.'}</td>
                           <td className="category-text">{sub.category || '—'}</td>
+                          <td>
+                            <span className={`submission-status-badge ${getStatusBadgeClass(sub.status)}`}>
+                              {formatStatus(sub.status)}
+                            </span>
+                          </td>
                           <td className="submitted-on-text">{formatSubmittedDate(sub)}</td>
                           <td>
                             <div className="table-actions">
