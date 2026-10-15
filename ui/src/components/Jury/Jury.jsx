@@ -192,7 +192,7 @@ const DEFAULT_JURY_MEMBERS = [
   },
   {
     id: 'pc2',
-    name: 'Dr. Ratna Devi',
+    name: 'Dr Ratna Devi',
     role: 'CEO, DakshamA Health, Director, PAIR, Steering Committee Member NCD Labs, WHO Geneva',
     category: 'Patient Centricity',
     type: 'JURY',
@@ -224,7 +224,7 @@ const DEFAULT_JURY_MEMBERS = [
   },
   {
     id: 'pc6',
-    name: 'Dr. Indu Bhushan',
+    name: 'Dr Indu Bhushan',
     role: 'President - iLEP, Former CEO Ayushman Bharat/National Health Authority',
     category: 'Patient Centricity',
     type: 'JURY',
@@ -383,10 +383,11 @@ const Jury = () => {
 
           if (juryOnly.length > 0) {
             // Merge with default dataset so existing pictures/names are retained
+            const normalize = (str) => (str || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
             const merged = [...DEFAULT_JURY_MEMBERS];
             juryOnly.forEach(apiMember => {
               const idx = merged.findIndex(def => 
-                def.name.toLowerCase().trim() === apiMember.name?.toLowerCase().trim()
+                normalize(def.name) === normalize(apiMember.name)
               );
               if (idx >= 0) {
                 merged[idx] = { 
