@@ -1,11 +1,22 @@
 .past-winners-section {
-  padding: 2rem 0 4rem 0;
+  --pw-green: #2f9a2f;
+  --pw-blue: #1a9be6;
+  --pw-navy: #0c2b48;
+  padding: 3rem 0 4rem 0;
   background-color: #eaf7fd;
   background-size: cover;
   background-position: center;
   position: relative;
+  overflow-x: hidden;
 }
 
+.past-winners-section .container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Header */
 .past-winners-header {
   display: flex;
   flex-direction: column;
@@ -17,20 +28,51 @@
 .past-winners-title {
   font-size: 44px;
   font-weight: 800;
-  color: #0b72c4;
-  margin-bottom: 0.75rem;
+  color: var(--pw-blue);
+  margin: 0 0 1.25rem 0;
+  line-height: 1.15;
+}
+
+.years-pills-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+}
+
+/* Outer white pill + inner green pill (as per design) */
+.year-pill-outer {
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transform: scale(1);
+  transition: all 0.2s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.year-pill-outer.active {
+  opacity: 1;
+  transform: scale(1.05);
 }
 
 .year-pill-green {
-  background: #10b981;
+  display: block;
+  background: var(--pw-green);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  padding: 0.3rem 1.25rem;
+  padding: 0.25rem 1.5rem;
   border-radius: 999px;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+  white-space: nowrap;
 }
 
+/* Carousel */
 .past-winners-carousel-wrapper {
   position: relative;
   display: flex;
@@ -39,18 +81,21 @@
   max-width: 1060px;
   margin: 0 auto;
   padding: 0 3.5rem;
+  box-sizing: border-box;
 }
 
 .past-winner-main-card {
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #e4f1ff 100%);
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(11, 114, 196, 0.1);
-  border: 1px solid rgba(11, 114, 196, 0.12);
+  border: 2px solid #ffffff;
   display: grid;
-  grid-template-columns: 1fr 1.25fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   width: 100%;
+  min-width: 0;
   align-items: stretch;
+  touch-action: pan-y; /* allow vertical scroll while swiping horizontally */
 }
 
 .winner-card-left {
@@ -60,26 +105,40 @@
   justify-content: center;
   align-items: flex-start;
   text-align: left;
+  min-width: 0;
 }
 
 .winner-category-title {
   font-size: 21px;
-  font-weight: 800;
-  color: #0c2b48;
+  font-weight: 600;
+  color: #0a0a0a;
   line-height: 1.32;
-  margin-bottom: 2.25rem;
+  margin: 0 0 2.25rem 0;
   text-align: left;
   max-width: 380px;
+  overflow-wrap: anywhere;
 }
 
 .winner-badge-green {
   display: inline-block;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  color: #10b981;
-  letter-spacing: 0.03em;
-  margin-bottom: 0.4rem;
+  color: var(--pw-green);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.5rem;
   text-align: left;
+  padding-bottom: 0.4rem;
+  position: relative;
+}
+
+.winner-badge-green::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 64px;
+  height: 2px;
+  background: currentColor;
 }
 
 .winner-company-block {
@@ -87,15 +146,35 @@
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .winner-company-line {
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 700;
-  color: #0c2b48;
-  margin: 0;
-  line-height: 1.35;
+  color: #0a0a0a;
+  margin: 0.4rem 0 0 0;
+  line-height: 1.3;
   text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.winner-representative-line {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0b72c4;
+  margin: 4px 0 0 0;
+  overflow-wrap: anywhere;
+}
+
+.winner-caption-text {
+  font-size: 13px;
+  color: #64748b;
+  margin: 10px 0 0 0;
+  line-height: 1.5;
+  max-width: 420px;
+  overflow-wrap: anywhere;
 }
 
 .winner-card-right {
@@ -107,10 +186,15 @@
 }
 
 .winner-ceremony-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* Side Navigation Arrows */
@@ -118,12 +202,12 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #10b981;
+  border: 1.5px solid var(--pw-green);
+  color: var(--pw-green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -131,6 +215,7 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.25s ease;
   z-index: 10;
+  padding: 0;
 }
 
 .carousel-side-arrow.left {
@@ -142,9 +227,8 @@
 }
 
 .carousel-side-arrow:hover {
-  background: #10b981;
+  background: var(--pw-green);
   color: #ffffff;
-  border-color: #10b981;
   transform: translateY(-50%) scale(1.06);
 }
 
@@ -153,13 +237,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 2rem;
 }
 
 .carousel-dot {
-  width: 8px;
-  height: 8px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: #cbd5e1;
   cursor: pointer;
@@ -167,11 +252,54 @@
 }
 
 .carousel-dot.active {
-  background: #10b981;
-  transform: scale(1.25);
+  background: var(--pw-green);
+  transform: scale(1.2);
 }
 
+/* Tablet */
 @media (max-width: 992px) {
+  .past-winners-carousel-wrapper {
+    padding: 0 3rem;
+  }
+
+  .carousel-side-arrow {
+    width: 44px;
+    height: 44px;
+  }
+
+  .winner-card-left {
+    padding: 2rem 1.75rem;
+  }
+
+  .winner-category-title {
+    font-size: 18px;
+    margin-bottom: 1.5rem;
+  }
+
+  .winner-company-line {
+    font-size: 20px;
+  }
+}
+
+/* Mobile: stack card, image on top, swipe instead of arrows */
+@media (max-width: 768px) {
+  .past-winners-section {
+    padding: 2.5rem 0 3rem 0;
+  }
+
+  .past-winners-section .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .past-winners-title {
+    font-size: 32px;
+  }
+
+  .past-winners-header {
+    margin-bottom: 1.75rem;
+  }
+
   .past-winners-carousel-wrapper {
     padding: 0;
   }
@@ -181,16 +309,52 @@
   }
 
   .past-winner-main-card {
-    grid-template-columns: 1fr;
-  }
-
-  .winner-card-left {
-    padding: 2rem 1.5rem;
-    text-align: left;
-    align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 18px;
   }
 
   .winner-card-right {
-    min-height: 240px;
+    order: -1;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+
+  .winner-card-left {
+    padding: 1.5rem 1.25rem 1.75rem;
+  }
+
+  .winner-category-title {
+    font-size: 17px;
+    max-width: 100%;
+    margin-bottom: 1.25rem;
+  }
+
+  .winner-company-line {
+    font-size: 19px;
+  }
+
+  .winner-caption-text {
+    max-width: 100%;
+  }
+
+  .carousel-dots-wrapper {
+    margin-top: 1.5rem;
+  }
+
+  .carousel-dot {
+    width: 9px;
+    height: 9px;
+  }
+}
+
+@media (max-width: 400px) {
+  .past-winners-title {
+    font-size: 28px;
+  }
+
+  .year-pill-green {
+    font-size: 13px;
+    padding: 0.25rem 1.1rem;
   }
 }

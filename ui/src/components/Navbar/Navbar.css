@@ -423,6 +423,10 @@ li.desktop-only-link {
     width: 100%;
     text-align: center;
   }
+
+  .nav-action {
+    display: none;
+  }
   
   .mobile-only-link.divider {
     border-top: 1px solid #e2e8f0;

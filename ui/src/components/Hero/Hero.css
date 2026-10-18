@@ -182,9 +182,25 @@
   }
 }
 
+@media (max-width: 1100px) {
+    .hero-annual {
+    padding-top: 7rem;
+  }
+}
+
+@media (max-width: 992px) {
+    .hero-annual {
+    padding-top: 10rem;
+  }
+}
+
 @media (max-width: 768px) {
   .hero-annual-title {
     font-size: 40px;
+  }
+
+  .hero-annual {
+    padding-top: 7rem;
   }
   
   .countdown-box {
@@ -199,5 +215,17 @@
   
   .countdown-colon {
     font-size: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+    .hero-annual {
+    padding-top: 7rem;
+  }
+}
+
+@media (max-width: 480px) {
+    .hero-annual {
+    padding-top: 7rem;
   }
 }

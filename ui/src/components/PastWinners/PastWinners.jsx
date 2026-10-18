@@ -90,6 +90,12 @@ const PastWinners = () => {
     setActiveIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
+  const handleDragEnd = (_, info) => {
+    if (totalSlides < 2) return;
+    if (info.offset.x < -60) handleNext();
+    else if (info.offset.x > 60) handlePrev();
+  };
+
   const getWinnerImage = (path) => {
     if (!path || (typeof path === 'string' && (path.includes('winner') || !path.trim()))) {
       return ceremonyPhoto;
@@ -117,37 +123,27 @@ const PastWinners = () => {
       <div className="container">
         <div className="past-winners-header">
           <h2 className="past-winners-title">Past Winners</h2>
-          <div className="years-pills-container" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div className="years-pills-container">
             {availableYears.length > 1 && (
-              <div 
-                className={`year-pill-green ${selectedYear === 'ALL' ? 'active' : ''}`}
+              <button
+                type="button"
+                className={`year-pill-outer ${selectedYear === 'ALL' ? 'active' : ''}`}
                 onClick={() => { setSelectedYear('ALL'); setActiveIndex(0); }}
-                style={{ 
-                  cursor: 'pointer', 
-                  opacity: selectedYear === 'ALL' ? 1 : 0.6,
-                  transform: selectedYear === 'ALL' ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.2s ease'
-                }}
               >
-                <span>All Sessions</span>
-              </div>
+                <span className="year-pill-green">All Sessions</span>
+              </button>
             )}
             {availableYears.map(yr => {
               const isActive = selectedYear === yr || (availableYears.length === 1);
               return (
-                <div
+                <button
+                  type="button"
                   key={yr}
-                  className={`year-pill-green ${isActive ? 'active' : ''}`}
+                  className={`year-pill-outer ${isActive ? 'active' : ''}`}
                   onClick={() => { setSelectedYear(yr); setActiveIndex(0); }}
-                  style={{ 
-                    cursor: 'pointer', 
-                    opacity: isActive ? 1 : 0.6,
-                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'all 0.2s ease'
-                  }}
                 >
-                  <span>{yr}</span>
-                </div>
+                  <span className="year-pill-green">{yr}</span>
+                </button>
               );
             })}
           </div>
@@ -155,7 +151,7 @@ const PastWinners = () => {
 
         {/* Outer Carousel Container with Navigation Arrows on sides */}
         <div className="past-winners-carousel-wrapper">
-          <button className="carousel-side-arrow left" onClick={handlePrev} aria-label="Previous">
+          <button type="button" className="carousel-side-arrow left" onClick={handlePrev} aria-label="Previous">
             <ArrowLeft size={20} />
           </button>
 
@@ -163,6 +159,10 @@ const PastWinners = () => {
             <motion.div 
               key={`${currentWinner.id}-${activeIndex}`}
               className="past-winner-main-card"
+              drag={totalSlides > 1 ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragEnd={handleDragEnd}
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
@@ -175,7 +175,7 @@ const PastWinners = () => {
                 <span 
                   className="winner-badge-green"
                   style={{
-                    color: isRunnerUp ? '#f97316' : (currentWinner.color || '#10b981')
+                    color: isRunnerUp ? '#f97316' : (currentWinner.color || '#2f9a2f')
                   }}
                 >
                   {`${currentWinner.yearStr || currentWinner.year} ${(currentWinner.position || 'WINNER').toUpperCase()}`}
@@ -187,13 +187,13 @@ const PastWinners = () => {
                   </p>
                   
                   {currentWinner.name && currentWinner.name !== (currentWinner.organisation || currentWinner.companyName) && (
-                    <p className="winner-representative-line" style={{ fontSize: '16px', fontWeight: '700', color: '#0b72c4', margin: '4px 0 0 0' }}>
+                    <p className="winner-representative-line">
                       {currentWinner.name}
                     </p>
                   )}
 
                   {(currentWinner.caption || currentWinner.description) && (
-                    <p className="winner-caption-text" style={{ fontSize: '13px', color: '#64748b', margin: '10px 0 0 0', lineHeight: 1.5, maxWidth: '420px' }}>
+                    <p className="winner-caption-text">
                       {currentWinner.caption || currentWinner.description}
                     </p>
                   )}
@@ -206,12 +206,13 @@ const PastWinners = () => {
                   src={getWinnerImage(currentWinner.imagePath)} 
                   alt={currentWinner.name || 'Past Winner Ceremony'} 
                   className="winner-ceremony-image" 
+                  draggable={false}
                 />
               </div>
             </motion.div>
           </AnimatePresence>
 
-          <button className="carousel-side-arrow right" onClick={handleNext} aria-label="Next">
+          <button type="button" className="carousel-side-arrow right" onClick={handleNext} aria-label="Next">
             <ArrowRight size={20} />
           </button>
         </div>

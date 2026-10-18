@@ -2,19 +2,33 @@
   padding: 5rem 0;
   background-color: #ffffff;
   position: relative;
+  overflow-x: hidden; /* safety net against horizontal page scroll */
+}
+
+.jury-section .container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .jury-layout-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 3.5rem;
   align-items: flex-start;
+}
+
+/* Lets grid children shrink below their content width (fixes cropping) */
+.jury-layout-grid > * {
+  min-width: 0;
 }
 
 /* Left Sidebar */
 .jury-left-sidebar {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .jury-title-block {
@@ -76,11 +90,13 @@
 /* Right Cards Area */
 .jury-cards-area {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .jury-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
 }
 
@@ -93,6 +109,8 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .jury-member-card:hover {
@@ -139,6 +157,7 @@
 
 .jury-member-info {
   padding: 0.85rem 0.25rem 0.25rem 0.25rem;
+  min-width: 0;
 }
 
 .jury-member-name {
@@ -147,6 +166,7 @@
   color: #0c2b48;
   margin: 0 0 0.35rem 0;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .jury-member-role {
@@ -155,6 +175,7 @@
   line-height: 1.45;
   margin: 0;
   font-weight: 400;
+  overflow-wrap: anywhere; /* long designations wrap instead of being cut */
 }
 
 .jury-empty-message {
@@ -169,18 +190,18 @@
 @media (max-width: 1100px) {
   .jury-layout-grid {
     gap: 2rem;
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 240px minmax(0, 1fr);
   }
-  
+
   .jury-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 900px) {
   .jury-layout-grid {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1fr); /* the key fix */
+    gap: 2rem;
   }
 
   .jury-category-pills {
@@ -188,6 +209,13 @@
     overflow-x: auto;
     white-space: nowrap;
     padding-bottom: 0.5rem;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .jury-category-pills::-webkit-scrollbar {
+    display: none;
   }
 
   .jury-category-pill {
@@ -196,16 +224,30 @@
   }
 
   .jury-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
+  .jury-section {
+    padding: 3rem 0;
+  }
+
+  .jury-section .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
   .jury-section-title {
     font-size: 30px;
   }
 
   .jury-cards-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .jury-member-photo-frame {
+    height: 220px;
   }
 }
