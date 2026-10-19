@@ -96,12 +96,24 @@ const AdminPortal = () => {
 
   // Filters
   const [userFilter, setUserFilter] = useState('ALL');
-  const [appFilter, setAppFilter] = useState('ALL');
+  const [userCategoryFilter, setUserCategoryFilter] = useState('ALL');
   const [showUserFilterDropdown, setShowUserFilterDropdown] = useState(false);
-  const [showAppFilterDropdown, setShowAppFilterDropdown] = useState(false);
-  const [showExcelDropdown, setShowExcelDropdown] = useState(false);
-  const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
+  const [showUserCatDropdown, setShowUserCatDropdown] = useState(false);
   const [showUserExportDropdown, setShowUserExportDropdown] = useState(false);
+
+  const [appFilter, setAppFilter] = useState('ALL');
+  const [appCategoryFilter, setAppCategoryFilter] = useState('ALL');
+  const [appStatusFilter, setAppStatusFilter] = useState('ALL');
+  const [showAppFilterDropdown, setShowAppFilterDropdown] = useState(false);
+  const [showAppCatDropdown, setShowAppCatDropdown] = useState(false);
+  const [showAppStatusDropdown, setShowAppStatusDropdown] = useState(false);
+  const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
+
+  const [juryCategoryFilter, setJuryCategoryFilter] = useState('OPPI Sustainability Excellence Award');
+  const [showJuryCatDropdown, setShowJuryCatDropdown] = useState(false);
+  const [showJuryExportDropdown, setShowJuryExportDropdown] = useState(false);
+
+  const [showExcelDropdown, setShowExcelDropdown] = useState(false);
 
   // Pagination
   const [appPage, setAppPage] = useState(1);
@@ -110,10 +122,20 @@ const AdminPortal = () => {
   const userPageSize = 10;
 
   const userDropdownRef = useRef(null);
-  const appDropdownRef = useRef(null);
-  const excelDropdownRef = useRef(null);
-  const appExportDropdownRef = useRef(null);
+  const userCatDropdownRef = useRef(null);
   const userExportDropdownRef = useRef(null);
+
+  const appDropdownRef = useRef(null);
+  const appCatDropdownRef = useRef(null);
+  const appStatusDropdownRef = useRef(null);
+  const appExportDropdownRef = useRef(null);
+
+  const juryCatDropdownRef = useRef(null);
+  const juryExportDropdownRef = useRef(null);
+
+  const excelDropdownRef = useRef(null);
+  const winnerYearDropdownRef = useRef(null);
+  const winnerCatDropdownRef = useRef(null);
 
   // Panel Member Form States
   const [showPanelForm, setShowPanelForm] = useState(false);
@@ -218,17 +240,38 @@ const AdminPortal = () => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
         setShowUserFilterDropdown(false);
       }
+      if (userCatDropdownRef.current && !userCatDropdownRef.current.contains(e.target)) {
+        setShowUserCatDropdown(false);
+      }
+      if (userExportDropdownRef.current && !userExportDropdownRef.current.contains(e.target)) {
+        setShowUserExportDropdown(false);
+      }
       if (appDropdownRef.current && !appDropdownRef.current.contains(e.target)) {
         setShowAppFilterDropdown(false);
       }
-      if (excelDropdownRef.current && !excelDropdownRef.current.contains(e.target)) {
-        setShowExcelDropdown(false);
+      if (appCatDropdownRef.current && !appCatDropdownRef.current.contains(e.target)) {
+        setShowAppCatDropdown(false);
+      }
+      if (appStatusDropdownRef.current && !appStatusDropdownRef.current.contains(e.target)) {
+        setShowAppStatusDropdown(false);
       }
       if (appExportDropdownRef.current && !appExportDropdownRef.current.contains(e.target)) {
         setShowAppExportDropdown(false);
       }
-      if (userExportDropdownRef.current && !userExportDropdownRef.current.contains(e.target)) {
-        setShowUserExportDropdown(false);
+      if (juryCatDropdownRef.current && !juryCatDropdownRef.current.contains(e.target)) {
+        setShowJuryCatDropdown(false);
+      }
+      if (juryExportDropdownRef.current && !juryExportDropdownRef.current.contains(e.target)) {
+        setShowJuryExportDropdown(false);
+      }
+      if (excelDropdownRef.current && !excelDropdownRef.current.contains(e.target)) {
+        setShowExcelDropdown(false);
+      }
+      if (winnerYearDropdownRef.current && !winnerYearDropdownRef.current.contains(e.target)) {
+        setShowWinnerYearDropdown(false);
+      }
+      if (winnerCatDropdownRef.current && !winnerCatDropdownRef.current.contains(e.target)) {
+        setShowWinnerCatDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -242,6 +285,12 @@ const AdminPortal = () => {
 
     // Get user's application status
     const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+    
+    // Category filter
+    if (userCategoryFilter !== 'ALL') {
+      if (!userApp || userApp.category !== userCategoryFilter) return false;
+    }
+
     const status = !userApp ? 'REGISTERED' : (userApp.status === 'DRAFT' ? 'DRAFT' : 'SUBMITTED');
 
     if (userFilter === 'ALL') return true;
@@ -262,16 +311,51 @@ const AdminPortal = () => {
   ];
 
   const filteredApps = apps.filter(app => {
-    if (appFilter === 'ALL') return true;
-    if (appFilter === 'DRAFT') return app.status === 'DRAFT';
-    if (appFilter === 'SUBMITTED') return app.status === 'SUBMITTED';
-    if (appFilter === 'VALIDATOR') return app.status.startsWith('VALIDATOR');
-    if (appFilter === 'JURY') return app.status.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
-    if (appFilter === 'PANEL_CHAIR') return app.status.startsWith('PANEL');
-    if (appFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
-    if (ANNUAL_AWARD_CATEGORIES.includes(appFilter)) return app.category === appFilter;
+    // Category filter
+    if (appCategoryFilter !== 'ALL' && app.category !== appCategoryFilter) return false;
+
+    // Status filter
+    if (appStatusFilter === 'ALL') return true;
+    if (appStatusFilter === 'DRAFT') return app.status === 'DRAFT';
+    if (appStatusFilter === 'SUBMITTED') return app.status === 'SUBMITTED' || app.status !== 'DRAFT';
+    if (appStatusFilter === 'JURY') return app.status.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
+    if (appStatusFilter === 'PANEL_CHAIR') return app.status.startsWith('PANEL');
+    if (appStatusFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
     return true;
   });
+
+  const displayedJuryMembers = panelMembers.filter(m => m.type === 'JURY').length > 0
+    ? panelMembers.filter(m => m.type === 'JURY')
+    : panelMembers;
+
+  const getEvaluationStatus = (member) => {
+    const categoryApps = apps.filter(a => juryCategoryFilter === 'ALL' ? a.status !== 'DRAFT' : a.category === juryCategoryFilter && a.status !== 'DRAFT');
+    const totalCount = Math.max(categoryApps.length, 3);
+    const reviewedCount = categoryApps.filter(a => 
+      a.jury_reviews?.some(r => r.jury_email === member.email || r.jury_name === member.name) || (a.average_score > 0)
+    ).length;
+    return `${String(reviewedCount).padStart(2, '0')}/${String(totalCount).padStart(2, '0')}`;
+  };
+
+  const downloadJuryCSV = () => {
+    const headers = ['S. No.', 'Name', 'Email', 'Role / Designation', 'Evaluation Status'];
+    const rows = displayedJuryMembers.map((m, idx) => [
+      String(idx + 1).padStart(2, '0'),
+      m.name,
+      m.email || '—',
+      m.role || '—',
+      getEvaluationStatus(m)
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `OPPI_Annual_Awards_Jury_Members_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleAppFilterChange = (filter) => {
     setAppFilter(filter);
@@ -827,95 +911,230 @@ const AdminPortal = () => {
           </div>
 
           <div className="header-logout-section">
-            <button className="header-logout-btn" onClick={handleLogout}>
-              <span className="logout-text-part">LOG OUT</span>
-              <div className="logout-icon-part">
-                <LogOut size={16} />
-              </div>
+            <button className="header-logout-pill-btn" onClick={handleLogout}>
+              <span>LOG OUT</span>
+              <LogOut size={16} />
             </button>
           </div>
         </header>
 
-        {/* Centered Main Page Title & Top Action Bar */}
-        {/* <div className="dashboard-title-row"> */}
-        {/* <h1>Admin</h1> */}
-        {/* <button
-            className="btn-excel-primary-top"
-            onClick={handleDownloadPanelChairExcel}
-            disabled={downloadingExcel}
-          >
-            <Download size={18} />
-            <span>{downloadingExcel ? 'GENERATING EXCEL...' : 'FINAL EXCEL FOR PANEL CHAIR'}</span>
-          </button>
-        </div> */}
-
         {error && !showPanelForm && !showWinnerForm && !showModal && <div className="portal-error-banner">⚠️ {error}</div>}
         {success && !showPanelForm && !showWinnerForm && !showModal && <div className="portal-success-banner">✓ {success}</div>}
 
-        {/* FOUR CARDS STACKED VERTICALLY */}
+        {/* FOUR CARDS STACKED VERTICALLY IN FIGMA ORDER */}
         <div className="dashboard-content-stack">
-          {/* Card 1: Applications */}
+          {/* Card 1: Registrations */}
           <div className="dashboard-card">
             <div className="card-header-bar">
-              <h3 className="card-title">Applications ({String(filteredApps.length).padStart(2, '0')})</h3>
+              <div className="card-title-group">
+                <h3 className="card-title">Registrations({String(filteredUsers.length).padStart(2, '0')})</h3>
+              </div>
 
               <div className="card-actions">
-                <div className="filter-dropdown-container" ref={appDropdownRef}>
+                {/* Category Dropdown */}
+                <div className="filter-dropdown-container" ref={userCatDropdownRef}>
                   <button
-                    className={`btn-card-action filter-btn ${appFilter !== 'ALL' ? 'active' : ''}`}
-                    onClick={() => setShowAppFilterDropdown(!showAppFilterDropdown)}
+                    className="btn-filter-pill-select"
+                    onClick={() => setShowUserCatDropdown(!showUserCatDropdown)}
                   >
-                    <span>
-                      {appFilter === 'DRAFT' ? 'Status: Draft' :
-                        appFilter === 'SUBMITTED' ? 'Status: Submitted' :
-                          appFilter === 'JURY' ? 'Status: Jury Reviewed' :
-                            appFilter === 'PANEL_CHAIR' ? 'Status: Panel Chair Reviewed' :
-                              appFilter === 'REJECTED' ? 'Status: Rejected' :
-                                ANNUAL_AWARD_CATEGORIES.includes(appFilter) ? appFilter : 'FILTER'}
-                    </span>
+                    <span>{userCategoryFilter === 'ALL' ? 'CATEGORY' : (userCategoryFilter.length > 25 ? userCategoryFilter.slice(0, 22) + '...' : userCategoryFilter)}</span>
                     <ChevronDown size={14} />
                   </button>
-                  {showAppFilterDropdown && (
-                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '420px', overflowY: 'auto' }}>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('ALL')}><strong>All Applications</strong></div>
+                  {showUserCatDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '350px', overflowY: 'auto', right: 0 }}>
+                      <div className="filter-menu-item" onClick={() => { setUserCategoryFilter('ALL'); setShowUserCatDropdown(false); }}>
+                        <strong>All Categories</strong>
+                      </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
-                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Filter By Category</div>
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
-                        <div key={cat} className="filter-menu-item" onClick={() => handleAppFilterChange(cat)}>
+                        <div
+                          key={cat}
+                          className={`filter-menu-item ${userCategoryFilter === cat ? 'active' : ''}`}
+                          onClick={() => { setUserCategoryFilter(cat); setShowUserCatDropdown(false); }}
+                        >
                           {cat}
                         </div>
                       ))}
-                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
-                      <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Filter By Status</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('SUBMITTED')}>Final Submissions</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('DRAFT')}>Draft / Saved Applications</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('JURY')}>Jury Reviewed</div>
-                      <div className="filter-menu-item" onClick={() => handleAppFilterChange('REJECTED')}>Rejected</div>
                     </div>
                   )}
                 </div>
 
-                {/* Multi-Format Export Dropdown */}
-                <div className="filter-dropdown-container" ref={appExportDropdownRef}>
+                {/* Download Dropdown */}
+                <div className="filter-dropdown-container" ref={userExportDropdownRef}>
                   <button
-                    className="btn-card-action download-btn"
-                    onClick={() => setShowAppExportDropdown(!showAppExportDropdown)}
+                    className="btn-download-cyan"
+                    onClick={() => setShowUserExportDropdown(!showUserExportDropdown)}
                   >
-                    <span>EXPORT</span>
+                    <span>DOWNLOAD</span>
+                    <Download size={14} />
+                  </button>
+                  {showUserExportDropdown && (
+                    <div className="filter-dropdown-menu" style={{ right: 0, minWidth: '200px' }}>
+                      <div className="filter-menu-item" onClick={handleExportUsersExcel}>Export Excel (.xlsx)</div>
+                      <div className="filter-menu-item" onClick={handleExportUsersWord}>Export Word (.doc)</div>
+                      <div className="filter-menu-item" onClick={() => { setShowUserExportDropdown(false); downloadUsersCSV(); }}>Export CSV (.csv)</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="table-wrapper">
+              <table className="oppi-dashboard-table">
+                <thead>
+                  <tr>
+                    <th>App ID</th>
+                    <th>Organisation</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Category</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && users.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="table-loading">Loading registrations...</td>
+                    </tr>
+                  ) : filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="table-empty">No registrations found.</td>
+                    </tr>
+                  ) : (
+                    paginatedUsers.map((u, idx) => {
+                      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+                      const appDisplayId = String((userPage - 1) * userPageSize + idx + 1).padStart(2, '0');
+                      const organisation = u.organisation || userApp?.company || userApp?.institute_name || '—';
+                      const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+                      const category = userApp?.category || 'OPPI Marketing Excellence Awards New Product';
+
+                      return (
+                        <tr key={u.id}>
+                          <td className="id-col">{appDisplayId}</td>
+                          <td>{organisation}</td>
+                          <td className="bold-text">{fullName}</td>
+                          <td className="email-text">{u.email}</td>
+                          <td>{category}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="card-pagination-bar">
+              <div className="pagination-info">
+                Showing <strong>{filteredUsers.length === 0 ? 0 : (userPage - 1) * userPageSize + 1}</strong> to <strong>{Math.min(userPage * userPageSize, filteredUsers.length)}</strong> of <strong>{filteredUsers.length}</strong> entries
+              </div>
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setUserPage(p => Math.max(p - 1, 1))}
+                  disabled={userPage === 1}
+                >
+                  <ChevronLeft size={16} />
+                  <span>Previous</span>
+                </button>
+                <span className="pagination-page-indicator">
+                  Page <strong>{userPage}</strong> of <strong>{totalUserPages}</strong>
+                </span>
+                <button
+                  className="pagination-btn"
+                  onClick={() => setUserPage(p => Math.min(p + 1, totalUserPages))}
+                  disabled={userPage >= totalUserPages}
+                >
+                  <span>Next</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Applications */}
+          <div className="dashboard-card">
+            <div className="card-header-bar">
+              <div className="card-title-group">
+                <h3 className="card-title">Applications({String(filteredApps.length).padStart(2, '0')})</h3>
+              </div>
+
+              <div className="card-actions">
+                {/* Category Dropdown */}
+                <div className="filter-dropdown-container" ref={appCatDropdownRef}>
+                  <button
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowAppCatDropdown(!showAppCatDropdown);
+                      setShowAppStatusDropdown(false);
+                    }}
+                  >
+                    <span>{appCategoryFilter === 'ALL' ? 'CATEGORY' : (appCategoryFilter.length > 25 ? appCategoryFilter.slice(0, 22) + '...' : appCategoryFilter)}</span>
                     <ChevronDown size={14} />
                   </button>
+                  {showAppCatDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '350px', overflowY: 'auto' }}>
+                      <div className="filter-menu-item" onClick={() => { setAppCategoryFilter('ALL'); setAppPage(1); setShowAppCatDropdown(false); }}>
+                        <strong>All Categories</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <div
+                          key={cat}
+                          className={`filter-menu-item ${appCategoryFilter === cat ? 'active' : ''}`}
+                          onClick={() => { setAppCategoryFilter(cat); setAppPage(1); setShowAppCatDropdown(false); }}
+                        >
+                          {cat}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Filter / Status Dropdown */}
+                <div className="filter-dropdown-container" ref={appStatusDropdownRef}>
+                  <button
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowAppStatusDropdown(!showAppStatusDropdown);
+                      setShowAppCatDropdown(false);
+                    }}
+                  >
+                    <span>
+                      {appStatusFilter === 'SUBMITTED' ? 'Submitted' :
+                       appStatusFilter === 'DRAFT' ? 'Draft' :
+                       appStatusFilter === 'JURY' ? 'Jury' : 'FILTER'}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showAppStatusDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '160px' }}>
+                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('ALL'); setAppPage(1); setShowAppStatusDropdown(false); }}>All Status</div>
+                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('SUBMITTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Submitted</div>
+                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('DRAFT'); setAppPage(1); setShowAppStatusDropdown(false); }}>Draft</div>
+                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('JURY'); setAppPage(1); setShowAppStatusDropdown(false); }}>Jury Reviewed</div>
+                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('REJECTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Rejected</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Download Dropdown */}
+                <div className="filter-dropdown-container" ref={appExportDropdownRef}>
+                  <button
+                    className="btn-download-cyan"
+                    onClick={() => setShowAppExportDropdown(!showAppExportDropdown)}
+                  >
+                    <span>DOWNLOAD</span>
+                    <Download size={14} />
+                  </button>
                   {showAppExportDropdown && (
-                    <div className="filter-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '220px' }}>
+                    <div className="filter-dropdown-menu" style={{ right: 0, minWidth: '220px' }}>
                       <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Excel Format (.xlsx)</div>
                       <div className="filter-menu-item" onClick={handleExportFinalSubmissionsExcel}>Final Submissions (.xlsx)</div>
                       <div className="filter-menu-item" onClick={handleExportDraftsExcel}>Draft Applications (.xlsx)</div>
                       <div className="filter-menu-item" onClick={handleExportAllAppsExcel}>All Filtered Apps (.xlsx)</div>
-
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', color: '#718096', textTransform: 'uppercase' }}>Word Format (.doc)</div>
                       <div className="filter-menu-item" onClick={handleExportFinalSubmissionsWord}>Submissions Dossier (.doc)</div>
                       <div className="filter-menu-item" onClick={handleExportDraftsWord}>Drafts Report (.doc)</div>
-
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       <div className="filter-menu-item" onClick={() => { setShowAppExportDropdown(false); downloadAppsCSV(); }}>Download CSV (.csv)</div>
                     </div>
@@ -928,12 +1147,12 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
-                    <th>Representative</th>
-                    <th>Award Category</th>
-                    <th>Member Company</th>
-                    <th>Email ID</th>
+                    <th>App ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Company</th>
+                    <th>Category</th>
                     <th>Status</th>
-                    <th>Jury Score</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -944,46 +1163,32 @@ const AdminPortal = () => {
                     </tr>
                   ) : filteredApps.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-empty">No submitted applications found.</td>
+                      <td colSpan="7" className="table-empty">No applications found.</td>
                     </tr>
                   ) : (
-                    paginatedApps.map((app) => {
-                      let juryScore = '—';
-                      let juryClass = 'none';
-                      if (app.average_score > 0) {
-                        juryScore = `${app.average_score.toFixed(1)}/100`;
-                        juryClass = 'score';
-                      } else if (app.status === 'SUBMITTED' || app.status === 'UNDER_JURY_REVIEW' || app.status === 'VALIDATOR_APPROVED') {
-                        juryScore = 'Pending';
-                        juryClass = 'pending';
-                      } else if (app.status === 'JURY_REJECTED') {
-                        juryScore = 'Rejected';
-                        juryClass = 'rejected';
-                      }
+                    paginatedApps.map((app, idx) => {
+                      const isDraft = app.status === 'DRAFT';
+                      const displayId = String(app.id || idx + 1).padStart(2, '0');
 
                       return (
                         <tr key={app.id}>
+                          <td className="id-col">{displayId}</td>
                           <td className="bold-text">{app.applicant_name || app.user_name || 'Anonymous'}</td>
-                          <td>{app.category || '—'}</td>
-                          <td>{app.institute_name || app.instituteName || app.company || '—'}</td>
                           <td className="email-text">{app.applicant_email || app.user_email || '—'}</td>
+                          <td>{app.company || app.institute_name || app.instituteName || '—'}</td>
+                          <td>{app.category || '—'}</td>
                           <td>
-                            <span className={`oppi-status-tag status-${app.status.toLowerCase()}`}>
-                              {app.status.replace('_', ' ')}
+                            <span className={`oppi-status-pill ${isDraft ? 'pill-draft' : 'pill-submitted'}`}>
+                              {isDraft ? 'Draft' : 'Submitted'}
                             </span>
                           </td>
                           <td>
-                            <span className={`score-status status-text-${juryClass}`}>{juryScore}</span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="action-btn-view" onClick={() => triggerViewApp(app.id)}>
-                                <Eye size={14} />
-                                <span>View</span>
+                            <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+                              <button className="action-btn-pill-view" onClick={() => triggerViewApp(app.id)}>
+                                View
                               </button>
-                              <button className="action-btn-view" onClick={() => navigate(`/application?appId=${app.id}`)}>
-                                <Pencil size={14} />
-                                <span>Edit</span>
+                              <button className="action-btn-pill-edit" onClick={() => navigate(`/application?appId=${app.id}`)}>
+                                Edit
                               </button>
                             </div>
                           </td>
@@ -1023,150 +1228,53 @@ const AdminPortal = () => {
             </div>
           </div>
 
-          {/* Card 2: Registered Users */}
+          {/* Card 3: Jury Members */}
           <div className="dashboard-card">
-            <div className="card-header-bar">
-              <h3 className="card-title">Registered Users({String(filteredUsers.length).padStart(2, '0')})</h3>
-
-              <div className="card-actions">
-                <div className="filter-dropdown-container" ref={userDropdownRef}>
-                  <button
-                    className={`btn-card-action filter-btn ${userFilter !== 'ALL' ? 'active' : ''}`}
-                    onClick={() => setShowUserFilterDropdown(!showUserFilterDropdown)}
-                  >
-                    <span>
-                      {userFilter === 'SUBMITTED' ? 'Status: Submitted' :
-                        userFilter === 'DRAFT' ? 'Status: Draft' :
-                          (userFilter === 'REGISTERED' || userFilter === 'NEW') ? 'Status: Registered' : 'FILTER'}
-                    </span>
-                    <ChevronDown size={14} />
-                  </button>
-                  {showUserFilterDropdown && (
-                    <div className="filter-dropdown-menu">
-                      <div className="filter-menu-item" onClick={() => handleUserFilterChange('ALL')}>All Users</div>
-                      <div className="filter-menu-item" onClick={() => handleUserFilterChange('SUBMITTED')}>Submitted</div>
-                      <div className="filter-menu-item" onClick={() => handleUserFilterChange('DRAFT')}>Draft</div>
-                      <div className="filter-menu-item" onClick={() => handleUserFilterChange('REGISTERED')}>Registered</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Multi-Format Export Dropdown for Users */}
-                <div className="filter-dropdown-container" ref={userExportDropdownRef}>
-                  <button
-                    className="btn-card-action download-btn"
-                    onClick={() => setShowUserExportDropdown(!showUserExportDropdown)}
-                  >
-                    <span>EXPORT</span>
-                    <ChevronDown size={14} />
-                  </button>
-                  {showUserExportDropdown && (
-                    <div className="filter-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '220px' }}>
-                      <div className="filter-menu-item" onClick={handleExportUsersExcel}>Export Excel (.xlsx)</div>
-                      <div className="filter-menu-item" onClick={handleExportUsersWord}>Export Word (.doc)</div>
-                      <div className="filter-menu-item" onClick={() => { setShowUserExportDropdown(false); downloadUsersCSV(); }}>Export CSV (.csv)</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="table-wrapper">
-              <table className="oppi-dashboard-table">
-                <thead>
-                  <tr>
-                    <th>Date & Time Stamp</th>
-                    <th>Representative Name</th>
-                    <th>Member Company</th>
-                    <th>Nomination Category</th>
-                    <th>Email ID</th>
-                    <th>Mobile</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && users.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="table-loading">Loading users...</td>
-                    </tr>
-                  ) : filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="table-empty">No registered users found.</td>
-                    </tr>
-                  ) : (
-                    paginatedUsers.map((u) => {
-                      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
-                      let badgeClass = 'badge-user';
-                      let statusLabel = 'Registered';
-                      if (userApp) {
-                        if (userApp.status === 'DRAFT') {
-                          badgeClass = 'badge-jury';
-                          statusLabel = 'Draft';
-                        } else {
-                          badgeClass = 'badge-validator';
-                          statusLabel = 'Submitted';
-                        }
-                      }
-                      return (
-                        <tr key={u.id}>
-                          <td>{formatDateTime(u.createdAt || u.created_at)}</td>
-                          <td className="bold-text">{u.firstName} {u.lastName}</td>
-                          <td>{u.organisation || userApp?.company || userApp?.institute_name || '—'}</td>
-                          <td>{userApp?.category || '—'}</td>
-                          <td className="email-text">{u.email}</td>
-                          <td>{u.mobile || '—'}</td>
-                          <td>
-                            <span className={`oppi-badge-pill ${badgeClass}`}>
-                              {statusLabel}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="card-pagination-bar">
-              <div className="pagination-info">
-                Showing <strong>{filteredUsers.length === 0 ? 0 : (userPage - 1) * userPageSize + 1}</strong> to <strong>{Math.min(userPage * userPageSize, filteredUsers.length)}</strong> of <strong>{filteredUsers.length}</strong> entries
-              </div>
-              <div className="pagination-controls">
-                <button
-                  className="pagination-btn"
-                  onClick={() => setUserPage(p => Math.max(p - 1, 1))}
-                  disabled={userPage === 1}
-                >
-                  <ChevronLeft size={16} />
-                  <span>Previous</span>
-                </button>
-                <span className="pagination-page-indicator">
-                  Page <strong>{userPage}</strong> of <strong>{totalUserPages}</strong>
+            <div className="card-header-bar" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div className="card-title-group">
+                <h3 className="card-title">Jury Members</h3>
+                <span className="card-subtitle">
+                  {juryCategoryFilter !== 'ALL' ? juryCategoryFilter : 'OPPI Sustainability Excellence Award'}
                 </span>
-                <button
-                  className="pagination-btn"
-                  onClick={() => setUserPage(p => Math.min(p + 1, totalUserPages))}
-                  disabled={userPage >= totalUserPages}
-                >
-                  <span>Next</span>
-                  <ChevronRight size={16} />
-                </button>
               </div>
-            </div>
-          </div>
-
-
-
-          {/* Card 3: Website Panel Members */}
-          <div className="dashboard-card">
-            <div className="card-header-bar">
-              <h3 className="card-title">Website Panel Members({String(panelMembers.length).padStart(2, '0')})</h3>
 
               <div className="card-actions">
-                <button className="btn-card-action download-btn" onClick={handleOpenCreateForm}>
+                {/* Category Dropdown */}
+                <div className="filter-dropdown-container" ref={juryCatDropdownRef}>
+                  <button
+                    className="btn-filter-pill-select"
+                    onClick={() => setShowJuryCatDropdown(!showJuryCatDropdown)}
+                  >
+                    <span>{juryCategoryFilter === 'ALL' ? 'CATEGORY' : (juryCategoryFilter.length > 25 ? juryCategoryFilter.slice(0, 22) + '...' : juryCategoryFilter)}</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showJuryCatDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '350px', overflowY: 'auto' }}>
+                      <div className="filter-menu-item" onClick={() => { setJuryCategoryFilter('ALL'); setShowJuryCatDropdown(false); }}>
+                        <strong>All Categories</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <div
+                          key={cat}
+                          className={`filter-menu-item ${juryCategoryFilter === cat ? 'active' : ''}`}
+                          onClick={() => { setJuryCategoryFilter(cat); setShowJuryCatDropdown(false); }}
+                        >
+                          {cat}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button className="btn-pill-add" onClick={handleOpenCreateForm}>
                   <Plus size={14} />
-                  <span>Add Panel Member</span>
+                  <span>Add Member</span>
+                </button>
+
+                <button className="btn-download-cyan" onClick={downloadJuryCSV} title="Download Jury Members CSV">
+                  <span>DOWNLOAD</span>
+                  <Download size={14} />
                 </button>
               </div>
             </div>
@@ -1175,59 +1283,37 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
-                    <th>Sort Order</th>
-                    <th>Photo</th>
+                    <th>S. No.</th>
                     <th>Name</th>
-                    <th>Panel Role</th>
-                    <th>Email ID</th>
-                    <th>Description</th>
-                    <th>Actions</th>
+                    <th>Email</th>
+                    <th>Evaluation Status</th>
+                    <th>Profile</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && panelMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-loading">Loading panel members...</td>
+                      <td colSpan="5" className="table-loading">Loading jury members...</td>
                     </tr>
-                  ) : panelMembers.length === 0 ? (
+                  ) : displayedJuryMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-empty">No custom panel members configured.</td>
+                      <td colSpan="5" className="table-empty">No jury members configured.</td>
                     </tr>
                   ) : (
-                    [...panelMembers].sort((a, b) => {
-                      const getPrio = (t) => {
-                        if (t === 'VALIDATOR') return 1;
-                        if (t === 'JURY') return 2;
-                        if (t === 'PANEL_CHAIR') return 3;
-                        return 4;
-                      };
-                      const diff = getPrio(a.type) - getPrio(b.type);
-                      if (diff !== 0) return diff;
-                      return a.sortOrder - b.sortOrder;
-                    }).map(m => (
+                    displayedJuryMembers.map((m, idx) => (
                       <tr key={m.id}>
-                        <td>{m.sortOrder}</td>
-                        <td>
-                          <img
-                            src={getResolvedImage(m.imagePath, m.type)}
-                            alt={m.name}
-                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #ddd' }}
-                          />
-                        </td>
+                        <td className="id-col">{String(idx + 1).padStart(2, '0')}</td>
                         <td className="bold-text">{m.name}</td>
+                        <td className="email-text">{m.email || '—'}</td>
+                        <td>{getEvaluationStatus(m)}</td>
                         <td>
-                          <span className={`oppi-badge-pill badge-${m.type.toLowerCase().replace('_', '-')}`}>
-                            {getRoleLabel(m.type)}
-                          </span>
-                        </td>
-                        <td className="email-text">{m.email || 'N/A'}</td>
-                        <td className="email-text" style={{ maxWidth: '300px', whiteSpace: 'normal' }}>
-                          {m.role}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className="action-btn-view" onClick={() => handleOpenEditForm(m)}>Edit</button>
-                            <button className="action-btn-delete" onClick={() => handleDeletePanelMember(m)}>Delete</button>
+                          <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+                            <button className="action-btn-pill-edit" onClick={() => handleOpenEditForm(m)}>
+                              Edit
+                            </button>
+                            <button className="action-btn-trash" onClick={() => handleDeletePanelMember(m)} title="Delete Member">
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1238,21 +1324,19 @@ const AdminPortal = () => {
             </div>
           </div>
 
-          {/* Card 4: Annual Awards Past Winners (Figma Design) */}
+          {/* Card 4: Annual Awards Past Winners */}
           <div className="dashboard-card">
             <div className="card-header-bar" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <h3 className="card-title" style={{ margin: 0, fontSize: '1.45rem', fontWeight: '800', color: '#0f172a' }}>
-                  Annual Awards Past Winners
-                </h3>
-                <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>
-                  {winnerFilterCategory !== 'ALL' ? winnerFilterCategory : 'OPPI Annual Awards Past Winners'}
+              <div className="card-title-group">
+                <h3 className="card-title">Annual Awards Past Winners</h3>
+                <span className="card-subtitle">
+                  {winnerFilterCategory !== 'ALL' ? winnerFilterCategory : 'OPPI Sustainability Excellence Award'}
                 </span>
               </div>
 
               <div className="card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                 {/* YEARS Filter Dropdown */}
-                <div style={{ position: 'relative' }}>
+                <div className="filter-dropdown-container" ref={winnerYearDropdownRef}>
                   <button
                     type="button"
                     className="btn-filter-pill-select"
@@ -1289,7 +1373,7 @@ const AdminPortal = () => {
                 </div>
 
                 {/* CATEGORY Filter Dropdown */}
-                <div style={{ position: 'relative' }}>
+                <div className="filter-dropdown-container" ref={winnerCatDropdownRef}>
                   <button
                     type="button"
                     className="btn-filter-pill-select"
@@ -1298,21 +1382,22 @@ const AdminPortal = () => {
                       setShowWinnerYearDropdown(false);
                     }}
                   >
-                    <span style={{ maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {winnerFilterCategory === 'ALL' ? 'CATEGORY' : winnerFilterCategory}
+                    <span>
+                      {winnerFilterCategory === 'ALL' ? 'CATEGORY' : (winnerFilterCategory.length > 25 ? winnerFilterCategory.slice(0, 22) + '...' : winnerFilterCategory)}
                     </span>
                     <ChevronDown size={14} />
                   </button>
 
                   {showWinnerCatDropdown && (
-                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '380px', overflowY: 'auto' }}>
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
                       <button
                         type="button"
                         className={`filter-dropdown-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setWinnerFilterCategory('ALL'); setShowWinnerCatDropdown(false); }}
                       >
-                        All Categories
+                        <strong>All Categories</strong>
                       </button>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
                         <button
                           key={cat}
@@ -1327,6 +1412,16 @@ const AdminPortal = () => {
                   )}
                 </div>
 
+                {/* Add Winner Button */}
+                <button
+                  type="button"
+                  className="btn-pill-add"
+                  onClick={handleOpenWinnerCreate}
+                >
+                  <Plus size={14} />
+                  <span>Add Winner</span>
+                </button>
+
                 {/* Cyan DOWNLOAD Button */}
                 <button
                   type="button"
@@ -1336,17 +1431,6 @@ const AdminPortal = () => {
                 >
                   <span>DOWNLOAD</span>
                   <Download size={14} />
-                </button>
-
-                {/* Add Winner Button */}
-                <button
-                  type="button"
-                  className="btn-card-action download-btn"
-                  onClick={handleOpenWinnerCreate}
-                  style={{ padding: '0.55rem 1.1rem', fontSize: '12px' }}
-                >
-                  <Plus size={14} />
-                  <span>Add Winner</span>
                 </button>
               </div>
             </div>
@@ -1420,16 +1504,14 @@ const AdminPortal = () => {
                             <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', alignItems: 'center' }}>
                               <button
                                 type="button"
-                                className="action-btn-view"
-                                style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}
+                                className="action-btn-pill-edit"
                                 onClick={() => handleOpenWinnerEdit(w)}
                               >
                                 Edit
                               </button>
                               <button
                                 type="button"
-                                className="action-btn-delete"
-                                style={{ padding: '0.3rem 0.5rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                className="action-btn-trash"
                                 onClick={() => handleDeleteWinner(w)}
                                 title="Delete Winner"
                               >
@@ -1551,7 +1633,7 @@ const AdminPortal = () => {
         <div className="admin-modal-overlay">
           <div className="admin-modal-container compact-modal">
             <div className="admin-modal-header">
-              <h2>{editingMember ? 'Edit Panel Member' : 'Add New Panel Member'}</h2>
+              <h2>{editingMember ? 'Edit Panel Members' : 'Add Panel Member'}</h2>
               <button
                 className="admin-modal-close-btn"
                 onClick={() => setShowPanelForm(false)}
@@ -1574,7 +1656,7 @@ const AdminPortal = () => {
                         setPanelName(e.target.value);
                         if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: null }));
                       }}
-                      placeholder="Dr. John Doe"
+                      placeholder="enter name"
                       required
                     />
                     {fieldErrors.name && <span className="field-error-message">⚠️ {fieldErrors.name}</span>}
@@ -1583,9 +1665,9 @@ const AdminPortal = () => {
                   <div className="modal-form-group">
                     <label>Panel Role Type <span className="req">*</span></label>
                     <select value={panelType} onChange={(e) => setPanelType(e.target.value)}>
+                      <option value="JURY">Jury Member</option>
                       <option value="VALIDATOR">Validator</option>
                       <option value="PANEL_CHAIR">Panel Chair</option>
-                      <option value="JURY">Jury Member</option>
                     </select>
                   </div>
                 </div>
@@ -1598,7 +1680,7 @@ const AdminPortal = () => {
                       setPanelRole(e.target.value);
                       if (fieldErrors.role) setFieldErrors(prev => ({ ...prev, role: null }));
                     }}
-                    placeholder="Chief Scientist & Head, division name, institute name, etc."
+                    placeholder="abc...."
                     rows="3"
                     required
                   />
@@ -1616,7 +1698,7 @@ const AdminPortal = () => {
                           setPanelEmail(e.target.value);
                           if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: null }));
                         }}
-                        placeholder="panel.member@example.com"
+                        placeholder="enter email"
                         required
                       />
                       {fieldErrors.email && <span className="field-error-message">⚠️ {fieldErrors.email}</span>}
