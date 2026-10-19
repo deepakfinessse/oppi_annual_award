@@ -696,7 +696,7 @@ const ApplicationForm = () => {
               </button>
             )} */}
             <Link to="/change-password" className="btn-header-pill btn-change-pwd">
-              <Lock size={15} />
+              {/* <Lock size={15} /> */}
               <span>CHANGE PASSWORD</span>
             </Link>
             <button onClick={handleLogout} className="btn-header-pill btn-logout">
