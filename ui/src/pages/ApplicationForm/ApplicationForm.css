@@ -151,6 +151,58 @@
   color: #b91c1c;
 }
 
+/* Field-Level Inline Error Styling */
+.field-error-msg {
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: left;
+  line-height: 1.35;
+  animation: fieldErrorFadeIn 0.2s ease-in-out;
+}
+
+.field-error-icon {
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+.upload-field-error {
+  margin-top: 0.5rem;
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fffafb !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.dropdown-trigger-box.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fffafb !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.upload-dropzone.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fffafb !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+@keyframes fieldErrorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Form Grid */
 .application-form {
   display: flex;

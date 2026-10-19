@@ -23,9 +23,9 @@ public class EmailService
 
     private void PopulateEmailHtmlBody(MailMessage mail, string bodyContent)
     {
-        string plainText = mail.Body;
+        string plainText = mail.Body ?? string.Empty;
 
-        mail.Body = null;
+        mail.Body = plainText;
         mail.IsBodyHtml = false;
         mail.AlternateViews.Clear();
 
@@ -353,7 +353,8 @@ Team - OPPI Awards";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send application submission email to {Email}.", recipientEmail);
+            _logger.LogError(ex, "Failed to send application submission email to {Email}: {Message} (Inner: {Inner})", recipientEmail, ex.Message, ex.InnerException?.Message);
+            throw;
         }
     }
 }

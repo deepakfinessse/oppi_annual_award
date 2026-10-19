@@ -130,6 +130,7 @@ const ApplicationForm = () => {
   const [isSavingAndExiting, setIsSavingAndExiting] = useState(false);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [appStatus, setAppStatus] = useState('DRAFT');
   const [viewMode, setViewMode] = useState('dashboard'); // 'dashboard' | 'form' | 'preview'
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -242,6 +243,7 @@ const ApplicationForm = () => {
   const handleStartNewNomination = async () => {
     setIsStartingNew(true);
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
     try {
       const res = await createApplication(true);
       if (res && res.id) {
@@ -273,6 +275,7 @@ const ApplicationForm = () => {
 
   const handleEditSubmission = async (selectedId) => {
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
     setIsEditingSubmitted(true);
     await loadApplication(selectedId);
     setViewMode('form');
@@ -347,6 +350,9 @@ const ApplicationForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleLogout = () => {
@@ -387,37 +393,57 @@ const ApplicationForm = () => {
   const handleGoToPreview = async (e) => {
     if (e) e.preventDefault();
 
+    const errors = {};
     if (!formData.awardCategory) {
-      setMessage({ type: 'error', text: 'Please select an Award Category.' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      errors.awardCategory = 'Please select an Award Category.';
     }
     if (!formData.organisationName?.trim()) {
-      setMessage({ type: 'error', text: 'Please enter Organisation Name.' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      errors.organisationName = 'Please enter Organisation Name.';
     }
     if (!formData.representativeName?.trim()) {
-      setMessage({ type: 'error', text: 'Please enter Representative Name.' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      errors.representativeName = 'Please enter Representative Name.';
     }
     if (!formData.designation?.trim()) {
-      setMessage({ type: 'error', text: 'Please enter Designation.' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      errors.designation = 'Please enter Designation.';
+    }
+    if (!formData.emailId?.trim()) {
+      errors.emailId = 'Please enter Email Id.';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.emailId.trim())) {
+        errors.emailId = 'Please enter a valid email address.';
+      }
+    }
+    if (!formData.mobileNumber?.trim()) {
+      errors.mobileNumber = 'Please enter Mobile Number.';
+    } else {
+      const cleanPhone = formData.mobileNumber.replace(/[^0-9]/g, '');
+      if (cleanPhone.length < 10) {
+        errors.mobileNumber = 'Please enter a valid 10-digit mobile number.';
+      }
     }
     if (!formData.briefDescription?.trim()) {
-      setMessage({ type: 'error', text: 'Please provide a Brief Description.' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      errors.briefDescription = 'Please provide a Brief Description.';
     }
     if (documentFiles.length === 0) {
-      setMessage({ type: 'error', text: 'Please upload at least one required Document (PDF).' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      errors.documentFiles = 'Please upload at least one required Document (PDF).';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setMessage({ type: 'error', text: 'Please fill in all required fields marked with *.' });
+      setTimeout(() => {
+        const firstErrorEl = document.querySelector('.field-error-msg, .input-error');
+        if (firstErrorEl) {
+          firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
       return;
     }
 
+    setFieldErrors({});
     setMessage({ type: '', text: '' });
     setIsSavingDraft(true);
 
@@ -633,6 +659,7 @@ const ApplicationForm = () => {
         const data = await res.json();
         if (section === 'document') {
           setDocumentFiles(prev => [...prev, ...data.files]);
+          setFieldErrors(prev => ({ ...prev, documentFiles: '' }));
         } else {
           setVideoFiles(prev => [...prev, ...data.files]);
         }
@@ -1076,7 +1103,7 @@ const ApplicationForm = () => {
               </div>
             )}
 
-            <form onSubmit={handleGoToPreview} className="application-form">
+            <form onSubmit={handleGoToPreview} className="application-form" noValidate>
               {/* Row 1: Award Category */}
               <div className="form-group full-width">
                 <label>
@@ -1085,7 +1112,7 @@ const ApplicationForm = () => {
                 <div className="custom-category-dropdown" ref={categoryDropdownRef}>
                   <button
                     type="button"
-                    className={`dropdown-trigger-box ${formData.awardCategory ? 'has-selection' : ''} ${isCategoryDropdownOpen ? 'open' : ''}`}
+                    className={`dropdown-trigger-box ${formData.awardCategory ? 'has-selection' : ''} ${isCategoryDropdownOpen ? 'open' : ''} ${fieldErrors.awardCategory ? 'input-error' : ''}`}
                     onClick={() => !isReadOnly && setIsCategoryDropdownOpen(prev => !prev)}
                     disabled={isReadOnly}
                   >
@@ -1108,6 +1135,9 @@ const ApplicationForm = () => {
                               if (isAlreadySubmitted) return;
                               setFormData(prev => ({ ...prev, awardCategory: cat }));
                               setIsCategoryDropdownOpen(false);
+                              if (fieldErrors.awardCategory) {
+                                setFieldErrors(prev => ({ ...prev, awardCategory: '' }));
+                              }
                             }}
                           >
                             <div className="option-text-wrapper">
@@ -1123,6 +1153,12 @@ const ApplicationForm = () => {
                     </div>
                   )}
                 </div>
+                {fieldErrors.awardCategory && (
+                  <span className="field-error-msg">
+                    <AlertCircle size={14} className="field-error-icon" />
+                    {fieldErrors.awardCategory}
+                  </span>
+                )}
               </div>
 
               {/* Row 2: Organisation & Representative Name */}
@@ -1138,8 +1174,14 @@ const ApplicationForm = () => {
                     value={formData.organisationName}
                     onChange={handleChange}
                     disabled={isReadOnly}
-                    required
+                    className={fieldErrors.organisationName ? 'input-error' : ''}
                   />
+                  {fieldErrors.organisationName && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.organisationName}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -1153,8 +1195,14 @@ const ApplicationForm = () => {
                     value={formData.representativeName}
                     onChange={handleChange}
                     disabled={isReadOnly}
-                    required
+                    className={fieldErrors.representativeName ? 'input-error' : ''}
                   />
+                  {fieldErrors.representativeName && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.representativeName}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1171,8 +1219,14 @@ const ApplicationForm = () => {
                     value={formData.designation}
                     onChange={handleChange}
                     disabled={isReadOnly}
-                    required
+                    className={fieldErrors.designation ? 'input-error' : ''}
                   />
+                  {fieldErrors.designation && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.designation}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -1232,8 +1286,14 @@ const ApplicationForm = () => {
                     value={formData.emailId}
                     onChange={handleChange}
                     disabled={isReadOnly && !isAdmin}
-                    required
+                    className={fieldErrors.emailId ? 'input-error' : ''}
                   />
+                  {fieldErrors.emailId && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.emailId}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -1247,8 +1307,14 @@ const ApplicationForm = () => {
                     value={formData.mobileNumber}
                     onChange={handleChange}
                     disabled={isReadOnly && !isAdmin}
-                    required
+                    className={fieldErrors.mobileNumber ? 'input-error' : ''}
                   />
+                  {fieldErrors.mobileNumber && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.mobileNumber}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1264,8 +1330,14 @@ const ApplicationForm = () => {
                   value={formData.briefDescription}
                   onChange={handleChange}
                   disabled={isReadOnly}
-                  required
+                  className={fieldErrors.briefDescription ? 'input-error' : ''}
                 ></textarea>
+                {fieldErrors.briefDescription && (
+                  <span className="field-error-msg">
+                    <AlertCircle size={14} className="field-error-icon" />
+                    {fieldErrors.briefDescription}
+                  </span>
+                )}
               </div>
 
               {/* Upload Document Section */}
@@ -1274,7 +1346,7 @@ const ApplicationForm = () => {
                   Upload Document <span className="required">*</span>
                 </label>
                 <div className="upload-container-split">
-                  <div className="upload-dropzone">
+                  <div className={`upload-dropzone ${fieldErrors.documentFiles ? 'input-error' : ''}`}>
                     <FileText className="upload-icon-large" size={38} />
                     <p>Drop your Document here, or <span className="browse-text">browse</span></p>
                     <input
@@ -1325,6 +1397,12 @@ const ApplicationForm = () => {
                       );
                     })}
                   </div>
+                )}
+                {fieldErrors.documentFiles && (
+                  <span className="field-error-msg upload-field-error">
+                    <AlertCircle size={14} className="field-error-icon" />
+                    {fieldErrors.documentFiles}
+                  </span>
                 )}
               </div>
 

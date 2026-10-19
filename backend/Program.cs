@@ -1223,10 +1223,16 @@ api.MapPost("/application/submit/{appId}", async (int appId, InnovationDbContext
 
     try
     {
-        if (a.User != null)
+        var targetUser = a.User ?? currentUser ?? await db.Users.FindAsync(a.UserId);
+        if (targetUser != null && !string.IsNullOrWhiteSpace(targetUser.Email))
         {
-            var displayName = $"{a.User.FirstName} {a.User.LastName}".Trim();
-            await emailService.SendApplicationSubmissionEmailAsync(a.User.Email, displayName, a.Id);
+            var displayName = $"{targetUser.FirstName} {targetUser.LastName}".Trim();
+            if (string.IsNullOrWhiteSpace(displayName)) displayName = "Applicant";
+            await emailService.SendApplicationSubmissionEmailAsync(targetUser.Email, displayName, a.Id);
+        }
+        else
+        {
+            Log.Warning("Could not send application submission email for App #{AppId} because recipient email was not found.", a.Id);
         }
     }
     catch (Exception ex)
