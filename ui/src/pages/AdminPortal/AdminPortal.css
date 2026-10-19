@@ -1341,3 +1341,52 @@
   background: #f0f9ff;
 }
 
+/* Position Badges for Final Evaluation & Ranking (Matching Figma) */
+.pos-badge-winner {
+  background-color: #00a3e0;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 90px;
+}
+
+.pos-badge-runner-1 {
+  background-color: #f58220;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 95px;
+}
+
+.pos-badge-runner-2 {
+  background-color: #f58220;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 95px;
+}
+
+.pos-badge-default {
+  background-color: #64748b;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 90px;
+}
+

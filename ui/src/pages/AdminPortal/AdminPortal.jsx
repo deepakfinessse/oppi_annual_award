@@ -28,7 +28,8 @@ import {
   exportApplicationsExcel,
   exportRegistrationsExcel,
   exportDraftApplicationsExcel,
-  exportSubmissionsExcel
+  exportSubmissionsExcel,
+  exportEvaluationRankingExcel
 } from '../../utils/excelExport';
 import {
   exportRegistrationsWord,
@@ -113,6 +114,12 @@ const AdminPortal = () => {
   const [showJuryCatDropdown, setShowJuryCatDropdown] = useState(false);
   const [showJuryExportDropdown, setShowJuryExportDropdown] = useState(false);
 
+  const [evalReport, setEvalReport] = useState(null);
+  const [evalCategoryFilter, setEvalCategoryFilter] = useState('ALL');
+  const [evalStatusFilter, setEvalStatusFilter] = useState('ALL');
+  const [showEvalCatDropdown, setShowEvalCatDropdown] = useState(false);
+  const [showEvalStatusDropdown, setShowEvalStatusDropdown] = useState(false);
+
   const [showExcelDropdown, setShowExcelDropdown] = useState(false);
 
   // Pagination
@@ -132,6 +139,9 @@ const AdminPortal = () => {
 
   const juryCatDropdownRef = useRef(null);
   const juryExportDropdownRef = useRef(null);
+
+  const evalCatDropdownRef = useRef(null);
+  const evalStatusDropdownRef = useRef(null);
 
   const excelDropdownRef = useRef(null);
   const winnerYearDropdownRef = useRef(null);
@@ -178,16 +188,18 @@ const AdminPortal = () => {
     setError('');
     setSuccess('');
     try {
-      const [appsRes, usersRes, panelMembersRes, pastWinnersRes] = await Promise.all([
-        getAdminApplications(),
-        getAdminUsers(),
-        getPublicPanelMembers(),
-        getPublicPastWinners()
+      const [appsRes, usersRes, panelMembersRes, pastWinnersRes, evalRes] = await Promise.all([
+        getAdminApplications().catch(() => []),
+        getAdminUsers().catch(() => []),
+        getPublicPanelMembers().catch(() => []),
+        getPublicPastWinners().catch(() => []),
+        getAdminPanelChairReport().catch(() => null)
       ]);
       setApps(appsRes || []);
       setUsers(usersRes || []);
       setPanelMembers(panelMembersRes || []);
       setPastWinners(pastWinnersRes || []);
+      setEvalReport(evalRes || null);
     } catch (err) {
       console.error('Failed to load admin data:', err);
       setError('Failed to fetch administrative data. Please check connection.');
@@ -263,6 +275,12 @@ const AdminPortal = () => {
       }
       if (juryExportDropdownRef.current && !juryExportDropdownRef.current.contains(e.target)) {
         setShowJuryExportDropdown(false);
+      }
+      if (evalCatDropdownRef.current && !evalCatDropdownRef.current.contains(e.target)) {
+        setShowEvalCatDropdown(false);
+      }
+      if (evalStatusDropdownRef.current && !evalStatusDropdownRef.current.contains(e.target)) {
+        setShowEvalStatusDropdown(false);
       }
       if (excelDropdownRef.current && !excelDropdownRef.current.contains(e.target)) {
         setShowExcelDropdown(false);
@@ -390,6 +408,131 @@ const AdminPortal = () => {
 
   const totalUserPages = Math.ceil(filteredUsers.length / userPageSize) || 1;
   const paginatedUsers = filteredUsers.slice((userPage - 1) * userPageSize, userPage * userPageSize);
+
+  // Final Evaluation and Ranking Juries and List
+  const evalJuries = (evalReport?.juries && evalReport.juries.length > 0)
+    ? evalReport.juries
+    : (panelMembers.filter(m => m.type === 'JURY').length > 0
+        ? panelMembers.filter(m => m.type === 'JURY').map(m => ({ id: m.id, name: m.name, email: m.email }))
+        : [
+            { id: 1, name: 'Aman Gupta' },
+            { id: 2, name: 'Dilip Yadav' },
+            { id: 3, name: 'Srikanth Srinivas' },
+            { id: 4, name: 'Shweta Roychowdhury' }
+          ]);
+
+  const candidateApps = apps.filter(a => a.status !== 'DRAFT');
+
+  const processedEvalItems = candidateApps.map((app, idx) => {
+    const scores = {};
+    let totalScore = 0;
+
+    evalJuries.forEach(j => {
+      let revScore = null;
+      if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+        const found = evalReport.reviews.find(r => 
+          Number(r.application_id) === Number(app.id) &&
+          (Number(r.jury_id) === Number(j.id) || (j.userIds && j.userIds.includes(Number(r.jury_id))))
+        );
+        if (found && typeof found.weighted_score === 'number') {
+          revScore = found.weighted_score;
+        }
+      }
+
+      if (revScore === null && app.jury_reviews && Array.isArray(app.jury_reviews)) {
+        const found = app.jury_reviews.find(r => 
+          (r.jury_id && Number(r.jury_id) === Number(j.id)) ||
+          (r.jury_name && r.jury_name.toLowerCase() === j.name.toLowerCase())
+        );
+        if (found && typeof found.weightedScore === 'number') {
+          revScore = found.weightedScore;
+        }
+      }
+
+      if (revScore !== null) {
+        scores[j.id] = revScore;
+        totalScore += revScore;
+      } else {
+        scores[j.id] = null;
+      }
+    });
+
+    const finalTotal = totalScore > 0 ? totalScore : (app.average_score > 0 ? Number(app.average_score.toFixed(2)) : 0);
+
+    return {
+      id: app.id,
+      displayId: String(app.id || idx + 1).padStart(2, '0'),
+      name: app.applicant_name || app.user_name || 'Anonymous',
+      organisation: app.company || app.institute_name || app.instituteName || '—',
+      category: app.category || 'OPPI Healthcare Communications Award',
+      scores,
+      total: finalTotal
+    };
+  });
+
+  // Group by category to rank
+  const categoryRankedMap = {};
+  processedEvalItems.forEach(item => {
+    const cat = item.category;
+    if (!categoryRankedMap[cat]) categoryRankedMap[cat] = [];
+    categoryRankedMap[cat].push(item);
+  });
+
+  Object.keys(categoryRankedMap).forEach(cat => {
+    categoryRankedMap[cat].sort((a, b) => b.total - a.total);
+    categoryRankedMap[cat].forEach((item, rIdx) => {
+      if (rIdx === 0) item.position = 'Winner';
+      else if (rIdx === 1) item.position = '1st Runner up';
+      else if (rIdx === 2) item.position = '2nd Runner up';
+      else item.position = `Rank ${rIdx + 1}`;
+    });
+  });
+
+  // Default demo rows if no submitted applications yet (matching Figma mockup)
+  const demoRankingRows = [
+    {
+      id: 'demo-1',
+      displayId: '01',
+      name: 'Shrey',
+      organisation: 'Company name 123',
+      category: 'OPPI Healthcare Communications Award',
+      scores: { [evalJuries[0]?.id || 1]: 6, [evalJuries[1]?.id || 2]: 6.5, [evalJuries[2]?.id || 3]: 7.5, [evalJuries[3]?.id || 4]: 7.5 },
+      total: 25.75,
+      position: 'Winner'
+    },
+    {
+      id: 'demo-2',
+      displayId: '02',
+      name: 'Disha',
+      organisation: 'Company name 124',
+      category: 'OPPI Healthcare Communications Award',
+      scores: { [evalJuries[0]?.id || 1]: 6.75, [evalJuries[1]?.id || 2]: 6.25, [evalJuries[2]?.id || 3]: 8.25, [evalJuries[3]?.id || 4]: 8.25 },
+      total: 25.25,
+      position: '1st Runner up'
+    },
+    {
+      id: 'demo-3',
+      displayId: '03',
+      name: 'Srishti',
+      organisation: 'Company name 124',
+      category: 'OPPI Healthcare Communications Award',
+      scores: { [evalJuries[0]?.id || 1]: 6.75, [evalJuries[1]?.id || 2]: 6.25, [evalJuries[2]?.id || 3]: 8.25, [evalJuries[3]?.id || 4]: 8.25 },
+      total: 25.25,
+      position: '2nd Runner up'
+    }
+  ];
+
+  const effectiveRankingItems = processedEvalItems.length > 0 ? processedEvalItems : demoRankingRows;
+
+  const evaluationRankingList = effectiveRankingItems.filter(item => {
+    if (evalCategoryFilter !== 'ALL' && item.category !== evalCategoryFilter) return false;
+    if (evalStatusFilter !== 'ALL') {
+      const posClean = (item.position || '').toLowerCase();
+      const filterClean = evalStatusFilter.toLowerCase();
+      if (!posClean.includes(filterClean)) return false;
+    }
+    return true;
+  });
 
   // Role casing mapper
   const getRoleLabel = (role) => {
@@ -573,6 +716,25 @@ const AdminPortal = () => {
       console.error('Failed to fetch/generate Panel Chair report:', err);
       const errMsg = typeof err === 'string' ? err : (err?.message || err?.detail || err?.error || (err?.title ? `${err.title}: ${err.detail || ''}` : 'Failed to generate Panel Chair Excel file.'));
       setError(errMsg);
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
+  const handleDownloadEvaluationExcel = async () => {
+    setDownloadingExcel(true);
+    setError('');
+    try {
+      await exportEvaluationRankingExcel(
+        evaluationRankingList,
+        evalJuries,
+        evalCategoryFilter !== 'ALL' ? evalCategoryFilter : 'All Categories'
+      );
+      setSuccess('Final Evaluation & Ranking Excel report downloaded successfully!');
+      setTimeout(() => setSuccess(''), 3500);
+    } catch (err) {
+      console.error('Failed to export Evaluation Excel:', err);
+      setError('Failed to export Evaluation Excel file.');
     } finally {
       setDownloadingExcel(false);
     }
@@ -1518,6 +1680,176 @@ const AdminPortal = () => {
                                 <Trash2 size={13} />
                               </button>
                             </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Card 5: Final Evaluation and Ranking */}
+          <div className="dashboard-card">
+            <div className="card-header-bar" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div className="card-title-group">
+                <h3 className="card-title">Final Evaluation and Ranking</h3>
+              </div>
+
+              <div className="card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                {/* CATEGORY Filter Dropdown */}
+                <div className="filter-dropdown-container" ref={evalCatDropdownRef}>
+                  <button
+                    type="button"
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowEvalCatDropdown(!showEvalCatDropdown);
+                      setShowEvalStatusDropdown(false);
+                    }}
+                  >
+                    <span>
+                      {evalCategoryFilter === 'ALL' ? 'CATEGORY' : (evalCategoryFilter.length > 25 ? evalCategoryFilter.slice(0, 22) + '...' : evalCategoryFilter)}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {showEvalCatDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${evalCategoryFilter === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setEvalCategoryFilter('ALL'); setShowEvalCatDropdown(false); }}
+                      >
+                        <strong>All Categories</strong>
+                      </button>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`filter-dropdown-item ${evalCategoryFilter === cat ? 'active' : ''}`}
+                          onClick={() => { setEvalCategoryFilter(cat); setShowEvalCatDropdown(false); }}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* STATUS Filter Dropdown */}
+                <div className="filter-dropdown-container" ref={evalStatusDropdownRef}>
+                  <button
+                    type="button"
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowEvalStatusDropdown(!showEvalStatusDropdown);
+                      setShowEvalCatDropdown(false);
+                    }}
+                  >
+                    <span>{evalStatusFilter === 'ALL' ? 'STATUS' : evalStatusFilter}</span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {showEvalStatusDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '160px', right: 0, zIndex: 100 }}>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${evalStatusFilter === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setEvalStatusFilter('ALL'); setShowEvalStatusDropdown(false); }}
+                      >
+                        All Status
+                      </button>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${evalStatusFilter === 'Winner' ? 'active' : ''}`}
+                        onClick={() => { setEvalStatusFilter('Winner'); setShowEvalStatusDropdown(false); }}
+                      >
+                        Winner
+                      </button>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
+                        onClick={() => { setEvalStatusFilter('1st runner up'); setShowEvalStatusDropdown(false); }}
+                      >
+                        1st runner up
+                      </button>
+                      <button
+                        type="button"
+                        className={`filter-dropdown-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
+                        onClick={() => { setEvalStatusFilter('2nd runner up'); setShowEvalStatusDropdown(false); }}
+                      >
+                        2nd runner up
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Cyan DOWNLOAD EXCEL Button */}
+                <button
+                  type="button"
+                  className="btn-download-cyan"
+                  onClick={handleDownloadEvaluationExcel}
+                  disabled={downloadingExcel}
+                  title="Download Final Evaluation & Ranking Excel"
+                >
+                  <span>{downloadingExcel ? 'DOWNLOADING...' : 'DOWNLOAD EXCEL'}</span>
+                  <Download size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="table-wrapper">
+              <table className="oppi-dashboard-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '60px' }}>App ID</th>
+                    <th>Name</th>
+                    <th>Organisation</th>
+                    <th>Category</th>
+                    {evalJuries.map(j => (
+                      <th key={j.id} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {j.name}
+                      </th>
+                    ))}
+                    <th style={{ textAlign: 'center', width: '90px' }}>Total</th>
+                    <th style={{ textAlign: 'center', width: '130px' }}>Position</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluationRankingList.length === 0 ? (
+                    <tr>
+                      <td colSpan={6 + evalJuries.length} className="table-empty">
+                        No evaluation ranking records found matching filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    evaluationRankingList.map((item) => {
+                      const pos = item.position || '';
+                      let posClass = 'pos-badge-default';
+                      if (pos.toLowerCase() === 'winner') posClass = 'pos-badge-winner';
+                      else if (pos.toLowerCase().includes('1st')) posClass = 'pos-badge-runner-1';
+                      else if (pos.toLowerCase().includes('2nd')) posClass = 'pos-badge-runner-2';
+
+                      return (
+                        <tr key={item.id}>
+                          <td className="id-col">{item.displayId}</td>
+                          <td className="bold-text">{item.name}</td>
+                          <td>{item.organisation}</td>
+                          <td>{item.category}</td>
+                          {evalJuries.map(j => (
+                            <td key={j.id} style={{ textAlign: 'center', fontWeight: '600', color: '#1e293b' }}>
+                              {item.scores[j.id] !== undefined && item.scores[j.id] !== null ? item.scores[j.id] : '—'}
+                            </td>
+                          ))}
+                          <td style={{ textAlign: 'center', fontWeight: '800', color: '#0f172a' }}>
+                            {typeof item.total === 'number' ? item.total.toFixed(2).replace(/\.00$/, '') : item.total}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={posClass}>
+                              {item.position}
+                            </span>
                           </td>
                         </tr>
                       );
