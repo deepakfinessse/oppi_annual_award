@@ -209,36 +209,38 @@
   color: #ffffff;
 }
 
-/* Detail Box Tabs */
+/* Detail Box Tabs (segmented pill, as per design) */
 .detail-box-tabs {
-  display: flex;
-  gap: 0.75rem;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
+  background: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
 }
 
 .detail-tab-pill {
-  background: #f1f5f9;
-  border: 1px solid transparent;
-  font-size: 13px;
-  font-weight: 700;
-  color: #475569;
-  padding: 0.55rem 1.4rem;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #000000;
+  padding: 0.7rem 1.4rem;
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .detail-tab-pill:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: #f1f5f9;
 }
 
 .detail-tab-pill.active {
   background: #149FE7;
   color: #ffffff;
-  border-color: #0b72c4;
-  box-shadow: 0 4px 12px rgba(11, 114, 196, 0.25);
 }
 
 /* Detail Box Content */
@@ -390,6 +392,85 @@
   flex: 1;
 }
 
+/* Judging Criteria (as per design) */
+.judging-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
+  padding: 0.5rem 0 0.5rem 2.6rem;
+}
+
+.judging-body .criteria-overview-box {
+  margin-left: -2.6rem;
+}
+
+.judging-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.judging-section--plain {
+  gap: 0;
+  margin-top: -1.2rem;
+}
+
+.judging-heading {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0b72c4;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.3;
+}
+
+.judging-point {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.judging-point-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.judging-arrow {
+  width: 12px;
+  height: auto;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.judging-text {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+
+.judging-subpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 1.75rem;
+}
+
+.judging-subpoint {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.judging-dot {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  border-radius: 50%;
+  background: #25a41a;
+  margin-top: 11px;
+}
+
 @media (max-width: 992px) {
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -412,5 +493,37 @@
   .detail-box-top-bar {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .judging-body {
+    padding-left: 0;
+    gap: 1.75rem;
+  }
+
+  .judging-body .criteria-overview-box {
+    margin-left: 0;
+  }
+
+  .judging-heading {
+    font-size: 20px;
+  }
+
+  .judging-text {
+    font-size: 15px;
+  }
+
+  .judging-subpoints {
+    padding-left: 1rem;
+  }
+
+  .detail-box-top-bar {
+    font-size: 20px;
+  }
+
+  .detail-tab-pill {
+    font-size: 14px;
+    padding: 0.6rem 1rem;
   }
 }

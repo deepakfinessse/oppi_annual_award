@@ -421,28 +421,38 @@ const categoryData = [
     judging: {
       items: [
         {
-          title: 'Impact of the Initiative / Strategy',
-          description: 'Mention the starting year of the program and share the impact data over the last three years of:',
-          subItems: [
-            'The number of people (in India) who have been positively impacted by the initiative/strategy',
+          title: 'Impact of the initiative/strategy',
+          points: [
+            {
+              text: 'Mention the starting year of the program and share the impact data over the last three years of:',
+              subItems: [
+                'The number of people (in India) who have been positively impacted by the initiative/strategy'
+              ]
+            },
             'Outcome of the initiative/strategy',
             'Impact through a policy change/intervention'
           ]
         },
         {
-          title: 'Scalability of the Initiative / Strategy',
-          subItems: [
-            'Whether the initiative/strategy can be expanded to cater to a larger population',
-            'Wherever applicable, share the urban-rural mix',
+          title: 'Scalability of the initiative/strategy',
+          points: [
+            {
+              text: 'Whether the initiative/strategy can be expanded to cater to a larger population',
+              subItems: ['Wherever applicable, share the urban-rural mix']
+            },
             'Whether the initiative/strategy can be expanded to cater to larger disease areas'
           ]
         },
         {
           title: 'Awareness',
-          description: 'The initiative/strategy that was used to raise awareness –',
-          subItems: [
-            'How did they raise awareness',
-            'What was the methodology to raise awareness'
+          points: [
+            {
+              text: 'The initiative/strategy that was used to raise awareness –',
+              subItems: [
+                'How did they raise awareness',
+                'What was the methodology to raise awareness'
+              ]
+            }
           ]
         },
         {
@@ -503,7 +513,7 @@ const Categories = () => {
               return (
                 <div key={idx} className="criteria-row-item">
                   <span className="criteria-row-icon-wrap">
-                    <img src={arrow} size={16} className="criteria-row-check" />
+                    <img src={arrow} alt="" className="criteria-row-check" />
                   </span>
                   <span className="criteria-row-text">{item}</span>
                 </div>
@@ -538,6 +548,73 @@ const Categories = () => {
             );
           })}
         </div>
+      </div>
+    );
+  };
+
+  // ---------- Judging Criteria renderer (matches design) ----------
+  const renderJudgingPoint = (key, text, subItems) => (
+    <div key={key} className="judging-point">
+      <div className="judging-point-row">
+        <img src={arrow} alt="" className="judging-arrow" />
+        <span className="judging-text">{text}</span>
+      </div>
+      {subItems && subItems.length > 0 && (
+        <div className="judging-subpoints">
+          {subItems.map((sub, sIdx) => (
+            <div key={sIdx} className="judging-subpoint">
+              <span className="judging-dot" />
+              <span className="judging-text">{sub}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderJudgingList = (data) => {
+    if (!data) return null;
+    const items = Array.isArray(data) ? data : (data.items || []);
+    const overview = data.overview;
+
+    return (
+      <div className="judging-body">
+        {overview && (
+          <div className="criteria-overview-box">
+            <div className="criteria-overview-icon">
+              <Sparkles size={18} />
+            </div>
+            <div className="criteria-overview-text">{overview}</div>
+          </div>
+        )}
+
+        {items.map((item, idx) => {
+          // Plain string -> single chevron bullet
+          if (typeof item === 'string') {
+            return (
+              <div key={idx} className="judging-section judging-section--plain">
+                {renderJudgingPoint(idx, item)}
+              </div>
+            );
+          }
+
+          // Object -> blue heading + chevron points (+ green dot sub-points)
+          let points = [];
+          if (item.points) {
+            points = item.points.map((p) => (typeof p === 'string' ? { text: p } : p));
+          } else if (item.description) {
+            points = [{ text: item.description, subItems: item.subItems }];
+          } else if (item.subItems) {
+            points = item.subItems.map((t) => ({ text: t }));
+          }
+
+          return (
+            <div key={idx} className="judging-section">
+              {item.title && <h4 className="judging-heading">{item.title}</h4>}
+              {points.map((p, pIdx) => renderJudgingPoint(pIdx, p.text, p.subItems))}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -631,7 +708,7 @@ const Categories = () => {
               >
                 {/* Detail Box Top Bar */}
                 <div className="detail-box-top-bar">
-                  <p>Ranjit Shahani Memorial Award For Excellence In Patient Centricity</p>
+                  <p>{selectedCategory.title}</p>
                   {/* <div className="detail-box-icon-and-title">
                     <div className="detail-box-icon-wrap">
                       <SelectedIcon size={24} className="detail-cat-icon" />
@@ -673,7 +750,9 @@ const Categories = () => {
 
                 {/* Content */}
                 <div className="detail-box-content">
-                  {renderContentList(currentTabData)}
+                  {activeTab === 'judging'
+                    ? renderJudgingList(currentTabData)
+                    : renderContentList(currentTabData)}
                 </div>
               </motion.div>
             )}

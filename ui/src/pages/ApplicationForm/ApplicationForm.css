@@ -62,22 +62,22 @@
 }
 
 .btn-change-pwd {
-  background: #0284c7;
+  background: #389B2E;
   color: white !important;
 }
 
 .btn-change-pwd:hover {
-  background: #0369a1;
+  background: #389B2E;
   transform: translateY(-1px);
 }
 
 .btn-logout {
-  background: #145db3;
+  background: #149FE7;
   color: white !important;
 }
 
 .btn-logout:hover {
-  background: #0f4a91;
+  background: #149FE7;
   transform: translateY(-1px);
 }
 
@@ -90,7 +90,7 @@
 }
 
 .app-page-title {
-  color: #0284c7;
+  color: #1264B9;
   font-size: 2.35rem;
   font-weight: 800;
   letter-spacing: 0.5px;

@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'DMSerifDisplay';
+  src: url('../../../public/fonts/DMSerifDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .stats-container-wrapper {
   position: relative;
   z-index: 20;
@@ -28,6 +36,7 @@
   color: #149FE7;
   line-height: 1;
   margin-bottom: 0.4rem;
+  font-family: 'DMSerifDisplay';
 }
 
 .stat-txt {

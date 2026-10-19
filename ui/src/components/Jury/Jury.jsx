@@ -192,7 +192,7 @@ const DEFAULT_JURY_MEMBERS = [
   },
   {
     id: 'pc2',
-    name: 'Dr Ratna Devi',
+    name: 'Dr. Ratna Devi',
     role: 'CEO, DakshamA Health, Director, PAIR, Steering Committee Member NCD Labs, WHO Geneva',
     category: 'Patient Centricity',
     type: 'JURY',
@@ -224,7 +224,7 @@ const DEFAULT_JURY_MEMBERS = [
   },
   {
     id: 'pc6',
-    name: 'Dr Indu Bhushan',
+    name: 'Dr. Indu Bhushan',
     role: 'President - iLEP, Former CEO Ayushman Bharat/National Health Authority',
     category: 'Patient Centricity',
     type: 'JURY',

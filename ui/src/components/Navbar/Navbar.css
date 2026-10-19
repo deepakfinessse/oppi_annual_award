@@ -78,7 +78,7 @@
 }
 
 .nav-links li a:not(.apply-btn):hover {
-  color: #0d5ea6;
+  color: #149FE7;
 }
 
 .nav-links li a:not(.apply-btn)::after {
@@ -88,7 +88,7 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: #0d5ea6;
+  background: #149FE7;
   transition: width 0.3s ease;
 }
 

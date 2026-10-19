@@ -682,7 +682,7 @@ const ApplicationForm = () => {
           </div>
 
           <div className="header-actions">
-            {viewMode !== 'dashboard' && (
+            {/* {viewMode !== 'dashboard' && (
               <button
                 type="button"
                 onClick={() => {
@@ -694,7 +694,7 @@ const ApplicationForm = () => {
                 <List size={15} />
                 <span>MY SUBMISSIONS</span>
               </button>
-            )}
+            )} */}
             <Link to="/change-password" className="btn-header-pill btn-change-pwd">
               <Lock size={15} />
               <span>CHANGE PASSWORD</span>
@@ -823,7 +823,7 @@ const ApplicationForm = () => {
           </div>
         ) : (
           <>
-            <button
+            {/* <button
               type="button"
               className="btn-back-to-dashboard"
               onClick={() => {
@@ -833,7 +833,7 @@ const ApplicationForm = () => {
             >
               <ArrowLeft size={16} />
               <span>Back to My Submissions</span>
-            </button>
+            </button> */}
 
             {/* Page Title */}
             <div className="app-page-title-section">
