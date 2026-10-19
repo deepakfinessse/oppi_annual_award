@@ -51,12 +51,35 @@
 }
 
 .header-title-section h2 {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  color: #1e3a8a;
+  color: #00a3e0;
   letter-spacing: 2px;
   margin: 0;
   text-align: center;
+}
+
+.header-logout-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.4rem;
+  border: none;
+  background: #00a3e0;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.8px;
+  box-shadow: 0 4px 12px rgba(0, 163, 224, 0.25);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-logout-pill-btn:hover {
+  background: #028ec3;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 163, 224, 0.35);
 }
 
 .header-logout-btn {
@@ -622,7 +645,7 @@
 }
 
 .admin-modal-header {
-  background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%);
+  background: #00a3e0;
   padding: 1.25rem 2rem;
   border-bottom: 2px solid #27c5ff;
   display: flex;
@@ -1184,5 +1207,186 @@
 .btn-filter-pill-select:hover {
   border-color: #00a3e0;
   background: #f8fafc;
+}
+
+/* Figma-Match Status Pills */
+.oppi-status-pill {
+  display: inline-block;
+  padding: 3px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.pill-draft {
+  background-color: #ff8a00;
+  color: #ffffff;
+}
+
+.pill-submitted {
+  background-color: #00a3e0;
+  color: #ffffff;
+}
+
+.pill-registered {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+.pill-reviewed {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.pill-rejected {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Figma-Match Table Action Buttons */
+.action-btn-pill-view {
+  background: #eafbf1;
+  border: 1px solid #22c55e;
+  color: #16a34a;
+  padding: 3px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-btn-pill-view:hover {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.action-btn-pill-edit {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 3px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-btn-pill-edit:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.action-btn-trash {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.action-btn-trash:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Card titles and subtitles */
+.card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-subtitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  margin: 0;
+}
+
+/* Action button for adding item (e.g. Add Panel Member, Add Winner) */
+.btn-pill-add {
+  background: #ffffff;
+  border: 1.5px solid #00a3e0;
+  color: #00a3e0;
+  border-radius: 6px;
+  padding: 0.45rem 0.95rem;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-pill-add:hover {
+  background: #f0f9ff;
+}
+
+/* Position Badges for Final Evaluation & Ranking (Matching Figma) */
+.pos-badge-winner {
+  background-color: #00a3e0;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 90px;
+}
+
+.pos-badge-runner-1 {
+  background-color: #f58220;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 95px;
+}
+
+.pos-badge-runner-2 {
+  background-color: #f58220;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 95px;
+}
+
+.pos-badge-default {
+  background-color: #64748b;
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+  min-width: 90px;
 }
 

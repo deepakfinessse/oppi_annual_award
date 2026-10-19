@@ -308,3 +308,44 @@ export const exportApplicationsExcel = async (apps = [], title = 'OPPI Annual Aw
   const fileName = `${filePrefix}_${dateStr}.xlsx`;
   await downloadWorkbook(workbook, fileName);
 };
+
+/**
+ * Export Final Evaluation and Ranking Sheet matching Figma Table
+ */
+export const exportEvaluationRankingExcel = async (rankingData = [], juries = [], categoryName = 'All Categories') => {
+  const workbook = new ExcelJS.Workbook();
+  const title = `OPPI Annual Awards — Final Evaluation & Ranking (${categoryName})`;
+  const worksheet = workbook.addWorksheet('Evaluation and Ranking');
+
+  const headers = [
+    { header: 'App ID', key: 'id', width: 10, align: 'center' },
+    { header: 'Name', key: 'name', width: 25 },
+    { header: 'Organisation', key: 'organisation', width: 30 },
+    { header: 'Category', key: 'category', width: 34 },
+    ...juries.map(j => ({ header: j.name, key: `jury_${j.id}`, width: 18, align: 'center' })),
+    { header: 'Total', key: 'total', width: 14, align: 'center' },
+    { header: 'Position', key: 'position', width: 18, align: 'center' }
+  ];
+
+  const rows = rankingData.map((item) => {
+    const rowObj = {
+      id: item.displayId,
+      name: item.name,
+      organisation: item.organisation,
+      category: item.category,
+      total: item.total,
+      position: item.position
+    };
+    juries.forEach(j => {
+      rowObj[`jury_${j.id}`] = item.scores[j.id] !== undefined ? item.scores[j.id] : '—';
+    });
+    return rowObj;
+  });
+
+  applyExcelStyling(worksheet, title, headers, rows);
+
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `OPPI_Final_Evaluation_and_Ranking_${dateStr}.xlsx`;
+  await downloadWorkbook(workbook, fileName);
+};
+

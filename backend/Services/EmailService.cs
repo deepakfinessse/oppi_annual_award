@@ -35,6 +35,41 @@ public class EmailService
             mail.AlternateViews.Add(plainView);
         }
 
+        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
+        var publicLogoUrl = $"{frontendUrl.TrimEnd('/')}/uploads/Oppi-logo.png";
+
+        // Safely determine logo path across different hosting environments
+        string? logoPath = null;
+        try
+        {
+            var uploadsFolder = _config["UploadsFolder"];
+            if (!string.IsNullOrEmpty(uploadsFolder))
+            {
+                var candidate = Path.Combine(uploadsFolder, "Oppi-logo.png");
+                if (File.Exists(candidate)) logoPath = candidate;
+            }
+
+            if (logoPath == null && !string.IsNullOrEmpty(_env.WebRootPath))
+            {
+                var candidate = Path.Combine(_env.WebRootPath, "uploads", "Oppi-logo.png");
+                if (File.Exists(candidate)) logoPath = candidate;
+            }
+
+            if (logoPath == null && !string.IsNullOrEmpty(_env.ContentRootPath))
+            {
+                var candidate1 = Path.Combine(_env.ContentRootPath, "wwwroot", "uploads", "Oppi-logo.png");
+                var candidate2 = Path.Combine(_env.ContentRootPath, "uploads", "Oppi-logo.png");
+                if (File.Exists(candidate1)) logoPath = candidate1;
+                else if (File.Exists(candidate2)) logoPath = candidate2;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not resolve physical logo path for email, falling back to public URL.");
+        }
+
+        string logoSrc = !string.IsNullOrEmpty(logoPath) ? "cid:oppi_logo" : publicLogoUrl;
+
         string htmlBody = $@"
 <!DOCTYPE html>
 <html>
@@ -52,7 +87,7 @@ public class EmailService
                     <!-- Header -->
                     <tr>
                         <td align=""center"" style=""background-color: #ebf5f7; padding: 30px 20px; border-bottom: 1px solid #e1edf0;"">
-                            <img src=""cid:oppi_logo"" height=""65"" alt=""OPPI Logo"" style=""display: block; border: 0; outline: none; text-decoration: none;"" />
+                            <img src=""{logoSrc}"" height=""65"" alt=""OPPI Logo"" style=""display: block; border: 0; outline: none; text-decoration: none;"" />
                         </td>
                     </tr>
                     <!-- Body Content -->
@@ -76,16 +111,22 @@ public class EmailService
 
         var htmlView = AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html");
         
-        var logoPath = Path.Combine(_env.WebRootPath, "uploads", "Oppi-logo.png");
-        if (File.Exists(logoPath))
+        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
         {
-            var logoResource = new LinkedResource(logoPath, "image/png")
+            try
             {
-                ContentId = "oppi_logo",
-                TransferEncoding = System.Net.Mime.TransferEncoding.Base64
-            };
-            logoResource.ContentType.Name = Path.GetFileName(logoPath);
-            htmlView.LinkedResources.Add(logoResource);
+                var logoResource = new LinkedResource(logoPath, "image/png")
+                {
+                    ContentId = "oppi_logo",
+                    TransferEncoding = System.Net.Mime.TransferEncoding.Base64
+                };
+                logoResource.ContentType.Name = Path.GetFileName(logoPath);
+                htmlView.LinkedResources.Add(logoResource);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to attach logo LinkedResource to email.");
+            }
         }
 
         mail.AlternateViews.Add(htmlView);
@@ -107,7 +148,7 @@ public class EmailService
 
         using var mail = new MailMessage();
         mail.From = new MailAddress(senderEmail, senderName);
-        mail.To.Add(new MailAddress(recipientEmail, recipientName));
+        mail.To.Add(string.IsNullOrWhiteSpace(recipientName) ? new MailAddress(recipientEmail) : new MailAddress(recipientEmail, recipientName));
         mail.Subject = subject;
         mail.Body = plainTextBody;
         mail.IsBodyHtml = false;
@@ -116,11 +157,14 @@ public class EmailService
 
         using var smtp = new SmtpClient(host, port)
         {
+            UseDefaultCredentials = false,
             Credentials = !string.IsNullOrEmpty(username) ? new NetworkCredential(username, password) : null,
-            EnableSsl = enableSsl
+            EnableSsl = enableSsl,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            Timeout = 20000
         };
 
-        _logger.LogInformation("Sending email ({Subject}) to {Email}...", subject, recipientEmail);
+        _logger.LogInformation("Sending email ({Subject}) to {Email} via {Host}:{Port}...", subject, recipientEmail, host, port);
         await smtp.SendMailAsync(mail);
         _logger.LogInformation("Email sent successfully to {Email}.", recipientEmail);
     }
