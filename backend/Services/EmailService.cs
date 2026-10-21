@@ -1,10 +1,13 @@
 using System.IO;
-using System.Net;
-using System.Net.Mail;
 using System.Text;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MimeKit;
+using OppiInnovationApi.Models;
 
 namespace OppiInnovationApi.Services;
 
@@ -13,65 +16,78 @@ public class EmailService
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<EmailService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public EmailService(IConfiguration config, IWebHostEnvironment env, ILogger<EmailService> logger)
+    public EmailService(
+        IConfiguration config, 
+        IWebHostEnvironment env, 
+        ILogger<EmailService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _config = config;
         _env = env;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
-    private void PopulateEmailHtmlBody(MailMessage mail, string bodyContent)
+    public async Task LogEmailAuditAsync(int? userId, string action, string? entityType, int? entityId, string details)
     {
-        string plainText = mail.Body ?? string.Empty;
-
-        mail.Body = plainText;
-        mail.IsBodyHtml = false;
-        mail.AlternateViews.Clear();
-
-        if (!string.IsNullOrEmpty(plainText))
+        try
         {
-            var plainView = AlternateView.CreateAlternateViewFromString(plainText, Encoding.UTF8, "text/plain");
-            mail.AlternateViews.Add(plainView);
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<InnovationDbContext>();
+            db.AuditLogs.Add(new AuditLog
+            {
+                UserId = userId,
+                Action = action,
+                EntityType = entityType ?? "Email",
+                EntityId = entityId,
+                Details = details,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to log email audit to database.");
+        }
+    }
 
-        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
-        var publicLogoUrl = $"{frontendUrl.TrimEnd('/')}/uploads/Oppi-logo.png";
-
-        // Safely determine logo path across different hosting environments
-        string? logoPath = null;
+    private string? ResolveLogoPath()
+    {
         try
         {
             var uploadsFolder = _config["UploadsFolder"];
             if (!string.IsNullOrEmpty(uploadsFolder))
             {
                 var candidate = Path.Combine(uploadsFolder, "Oppi-logo.png");
-                if (File.Exists(candidate)) logoPath = candidate;
+                if (File.Exists(candidate)) return candidate;
             }
 
-            if (logoPath == null && !string.IsNullOrEmpty(_env.WebRootPath))
+            if (!string.IsNullOrEmpty(_env.WebRootPath))
             {
                 var candidate = Path.Combine(_env.WebRootPath, "uploads", "Oppi-logo.png");
-                if (File.Exists(candidate)) logoPath = candidate;
+                if (File.Exists(candidate)) return candidate;
             }
 
-            if (logoPath == null && !string.IsNullOrEmpty(_env.ContentRootPath))
+            if (!string.IsNullOrEmpty(_env.ContentRootPath))
             {
                 var candidate1 = Path.Combine(_env.ContentRootPath, "wwwroot", "uploads", "Oppi-logo.png");
                 var candidate2 = Path.Combine(_env.ContentRootPath, "uploads", "Oppi-logo.png");
-                if (File.Exists(candidate1)) logoPath = candidate1;
-                else if (File.Exists(candidate2)) logoPath = candidate2;
+                if (File.Exists(candidate1)) return candidate1;
+                if (File.Exists(candidate2)) return candidate2;
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not resolve physical logo path for email, falling back to public URL.");
         }
+        return null;
+    }
 
-        string logoSrc = !string.IsNullOrEmpty(logoPath) ? "cid:oppi_logo" : publicLogoUrl;
-
-        string htmlBody = $@"
-<!DOCTYPE html>
+    private string BuildEmailHtml(string bodyContent, string logoSrc)
+    {
+        return $@"<!DOCTYPE html>
 <html>
 <head>
     <meta charset=""utf-8"">
@@ -108,31 +124,19 @@ public class EmailService
     </table>
 </body>
 </html>";
-
-        var htmlView = AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html");
-        
-        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
-        {
-            try
-            {
-                var logoResource = new LinkedResource(logoPath, "image/png")
-                {
-                    ContentId = "oppi_logo",
-                    TransferEncoding = System.Net.Mime.TransferEncoding.Base64
-                };
-                logoResource.ContentType.Name = Path.GetFileName(logoPath);
-                htmlView.LinkedResources.Add(logoResource);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to attach logo LinkedResource to email.");
-            }
-        }
-
-        mail.AlternateViews.Add(htmlView);
     }
 
-    private async Task SendMailInternalAsync(string recipientEmail, string recipientName, string subject, string plainTextBody, string htmlContent)
+    private async Task SendMailInternalAsync(
+        string recipientEmail, 
+        string recipientName, 
+        string subject, 
+        string plainTextBody, 
+        string htmlContent,
+        int? userId = null,
+        int? entityId = null,
+        string? entityType = null,
+        string? actionSuccess = null,
+        string? actionFailure = null)
     {
         var smtpSection = _config.GetSection("SmtpSettings");
         var host = smtpSection["Server"] ?? "smtp.gmail.com";
@@ -146,37 +150,104 @@ public class EmailService
         int port = int.TryParse(portStr, out var p) ? p : 587;
         bool enableSsl = !bool.TryParse(enableSslStr, out var ssl) || ssl;
 
-        using var mail = new MailMessage();
-        mail.From = new MailAddress(senderEmail, senderName);
-        mail.To.Add(string.IsNullOrWhiteSpace(recipientName) ? new MailAddress(recipientEmail) : new MailAddress(recipientEmail, recipientName));
-        mail.Subject = subject;
-        mail.Body = plainTextBody;
-        mail.IsBodyHtml = false;
-
-        PopulateEmailHtmlBody(mail, htmlContent);
-
-        using var smtp = new SmtpClient(host, port)
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(senderName, senderEmail));
+        if (string.IsNullOrWhiteSpace(recipientName))
         {
-            UseDefaultCredentials = false,
-            Credentials = !string.IsNullOrEmpty(username) ? new NetworkCredential(username, password) : null,
-            EnableSsl = enableSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network,
-            Timeout = 20000
+            message.To.Add(MailboxAddress.Parse(recipientEmail));
+        }
+        else
+        {
+            message.To.Add(new MailboxAddress(recipientName, recipientEmail));
+        }
+        message.Subject = subject;
+
+        var builder = new BodyBuilder
+        {
+            TextBody = plainTextBody
         };
 
-        _logger.LogInformation("Sending email ({Subject}) to {Email} via {Host}:{Port}...", subject, recipientEmail, host, port);
-        await smtp.SendMailAsync(mail);
-        _logger.LogInformation("Email sent successfully to {Email}.", recipientEmail);
-    }
+        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
+        var publicLogoUrl = $"{frontendUrl.TrimEnd('/')}/uploads/Oppi-logo.png";
+        var logoPath = ResolveLogoPath();
+        string logoSrc = publicLogoUrl;
 
-    public async Task SendRegistrationEmailAsync(string recipientEmail, string recipientName)
-    {
+        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+        {
+            try
+            {
+                var logoResource = builder.LinkedResources.Add(logoPath);
+                logoResource.ContentId = "oppi_logo";
+                logoResource.ContentType.MediaType = "image";
+                logoResource.ContentType.MediaSubtype = "png";
+                logoSrc = "cid:oppi_logo";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to attach logo LinkedResource to email.");
+            }
+        }
+
+        builder.HtmlBody = BuildEmailHtml(htmlContent, logoSrc);
+        message.Body = builder.ToMessageBody();
+
         try
         {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
-            var loginLink = $"{frontendUrl}/login";
+            using var client = new MailKit.Net.Smtp.SmtpClient();
+            client.CheckCertificateRevocation = false;
+            client.Timeout = 20000;
 
-            string plainTextBody = $@"Dear {recipientName},
+            var secureOption = enableSsl 
+                ? (port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls) 
+                : SecureSocketOptions.None;
+
+            _logger.LogInformation("Sending email ({Subject}) to {Email} via {Host}:{Port}...", subject, recipientEmail, host, port);
+            await client.ConnectAsync(host, port, secureOption);
+
+            if (!string.IsNullOrEmpty(username))
+            {
+                await client.AuthenticateAsync(username, password);
+            }
+
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation("Email sent successfully to {Email}.", recipientEmail);
+
+            await LogEmailAuditAsync(
+                userId, 
+                actionSuccess ?? "EMAIL_SENT", 
+                entityType ?? "Email", 
+                entityId, 
+                $"Sent email ({subject}) to {recipientEmail}");
+        }
+        catch (Exception ex)
+        {
+            var errorDetails = ex.Message;
+            if (ex.InnerException != null && !string.IsNullOrWhiteSpace(ex.InnerException.Message))
+            {
+                errorDetails += $" | Inner: {ex.InnerException.Message}";
+            }
+
+            _logger.LogError(ex, "Failed to send email ({Subject}) to {Email}: {Error}", subject, recipientEmail, errorDetails);
+
+            await LogEmailAuditAsync(
+                userId, 
+                actionFailure ?? "EMAIL_FAILED", 
+                entityType ?? "Email", 
+                entityId, 
+                $"Failed sending email ({subject}) to {recipientEmail}. Error: {errorDetails}");
+
+            throw;
+        }
+    }
+
+    public async Task SendRegistrationEmailAsync(string recipientEmail, string recipientName, int? userId = null)
+    {
+        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
+        var loginLink = $"{frontendUrl}/login";
+
+        string plainTextBody = $@"Dear {recipientName},
 
 Thank you for registering for the OPPI Annual Awards for the year 2026.
 
@@ -192,7 +263,7 @@ We look forward to receiving your submission before the timelines.
 Warm regards,
 Team - OPPI Awards";
 
-            string htmlContent = $@"
+        string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
 <p style=""margin: 0 0 20px 0;"">Thank you for registering for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <p style=""margin: 0 0 20px 0;"">To proceed with your application, please log in to the awards portal using your credentials:</p>
@@ -211,22 +282,25 @@ Team - OPPI Awards";
 <p style=""margin: 0 0 20px 0;"">We look forward to receiving your submission before the timelines.</p>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, "Registration Confirmation - OPPI Annual Awards 2026", plainTextBody, htmlContent);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send registration email to {Email}.", recipientEmail);
-        }
+        await SendMailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            "Registration Confirmation - OPPI Annual Awards 2026", 
+            plainTextBody, 
+            htmlContent,
+            userId: userId,
+            entityType: "User",
+            entityId: userId,
+            actionSuccess: "SEND_REGISTRATION_EMAIL",
+            actionFailure: "SEND_REGISTRATION_EMAIL_FAILED");
     }
 
-    public async Task SendResetPasswordEmailAsync(string recipientEmail, string recipientName, string resetToken)
+    public async Task SendResetPasswordEmailAsync(string recipientEmail, string recipientName, string resetToken, int? userId = null)
     {
-        try
-        {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
-            var resetLink = $"{frontendUrl}/reset-password?email={Uri.EscapeDataString(recipientEmail)}&token={Uri.EscapeDataString(resetToken)}";
+        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
+        var resetLink = $"{frontendUrl}/reset-password?email={Uri.EscapeDataString(recipientEmail)}&token={Uri.EscapeDataString(resetToken)}";
 
-            string plainTextBody = $@"Dear {recipientName},
+        string plainTextBody = $@"Dear {recipientName},
 
 Your password reset request has been received successfully.
 
@@ -240,7 +314,7 @@ Ms. Clara Rodricks clara.rodricks@indiaoppi.com
 Warm regards,
 Team - OPPI Awards";
 
-            string htmlContent = $@"
+        string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
 <p style=""margin: 0 0 20px 0;"">Your password reset request has been received successfully.</p>
 <p style=""margin: 0 0 20px 0;"">To reset your password, please click the button below:</p>
@@ -258,32 +332,59 @@ Team - OPPI Awards";
 </div>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, "Reset Password", plainTextBody, htmlContent);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send reset password email to {Email}.", recipientEmail);
-        }
+        await SendMailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            "Reset Password", 
+            plainTextBody, 
+            htmlContent,
+            userId: userId,
+            entityType: "User",
+            entityId: userId,
+            actionSuccess: "SEND_RESET_PASSWORD",
+            actionFailure: "SEND_RESET_PASSWORD_FAILED");
     }
 
-    public async Task SendRegisteredReminderEmailAsync(string recipientEmail, string recipientName)
+    public async Task SendRegisteredReminderEmailAsync(string recipientEmail, string recipientName, int? userId = null)
     {
-        await SendReminderEmailInternalAsync(recipientEmail, recipientName, "Reminder: Complete your OPPI Awards Registration");
+        await SendReminderEmailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            "Reminder: Complete your OPPI Awards Registration",
+            userId: userId,
+            entityId: userId,
+            entityType: "User",
+            actionSuccess: "SEND_REGISTERED_REMINDER",
+            actionFailure: "SEND_REGISTERED_REMINDER_FAILED");
     }
 
-    public async Task SendDraftReminderEmailAsync(string recipientEmail, string recipientName)
+    public async Task SendDraftReminderEmailAsync(string recipientEmail, string recipientName, int? userId = null, int? applicationId = null)
     {
-        await SendReminderEmailInternalAsync(recipientEmail, recipientName, "Reminder: Complete your OPPI Awards Draft Application");
+        await SendReminderEmailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            "Reminder: Complete your OPPI Awards Draft Application",
+            userId: userId,
+            entityId: applicationId,
+            entityType: "Application",
+            actionSuccess: "SEND_DRAFT_REMINDER",
+            actionFailure: "SEND_DRAFT_REMINDER_FAILED");
     }
 
-    private async Task SendReminderEmailInternalAsync(string recipientEmail, string recipientName, string subject)
+    private async Task SendReminderEmailInternalAsync(
+        string recipientEmail, 
+        string recipientName, 
+        string subject,
+        int? userId = null,
+        int? entityId = null,
+        string? entityType = null,
+        string? actionSuccess = null,
+        string? actionFailure = null)
     {
-        try
-        {
-            var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
-            var loginLink = $"{frontendUrl}/login";
+        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
+        var loginLink = $"{frontendUrl}/login";
 
-            string plainTextBody = $@"Dear {recipientName},
+        string plainTextBody = $@"Dear {recipientName},
 
 We have received your registration for the OPPI Annual Awards for the year 2026.
 
@@ -298,7 +399,7 @@ We look forward to receiving your submission before the timelines.
 Warm regards,
 Team - OPPI Awards";
 
-            string htmlContent = $@"
+        string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
 <p style=""margin: 0 0 20px 0;"">We have received your registration for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <p style=""margin: 0 0 20px 0;"">To proceed with your application, please login here:</p>
@@ -317,19 +418,22 @@ Team - OPPI Awards";
 <p style=""margin: 0 0 20px 0;"">We look forward to receiving your submission before the timelines.</p>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, subject, plainTextBody, htmlContent);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send reminder email to {Email}.", recipientEmail);
-        }
+        await SendMailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            subject, 
+            plainTextBody, 
+            htmlContent,
+            userId: userId,
+            entityId: entityId,
+            entityType: entityType,
+            actionSuccess: actionSuccess,
+            actionFailure: actionFailure);
     }
 
-    public async Task SendApplicationSubmissionEmailAsync(string recipientEmail, string recipientName, int applicationId)
+    public async Task SendApplicationSubmissionEmailAsync(string recipientEmail, string recipientName, int applicationId, int? userId = null)
     {
-        try
-        {
-            string plainTextBody = $@"Dear {recipientName},
+        string plainTextBody = $@"Dear {recipientName},
 
 Thank you for submitting your application for the OPPI Annual Awards for the year 2026.
 
@@ -340,7 +444,7 @@ We appreciate your participation and wish you continued success.
 Warm regards,
 Team - OPPI Awards";
 
-            string htmlContent = $@"
+        string htmlContent = $@"
 <p style=""margin: 0 0 20px 0;"">Dear {recipientName},</p>
 <p style=""margin: 0 0 20px 0;"">Thank you for submitting your application for the <strong>OPPI Annual Awards for the year 2026</strong>.</p>
 <div style=""margin: 0 0 25px 0; font-size: 16px; color: #165baf; background-color: #f0f7ff; padding: 12px 18px; border-radius: 6px; border: 1px solid #d0e4ff; display: inline-block; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"">
@@ -349,12 +453,16 @@ Team - OPPI Awards";
 <p style=""margin: 0 0 30px 0;"">We appreciate your participation and wish you continued success.</p>
 <p style=""margin: 0; color: #666666;"">Warm regards,<br><strong style=""color: #222222;"">Team - OPPI Awards</strong></p>";
 
-            await SendMailInternalAsync(recipientEmail, recipientName, "Application Submission - OPPI Annual Awards 2026", plainTextBody, htmlContent);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send application submission email to {Email}: {Message} (Inner: {Inner})", recipientEmail, ex.Message, ex.InnerException?.Message);
-            throw;
-        }
+        await SendMailInternalAsync(
+            recipientEmail, 
+            recipientName, 
+            "Application Submission - OPPI Annual Awards 2026", 
+            plainTextBody, 
+            htmlContent,
+            userId: userId,
+            entityId: applicationId,
+            entityType: "Application",
+            actionSuccess: "SEND_SUBMISSION_EMAIL",
+            actionFailure: "SEND_SUBMISSION_EMAIL_FAILED");
     }
 }

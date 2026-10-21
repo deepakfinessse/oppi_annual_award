@@ -139,8 +139,15 @@ public class ReminderEmailBackgroundService : BackgroundService
             {
                 _logger.LogInformation("Sending registered reminder email to: {Email}", user.Email);
                 var displayName = $"{user.FirstName} {user.LastName}".Trim();
-                await emailSvc.SendRegisteredReminderEmailAsync(user.Email, displayName);
-                await audit.LogAsync(user.Id, "SEND_REGISTERED_REMINDER", "User", user.Id, "Sent registered applicant reminder email");
+                try
+                {
+                    await emailSvc.SendRegisteredReminderEmailAsync(user.Email, displayName, user.Id);
+                    _logger.LogInformation("Successfully sent registered reminder email to: {Email}", user.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed sending registered reminder email to: {Email}", user.Email);
+                }
             }
             else
             {
@@ -172,8 +179,15 @@ public class ReminderEmailBackgroundService : BackgroundService
             {
                 _logger.LogInformation("Sending draft application reminder email to: {Email}", app.User.Email);
                 var displayName = $"{app.User.FirstName} {app.User.LastName}".Trim();
-                await emailSvc.SendDraftReminderEmailAsync(app.User.Email, displayName);
-                await audit.LogAsync(app.UserId, "SEND_DRAFT_REMINDER", "Application", app.Id, "Sent draft application reminder email");
+                try
+                {
+                    await emailSvc.SendDraftReminderEmailAsync(app.User.Email, displayName, app.UserId, app.Id);
+                    _logger.LogInformation("Successfully sent draft application reminder email to: {Email}", app.User.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed sending draft application reminder email to: {Email}", app.User.Email);
+                }
             }
             else
             {

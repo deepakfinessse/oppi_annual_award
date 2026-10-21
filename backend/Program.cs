@@ -661,7 +661,7 @@ auth.MapPost("/register", async (RegisterDto dto, InnovationDbContext db,
     try
     {
         var displayName = $"{user.FirstName} {user.LastName}".Trim();
-        await emailService.SendRegistrationEmailAsync(user.Email, displayName);
+        await emailService.SendRegistrationEmailAsync(user.Email, displayName, user.Id);
     }
     catch (Exception ex)
     {
@@ -721,7 +721,7 @@ auth.MapPost("/forgot-password", async (ForgotPasswordDto dto, InnovationDbConte
     try
     {
         var displayName = $"{user.FirstName} {user.LastName}".Trim();
-        await emailService.SendResetPasswordEmailAsync(dto.Email, displayName, otp);
+        await emailService.SendResetPasswordEmailAsync(dto.Email, displayName, otp, user.Id);
         Log.Information("Password reset email sent successfully to {Email}", dto.Email);
     }
     catch (Exception ex)
@@ -1228,7 +1228,7 @@ api.MapPost("/application/submit/{appId}", async (int appId, InnovationDbContext
         {
             var displayName = $"{targetUser.FirstName} {targetUser.LastName}".Trim();
             if (string.IsNullOrWhiteSpace(displayName)) displayName = "Applicant";
-            await emailService.SendApplicationSubmissionEmailAsync(targetUser.Email, displayName, a.Id);
+            await emailService.SendApplicationSubmissionEmailAsync(targetUser.Email, displayName, a.Id, targetUser.Id);
         }
         else
         {
@@ -1445,6 +1445,21 @@ api.MapPost("/admin/reminders/trigger", async (HttpContext ctx, InnovationDbCont
 
     reminderService.TriggerImmediateRun();
     return Results.Ok(new { message = "Reminder email check triggered successfully" });
+});
+
+api.MapGet("/admin/reminders/logs", async (HttpContext ctx, InnovationDbContext db) =>
+{
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var user = await db.Users.FindAsync(uid.Value);
+    if (user?.Role != "ADMIN") return Results.Forbid();
+
+    var logs = await db.AuditLogs
+        .Where(l => l.Action.Contains("REMINDER") || l.Action.Contains("EMAIL") || l.EntityType == "Email")
+        .OrderByDescending(l => l.Id)
+        .Take(50)
+        .ToListAsync();
+
+    return Results.Ok(logs);
 });
 
 api.MapGet("/admin/users", async (HttpContext ctx, InnovationDbContext db) =>
@@ -2924,7 +2939,7 @@ sci.MapPost("/submit/{appId}", async (int appId, InnovationDbContext db, HttpCon
     try
     {
         var displayName = $"{app2.User.FirstName} {app2.User.LastName}".Trim();
-        await emailService.SendApplicationSubmissionEmailAsync(app2.User.Email, displayName, app2.Id);
+        await emailService.SendApplicationSubmissionEmailAsync(app2.User.Email, displayName, app2.Id, app2.UserId);
     }
     catch (Exception ex)
     {
