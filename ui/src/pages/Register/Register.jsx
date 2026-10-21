@@ -80,8 +80,18 @@ const Register = () => {
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.firstName.trim()) errors.firstName = 'First Name is required';
-    if (!formData.lastName.trim()) errors.lastName = 'Last Name is required';
+    if (!formData.firstName?.trim()) {
+      errors.firstName = 'First Name is required';
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = 'First Name must be at least 2 characters';
+    }
+
+    if (!formData.lastName?.trim()) {
+      errors.lastName = 'Last Name is required';
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = 'Last Name must be at least 2 characters';
+    }
+
     if (!formData.organisation) errors.organisation = 'Organisation is required';
     if (!formData.mobileNumber.trim()) {
       errors.mobileNumber = 'Mobile Number is required';
@@ -124,12 +134,12 @@ const Register = () => {
     try {
       const payload = {
         Title: formData.title || '',
-        First_Name: formData.firstName,
-        Middle_Name: formData.middleName || '',
-        Last_Name: formData.lastName,
+        First_Name: formData.firstName.trim(),
+        Middle_Name: formData.middleName ? formData.middleName.trim() : '',
+        Last_Name: formData.lastName.trim(),
         Organisation: formData.organisation,
-        Email: formData.emailId,
-        Mobile: formData.mobileNumber,
+        Email: formData.emailId.trim(),
+        Mobile: formData.mobileNumber.trim(),
         Password: formData.createPassword,
         CaptchaId: captchaData.id,
         CaptchaAnswer: captchaData.captchaAnswer
@@ -147,8 +157,27 @@ const Register = () => {
         setFieldErrors({ emailId: msg });
       } else if (msg.toLowerCase().includes('mobile') || msg.toLowerCase().includes('phone')) {
         setFieldErrors({ mobileNumber: msg });
+      } else if (msg.toLowerCase().includes('last name') || msg.toLowerCase().includes('last_name')) {
+        setFieldErrors({ lastName: msg });
+      } else if (msg.toLowerCase().includes('first name') || msg.toLowerCase().includes('first_name')) {
+        setFieldErrors({ firstName: msg });
       } else if (err.errors && Array.isArray(err.errors)) {
-        setError(err.errors.join(', '));
+        const fieldErrMap = {};
+        const unmapped = [];
+        err.errors.forEach(e => {
+          const lower = e.toLowerCase();
+          if (lower.includes('last name') || lower.includes('last_name')) fieldErrMap.lastName = e;
+          else if (lower.includes('first name') || lower.includes('first_name')) fieldErrMap.firstName = e;
+          else if (lower.includes('email')) fieldErrMap.emailId = e;
+          else if (lower.includes('mobile') || lower.includes('phone')) fieldErrMap.mobileNumber = e;
+          else unmapped.push(e);
+        });
+        if (Object.keys(fieldErrMap).length > 0) {
+          setFieldErrors(prev => ({ ...prev, ...fieldErrMap }));
+        }
+        if (unmapped.length > 0) {
+          setError(unmapped.join(', '));
+        }
       } else {
         setError(msg || 'An unexpected error occurred during registration.');
       }
@@ -207,18 +236,19 @@ const Register = () => {
                         type="text"
                         name="firstName"
                         className={fieldErrors.firstName ? 'input-error' : ''}
-                        placeholder="First name"
+                        placeholder="First name *"
                         value={formData.firstName}
                         onChange={handleChange}
                         disabled={loading}
                         required
                       />
+                      {fieldErrors.firstName && <span className="field-error-msg">{fieldErrors.firstName}</span>}
                     </div>
                     <div className="name-input-container">
                       <input
                         type="text"
                         name="middleName"
-                        placeholder="Middle name(optional)"
+                        placeholder="Middle name (optional)"
                         value={formData.middleName}
                         onChange={handleChange}
                         disabled={loading}
@@ -229,20 +259,15 @@ const Register = () => {
                         type="text"
                         name="lastName"
                         className={fieldErrors.lastName ? 'input-error' : ''}
-                        placeholder="Last name"
+                        placeholder="Last name *"
                         value={formData.lastName}
                         onChange={handleChange}
                         disabled={loading}
                         required
                       />
-                    </div>
-                  </div>
-                  {(fieldErrors.firstName || fieldErrors.lastName) && (
-                    <div className="name-errors-row">
-                      {fieldErrors.firstName && <span className="field-error-msg">{fieldErrors.firstName}</span>}
                       {fieldErrors.lastName && <span className="field-error-msg">{fieldErrors.lastName}</span>}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Organisation */}

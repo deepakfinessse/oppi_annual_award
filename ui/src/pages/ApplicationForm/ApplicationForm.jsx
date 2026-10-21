@@ -102,6 +102,13 @@ const normalizeCategory = (cat) => {
   return trimmed;
 };
 
+const countWords = (text) => {
+  if (!text || typeof text !== 'string') return 0;
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).filter(Boolean).length;
+};
+
 const ApplicationForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -422,8 +429,11 @@ const ApplicationForm = () => {
         errors.mobileNumber = 'Please enter a valid 10-digit mobile number.';
       }
     }
+    const descWords = countWords(formData.briefDescription);
     if (!formData.briefDescription?.trim()) {
       errors.briefDescription = 'Please provide a Brief Description.';
+    } else if (descWords > 500) {
+      errors.briefDescription = `Brief Description cannot exceed 500 words (currently ${descWords} words).`;
     }
     if (documentFiles.length === 0) {
       errors.documentFiles = 'Please upload at least one required Document (PDF).';
@@ -944,9 +954,14 @@ const ApplicationForm = () => {
 
               {/* Brief Description */}
               <div className="preview-desc-section">
-                <label className="preview-desc-label">
-                  Brief Description <span className="required">*</span>
-                </label>
+                <div className="label-with-counter">
+                  <label className="preview-desc-label">
+                    Brief Description <span className="required">*</span>
+                  </label>
+                  <span className="word-counter-badge">
+                    {countWords(formData.briefDescription)} / 500 words
+                  </span>
+                </div>
                 <div className="preview-desc-content">
                   {formData.briefDescription || 'No description provided.'}
                 </div>
@@ -1320,9 +1335,21 @@ const ApplicationForm = () => {
 
               {/* Row 5: Brief Description */}
               <div className="form-group full-width">
-                <label>
-                  Brief Description <span className="required">*</span>
-                </label>
+                <div className="label-with-counter">
+                  <label>
+                    Brief Description <span className="required">*</span>
+                  </label>
+                  {(() => {
+                    const words = countWords(formData.briefDescription);
+                    const isOver = words > 500;
+                    const isNear = words >= 450 && words <= 500;
+                    return (
+                      <span className={`word-counter-badge ${isOver ? 'over-limit' : isNear ? 'near-limit' : ''}`}>
+                        {words} / 500 words
+                      </span>
+                    );
+                  })()}
+                </div>
                 <textarea
                   name="briefDescription"
                   placeholder="Maximum 500 words"

@@ -190,6 +190,7 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0.75rem;
   width: 100%;
+  align-items: start;
 }
 
 .name-input-container {

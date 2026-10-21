@@ -233,6 +233,41 @@
   margin-left: 2px;
 }
 
+.label-with-counter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.word-counter-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.word-counter-badge.near-limit {
+  color: #b45309;
+  background-color: #fef3c7;
+  border-color: #fde68a;
+  font-weight: 700;
+}
+
+.word-counter-badge.over-limit {
+  color: #dc2626;
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  font-weight: 700;
+}
+
 /* Custom Category Dropdown - Exact Figma Match */
 .custom-category-dropdown {
   position: relative;
