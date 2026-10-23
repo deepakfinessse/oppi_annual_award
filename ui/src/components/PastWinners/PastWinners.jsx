@@ -186,17 +186,17 @@ const PastWinners = () => {
                     {currentWinner.organisation || currentWinner.companyName || 'Organisation'}
                   </p>
                   
-                  {currentWinner.name && currentWinner.name !== (currentWinner.organisation || currentWinner.companyName) && (
+                  {/* {currentWinner.name && currentWinner.name !== (currentWinner.organisation || currentWinner.companyName) && (
                     <p className="winner-representative-line">
                       {currentWinner.name}
                     </p>
-                  )}
-
+                  )} */}
+{/* 
                   {(currentWinner.caption || currentWinner.description) && (
                     <p className="winner-caption-text">
                       {currentWinner.caption || currentWinner.description}
                     </p>
-                  )}
+                  )} */}
                 </div>
               </div>
 

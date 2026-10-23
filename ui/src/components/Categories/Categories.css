@@ -53,6 +53,7 @@
   transform: translateY(-4px);
   box-shadow: 0 16px 36px rgba(11, 114, 196, 0.12);
   border-color: #10b981;
+  background: radial-gradient(105.78% 90.75% at 97.13% 120.7%, #83CBF0 0%, #F8FFF7 100%) /* warning: gradient uses a rotation that is not supported by CSS and may not behave as expected */;
 }
 
 .category-card-top {

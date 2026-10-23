@@ -248,7 +248,7 @@ const Register = () => {
                       <input
                         type="text"
                         name="middleName"
-                        placeholder="Middle name (optional)"
+                        placeholder="Middle name"
                         value={formData.middleName}
                         onChange={handleChange}
                         disabled={loading}

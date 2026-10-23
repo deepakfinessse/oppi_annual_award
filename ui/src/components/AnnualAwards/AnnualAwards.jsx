@@ -19,7 +19,7 @@ const AnnualAwards = () => {
               Annual Awards <span className="highlight-year">2027</span>
             </h2>
             <p className="annual-awards-desc">
-              The Annual Awards acknowledge drivers, innovators and professionals who amend excellence across relevant categories. <br></br><br></br> Over the years, the Annual Awards have become a gold standard in the pharmaceutical industry. They will be presented at the 58th Annual Day celebrations.
+              The Annual Awards acknowledge achievers, innovators and perfectionists and reward excellence across relevant categories. <br></br><br></br> Over the years, the Annual Awards have become a gold standard in the pharmaceutical industry. They will be presented at the OPPI Annual Day celebrations 2027.
             </p>
           </motion.div>
 
