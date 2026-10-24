@@ -338,18 +338,37 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.filter-menu-item {
+.filter-menu-item,
+.filter-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  outline: none;
   padding: 0.7rem 1.25rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #475569;
   cursor: pointer;
   transition: all 0.15s;
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: 1.4;
+  white-space: normal;
 }
 
-.filter-menu-item:hover {
+.filter-menu-item:hover,
+.filter-dropdown-item:hover {
   background: #f1f5f9;
   color: #0284c7;
+}
+
+.filter-menu-item.active,
+.filter-dropdown-item.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-weight: 700;
 }
 
 /* Premium Table Styling (Figma layout: transparent headers) */

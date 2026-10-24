@@ -1644,22 +1644,21 @@ const AdminPortal = () => {
 
                   {showWinnerYearDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '150px', right: 0, zIndex: 100 }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${winnerFilterYear === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${winnerFilterYear === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setWinnerFilterYear('ALL'); setShowWinnerYearDropdown(false); }}
                       >
-                        All Years
-                      </button>
+                        <strong>All Years</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {availableWinnerYears.map(yr => (
-                        <button
+                        <div
                           key={yr}
-                          type="button"
-                          className={`filter-dropdown-item ${winnerFilterYear === yr ? 'active' : ''}`}
+                          className={`filter-menu-item ${winnerFilterYear === yr ? 'active' : ''}`}
                           onClick={() => { setWinnerFilterYear(yr); setShowWinnerYearDropdown(false); }}
                         >
                           {yr}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1683,23 +1682,21 @@ const AdminPortal = () => {
 
                   {showWinnerCatDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setWinnerFilterCategory('ALL'); setShowWinnerCatDropdown(false); }}
                       >
                         <strong>All Categories</strong>
-                      </button>
+                      </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
-                        <button
+                        <div
                           key={cat}
-                          type="button"
-                          className={`filter-dropdown-item ${winnerFilterCategory === cat ? 'active' : ''}`}
+                          className={`filter-menu-item ${winnerFilterCategory === cat ? 'active' : ''}`}
                           onClick={() => { setWinnerFilterCategory(cat); setShowWinnerCatDropdown(false); }}
                         >
                           {cat}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1847,23 +1844,21 @@ const AdminPortal = () => {
 
                   {showEvalCatDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalCategoryFilter === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${evalCategoryFilter === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setEvalCategoryFilter('ALL'); setShowEvalCatDropdown(false); }}
                       >
                         <strong>All Categories</strong>
-                      </button>
+                      </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
-                        <button
+                        <div
                           key={cat}
-                          type="button"
-                          className={`filter-dropdown-item ${evalCategoryFilter === cat ? 'active' : ''}`}
+                          className={`filter-menu-item ${evalCategoryFilter === cat ? 'active' : ''}`}
                           onClick={() => { setEvalCategoryFilter(cat); setShowEvalCatDropdown(false); }}
                         >
                           {cat}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1885,34 +1880,31 @@ const AdminPortal = () => {
 
                   {showEvalStatusDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '160px', right: 0, zIndex: 100 }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('ALL'); setShowEvalStatusDropdown(false); }}
                       >
-                        All Status
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === 'Winner' ? 'active' : ''}`}
+                        <strong>All Status</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === 'Winner' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('Winner'); setShowEvalStatusDropdown(false); }}
                       >
                         Winner
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
+                      </div>
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('1st runner up'); setShowEvalStatusDropdown(false); }}
                       >
                         1st runner up
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
+                      </div>
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('2nd runner up'); setShowEvalStatusDropdown(false); }}
                       >
                         2nd runner up
-                      </button>
+                      </div>
                     </div>
                   )}
                 </div>
