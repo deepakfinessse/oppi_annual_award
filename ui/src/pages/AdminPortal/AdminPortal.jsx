@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer/Footer';
 import ApplicationPreview from '../../components/ApplicationPreview/ApplicationPreview';
@@ -203,6 +203,7 @@ const AdminPortal = () => {
   const [panelName, setPanelName] = useState('');
   const [panelRole, setPanelRole] = useState('');
   const [panelType, setPanelType] = useState('JURY');
+  const [panelCategory, setPanelCategory] = useState('');
   const [panelImagePath, setPanelImagePath] = useState('');
   const [panelSortOrder, setPanelSortOrder] = useState(0);
   const [panelEmail, setPanelEmail] = useState('');
@@ -396,26 +397,84 @@ const AdminPortal = () => {
     return true;
   });
 
-  const displayedJuryMembers = panelMembers.filter(m => m.type === 'JURY').length > 0
-    ? panelMembers.filter(m => m.type === 'JURY')
-    : panelMembers;
+  const displayedJuryMembers = useMemo(() => {
+    const juryOnly = panelMembers.filter(m => {
+      const type = (m.type || m.Type || '').toUpperCase();
+      return type === 'JURY' || type === 'JURY_MEMBER';
+    });
+    const baseList = juryOnly.length > 0 ? juryOnly : panelMembers;
+
+    if (juryCategoryFilter === 'ALL') return baseList;
+
+    return baseList.filter(m => {
+      const cat = m.category || m.Category;
+      if (cat && isCategoryMatch(cat, juryCategoryFilter)) return true;
+
+      const ej = evalReport?.juries?.find(j =>
+        (j.id && Number(j.id) === Number(m.id)) ||
+        (j.email && m.email && j.email.toLowerCase() === m.email.toLowerCase()) ||
+        (j.name && m.name && j.name.toLowerCase() === m.name.toLowerCase())
+      );
+      if (ej?.category && isCategoryMatch(ej.category, juryCategoryFilter)) return true;
+
+      if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+        const juryIdList = [Number(m.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+        const reviewedInCat = evalReport.reviews.some(r => {
+          if (!juryIdList.includes(Number(r.jury_id))) return false;
+          const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
+                            evalReport?.applications?.find(a => Number(a.id) === Number(r.application_id));
+          return targetApp && isCategoryMatch(targetApp.category, juryCategoryFilter);
+        });
+        if (reviewedInCat) return true;
+      }
+
+      return false;
+    });
+  }, [panelMembers, juryCategoryFilter, evalReport, apps]);
 
   const getEvaluationStatus = (member) => {
-    const categoryApps = apps.filter(a => a.status !== 'DRAFT' && (juryCategoryFilter === 'ALL' || isCategoryMatch(a.category, juryCategoryFilter)));
-    const totalCount = Math.max(categoryApps.length, 3);
-    const reviewedCount = categoryApps.filter(a => 
-      a.jury_reviews?.some(r => r.jury_email === member.email || r.jury_name === member.name) || (a.average_score > 0)
-    ).length;
+    const memberCat = member.category || member.Category;
+    const targetCategory = juryCategoryFilter !== 'ALL' ? juryCategoryFilter : memberCat;
+    const categoryApps = apps.filter(a => a.status !== 'DRAFT' && (!targetCategory || isCategoryMatch(a.category, targetCategory)));
+    const totalCount = categoryApps.length;
+
+    const ej = evalReport?.juries?.find(j => 
+      (j.id && Number(j.id) === Number(member.id)) ||
+      (j.email && member.email && j.email.toLowerCase() === member.email.toLowerCase()) ||
+      (j.name && member.name && j.name.toLowerCase() === member.name.toLowerCase())
+    );
+    const juryIdList = [Number(member.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+
+    let reviewedCount = 0;
+    if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+      reviewedCount = evalReport.reviews.filter(r => {
+        if (!juryIdList.includes(Number(r.jury_id))) return false;
+        if (!targetCategory) return true;
+        const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
+                          evalReport?.applications?.find(a => Number(a.id) === Number(r.application_id));
+        return targetApp && isCategoryMatch(targetApp.category, targetCategory);
+      }).length;
+    } else {
+      reviewedCount = categoryApps.filter(a => 
+        a.jury_reviews?.some(r => 
+          (r.jury_email && member.email && r.jury_email.toLowerCase() === member.email.toLowerCase()) || 
+          (r.jury_name && member.name && r.jury_name.toLowerCase() === member.name.toLowerCase()) ||
+          (r.jury_id && Number(r.jury_id) === Number(member.id))
+        )
+      ).length;
+    }
+
     return `${String(reviewedCount).padStart(2, '0')}/${String(totalCount).padStart(2, '0')}`;
   };
 
   const downloadJuryCSV = () => {
-    const headers = ['S. No.', 'Name', 'Email', 'Role / Designation', 'Evaluation Status'];
+    const headers = ['S. No.', 'Name', 'Email', 'Role / Designation', 'Category', 'Evaluation Status'];
     const rows = displayedJuryMembers.map((m, idx) => [
       String(idx + 1).padStart(2, '0'),
       m.name,
       m.email || '—',
       m.role || '—',
+      m.category || m.Category || '—',
       getEvaluationStatus(m)
     ]);
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -803,6 +862,7 @@ const AdminPortal = () => {
     setPanelName('');
     setPanelRole('');
     setPanelType('JURY');
+    setPanelCategory(juryCategoryFilter !== 'ALL' ? juryCategoryFilter : ANNUAL_AWARD_CATEGORIES[0]);
     setPanelImagePath('');
     setPanelSortOrder(panelMembers.length + 1);
     setPanelEmail('');
@@ -819,6 +879,7 @@ const AdminPortal = () => {
     setPanelName(member.name);
     setPanelRole(member.role);
     setPanelType(member.type);
+    setPanelCategory(member.category || member.Category || ANNUAL_AWARD_CATEGORIES[0]);
     setPanelImagePath(member.imagePath || '');
     setPanelSortOrder(member.sortOrder);
     setPanelEmail(member.email || '');
@@ -889,6 +950,7 @@ const AdminPortal = () => {
       name: panelName,
       role: panelRole,
       type: panelType,
+      category: panelType === 'JURY' ? panelCategory : null,
       imagePath: panelImagePath,
       sortOrder: parseInt(panelSortOrder) || 0,
       email: panelEmail,
@@ -1515,6 +1577,7 @@ const AdminPortal = () => {
                     <th>S. No.</th>
                     <th>Name</th>
                     <th>Email</th>
+                    <th>Category</th>
                     <th>Evaluation Status</th>
                     <th>Profile</th>
                   </tr>
@@ -1522,11 +1585,11 @@ const AdminPortal = () => {
                 <tbody>
                   {loading && panelMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-loading">Loading jury members...</td>
+                      <td colSpan="6" className="table-loading">Loading jury members...</td>
                     </tr>
                   ) : displayedJuryMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-empty">No jury members configured.</td>
+                      <td colSpan="6" className="table-empty">No jury members configured for this category.</td>
                     </tr>
                   ) : (
                     displayedJuryMembers.map((m, idx) => (
@@ -1534,6 +1597,7 @@ const AdminPortal = () => {
                         <td className="id-col">{String(idx + 1).padStart(2, '0')}</td>
                         <td className="bold-text">{m.name}</td>
                         <td className="email-text">{m.email || '—'}</td>
+                        <td style={{ fontSize: '0.82rem', color: '#475569', maxWidth: '240px' }}>{m.category || m.Category || '—'}</td>
                         <td>{getEvaluationStatus(m)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
@@ -2070,6 +2134,20 @@ const AdminPortal = () => {
                     </select>
                   </div>
                 </div>
+
+                {panelType === 'JURY' && (
+                  <div className="modal-form-group full-width">
+                    <label>Award Category</label>
+                    <select
+                      value={panelCategory}
+                      onChange={(e) => setPanelCategory(e.target.value)}
+                    >
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className={`modal-form-group full-width ${fieldErrors.role ? 'has-error' : ''}`}>
                   <label>Designation &amp; Affiliation Description <span className="req">*</span></label>

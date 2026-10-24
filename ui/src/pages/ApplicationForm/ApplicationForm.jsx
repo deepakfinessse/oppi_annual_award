@@ -635,12 +635,18 @@ const ApplicationForm = () => {
   const handleFileUpload = async (section, files) => {
     if (!appId || !files || files.length === 0) return;
 
+    const errorKey = section === 'document' ? 'documentFiles' : 'videoFiles';
+    setFieldErrors(prev => ({ ...prev, [errorKey]: '' }));
+
     if (section === 'document') {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
         if (!isPdf) {
-          alert(`File "${file.name}" is not a PDF. Only PDF files are allowed.`);
+          setFieldErrors(prev => ({
+            ...prev,
+            documentFiles: `File "${file.name}" is not a PDF. Only PDF files are allowed.`
+          }));
           return;
         }
       }
@@ -650,7 +656,10 @@ const ApplicationForm = () => {
     const maxMB = section === 'video' ? 10 : 5;
     for (let i = 0; i < files.length; i++) {
       if (files[i].size > maxSizeBytes) {
-        alert(`File "${files[i].name}" exceeds the maximum allowed size of ${maxMB} MB.`);
+        setFieldErrors(prev => ({
+          ...prev,
+          [errorKey]: `File "${files[i].name}" exceeds the maximum allowed size of ${maxMB} MB.`
+        }));
         return;
       }
     }
@@ -673,14 +682,21 @@ const ApplicationForm = () => {
           setFieldErrors(prev => ({ ...prev, documentFiles: '' }));
         } else {
           setVideoFiles(prev => [...prev, ...data.files]);
+          setFieldErrors(prev => ({ ...prev, videoFiles: '' }));
         }
       } else {
-        const data = await res.json();
-        alert(data.message || 'Failed to upload file');
+        const data = await res.json().catch(() => ({}));
+        setFieldErrors(prev => ({
+          ...prev,
+          [errorKey]: data.message || `Failed to upload ${section} file.`
+        }));
       }
     } catch (err) {
       console.error(err);
-      alert('Error uploading file');
+      setFieldErrors(prev => ({
+        ...prev,
+        [errorKey]: `Error uploading ${section} file. Please check connection and try again.`
+      }));
     }
   };
 
@@ -1394,6 +1410,13 @@ const ApplicationForm = () => {
                   </div>
                 </div>
 
+                {fieldErrors.documentFiles && (
+                  <span className="field-error-msg upload-field-error">
+                    <AlertCircle size={14} className="field-error-icon" />
+                    {fieldErrors.documentFiles}
+                  </span>
+                )}
+
                 {documentFiles.length > 0 && (
                   <div className="attached-files-list">
                     {documentFiles.map((file, idx) => {
@@ -1429,25 +1452,22 @@ const ApplicationForm = () => {
                     })}
                   </div>
                 )}
-                {fieldErrors.documentFiles && (
-                  <span className="field-error-msg upload-field-error">
-                    <AlertCircle size={14} className="field-error-icon" />
-                    {fieldErrors.documentFiles}
-                  </span>
-                )}
               </div>
 
               {/* Upload Video Section */}
               <div className="form-group full-width upload-section-block">
                 <label>Upload Video</label>
                 <div className="upload-container-split">
-                  <div className="upload-dropzone">
+                  <div className={`upload-dropzone ${fieldErrors.videoFiles ? 'input-error' : ''}`}>
                     <Video className="upload-icon-large" size={38} />
                     <p>Drop your Video here, or <span className="browse-text">browse</span></p>
                     <input
                       type="file"
                       accept=".mp4,.mov,.webm"
-                      onChange={(e) => handleFileUpload('video', e.target.files)}
+                      onChange={(e) => {
+                        handleFileUpload('video', e.target.files);
+                        e.target.value = '';
+                      }}
                       disabled={isReadOnly}
                     />
                   </div>
@@ -1457,6 +1477,13 @@ const ApplicationForm = () => {
                     <p>• Size: Upto 10 mb</p>
                   </div>
                 </div>
+
+                {fieldErrors.videoFiles && (
+                  <span className="field-error-msg upload-field-error">
+                    <AlertCircle size={14} className="field-error-icon" />
+                    {fieldErrors.videoFiles}
+                  </span>
+                )}
 
                 {videoFiles.length > 0 && (
                   <div className="attached-files-list">

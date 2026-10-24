@@ -1665,6 +1665,7 @@ api.MapPost("/admin/panel-members", async (PanelMemberDto dto, InnovationDbConte
         Name = dto.Name,
         Role = dto.Role,
         Type = dto.Type.ToUpper(),
+        Category = dto.Category,
         ImagePath = dto.ImagePath,
         SortOrder = dto.SortOrder,
         Email = dto.Email.Trim(),
@@ -1725,6 +1726,7 @@ api.MapPut("/admin/panel-members/{id}", async (int id, PanelMemberDto dto, Innov
     member.Name = dto.Name;
     member.Role = dto.Role;
     member.Type = dto.Type.ToUpper();
+    member.Category = dto.Category;
     member.ImagePath = dto.ImagePath;
     member.SortOrder = dto.SortOrder;
     member.Email = dto.Email.Trim();

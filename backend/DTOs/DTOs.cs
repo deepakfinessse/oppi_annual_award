@@ -166,6 +166,7 @@ public class PanelMemberDto
     public string Role { get; set; } = null!;
     public string Type { get; set; } = null!; // VALIDATOR, JURY, PANEL_CHAIR
     public string? ImagePath { get; set; }
+    public string? Category { get; set; }
     public int SortOrder { get; set; }
     public string? Email { get; set; }
     public string? Password { get; set; }
