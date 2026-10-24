@@ -46,6 +46,7 @@ import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
 import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
+import { AWARD_CATEGORIES } from '../../constants/categories';
 import './AdminPortal.css';
 
 const formatDate = (dateStr) => {
@@ -76,6 +77,55 @@ const formatDateTime = (dateStr) => {
   } catch (e) {
     return '—';
   }
+};
+
+const cleanCat = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const isCategoryMatch = (catA, catB) => {
+  if (!catA || !catB) return false;
+  if (catA === catB) return true;
+  const a = cleanCat(catA);
+  const b = cleanCat(catB);
+  if (a === b) return true;
+
+  // Marketing: distinguish Existing vs New
+  if (a.includes('marketing') && b.includes('marketing')) {
+    const aExisting = a.includes('existing');
+    const bExisting = b.includes('existing');
+    const aNew = a.includes('new');
+    const bNew = b.includes('new');
+    if (aExisting && bExisting) return true;
+    if (aNew && bNew) return true;
+    if (!aExisting && !aNew && (bExisting || bNew)) return true;
+    if (!bExisting && !bNew && (aExisting || aNew)) return true;
+    return false;
+  }
+
+  // HR: distinguish HR Excellence vs D&I
+  const aDni = a.includes('diversity') || a.includes('di') || a.includes('inclusion');
+  const bDni = b.includes('diversity') || b.includes('di') || b.includes('inclusion');
+  if (aDni || bDni) return aDni && bDni;
+
+  const aHr = a.includes('hrexcellence') || a.includes('hr');
+  const bHr = b.includes('hrexcellence') || b.includes('hr');
+  if (aHr && bHr && !aDni && !bDni) return true;
+
+  // Healthcare Communications
+  if (a.includes('communication') && b.includes('communication')) return true;
+
+  // Medical Excellence
+  if (a.includes('medical') && b.includes('medical')) return true;
+
+  // Sales Force Excellence
+  if (a.includes('sales') && b.includes('sales')) return true;
+
+  // Sustainability
+  if (a.includes('sustainab') && b.includes('sustainab')) return true;
+
+  // Patient Centricity
+  if ((a.includes('patient') || a.includes('shahani')) && (b.includes('patient') || b.includes('shahani'))) return true;
+
+  return a.includes(b) || b.includes(a);
 };
 
 const AdminPortal = () => {
@@ -110,7 +160,7 @@ const AdminPortal = () => {
   const [showAppStatusDropdown, setShowAppStatusDropdown] = useState(false);
   const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
 
-  const [juryCategoryFilter, setJuryCategoryFilter] = useState('OPPI Sustainability Excellence Award');
+  const [juryCategoryFilter, setJuryCategoryFilter] = useState('ALL');
   const [showJuryCatDropdown, setShowJuryCatDropdown] = useState(false);
   const [showJuryExportDropdown, setShowJuryExportDropdown] = useState(false);
 
@@ -167,7 +217,7 @@ const AdminPortal = () => {
   const [selectedExistingApplicant, setSelectedExistingApplicant] = useState('');
   const [winnerYear, setWinnerYear] = useState(new Date().getFullYear());
   const [winnerYearStr, setWinnerYearStr] = useState('2025-2026');
-  const [winnerCategory, setWinnerCategory] = useState('OPPI Sustainability Excellence Award');
+  const [winnerCategory, setWinnerCategory] = useState(AWARD_CATEGORIES[0]);
   const [winnerName, setWinnerName] = useState('');
   const [winnerOrganisation, setWinnerOrganisation] = useState('');
   const [winnerPosition, setWinnerPosition] = useState('Winner');
@@ -296,48 +346,52 @@ const AdminPortal = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Helper to find all applications belonging to a user
+  const getUserApps = (u) => {
+    const userEmail = (u.email || '').toLowerCase().trim();
+    const userId = u.id || u.Id;
+    return apps.filter(app => {
+      const appUserEmail = (app.user_email || '').toLowerCase().trim();
+      const appApplicantEmail = (app.applicant_email || '').toLowerCase().trim();
+      const matchesEmail = (appUserEmail && appUserEmail === userEmail) || (appApplicantEmail && appApplicantEmail === userEmail);
+      const matchesUserId = userId && (app.user_id || app.UserId) && String(app.user_id || app.UserId) === String(userId);
+      return matchesEmail || matchesUserId;
+    });
+  };
+
   // Filter handlers
   const filteredUsers = users.filter(u => {
     // Only show users with the role 'USER'
-    if (u.role.toUpperCase() !== 'USER') return false;
+    if (u.role?.toUpperCase() !== 'USER') return false;
 
-    // Get user's application status
-    const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+    const userApps = getUserApps(u);
     
     // Category filter
     if (userCategoryFilter !== 'ALL') {
-      if (!userApp || userApp.category !== userCategoryFilter) return false;
+      const hasCat = userApps.some(app => isCategoryMatch(app.category, userCategoryFilter));
+      if (!hasCat) return false;
     }
 
-    const status = !userApp ? 'REGISTERED' : (userApp.status === 'DRAFT' ? 'DRAFT' : 'SUBMITTED');
+    const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
+    const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
 
     if (userFilter === 'ALL') return true;
     if (userFilter === 'REGISTERED' || userFilter === 'NEW') return status === 'REGISTERED';
     return status === userFilter;
   });
 
-  const ANNUAL_AWARD_CATEGORIES = [
-    'OPPI Marketing Excellence Awards - Existing Pharma Product',
-    'OPPI Marketing Excellence Awards - New Pharma Product',
-    'OPPI Sales Force Excellence Award',
-    'OPPI HR Award - HR Excellence Award',
-    'OPPI HR Award - D&I Award',
-    'OPPI Healthcare Communications Award',
-    'OPPI Medical Excellence Award',
-    'OPPI Sustainability Excellence Award',
-    'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity'
-  ];
+  const ANNUAL_AWARD_CATEGORIES = AWARD_CATEGORIES;
 
   const filteredApps = apps.filter(app => {
     // Category filter
-    if (appCategoryFilter !== 'ALL' && app.category !== appCategoryFilter) return false;
+    if (appCategoryFilter !== 'ALL' && !isCategoryMatch(app.category, appCategoryFilter)) return false;
 
     // Status filter
     if (appStatusFilter === 'ALL') return true;
     if (appStatusFilter === 'DRAFT') return app.status === 'DRAFT';
     if (appStatusFilter === 'SUBMITTED') return app.status === 'SUBMITTED' || app.status !== 'DRAFT';
-    if (appStatusFilter === 'JURY') return app.status.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
-    if (appStatusFilter === 'PANEL_CHAIR') return app.status.startsWith('PANEL');
+    if (appStatusFilter === 'JURY') return app.status?.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
+    if (appStatusFilter === 'PANEL_CHAIR') return app.status?.startsWith('PANEL');
     if (appStatusFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
     return true;
   });
@@ -347,7 +401,7 @@ const AdminPortal = () => {
     : panelMembers;
 
   const getEvaluationStatus = (member) => {
-    const categoryApps = apps.filter(a => juryCategoryFilter === 'ALL' ? a.status !== 'DRAFT' : a.category === juryCategoryFilter && a.status !== 'DRAFT');
+    const categoryApps = apps.filter(a => a.status !== 'DRAFT' && (juryCategoryFilter === 'ALL' || isCategoryMatch(a.category, juryCategoryFilter)));
     const totalCount = Math.max(categoryApps.length, 3);
     const reviewedCount = categoryApps.filter(a => 
       a.jury_reviews?.some(r => r.jury_email === member.email || r.jury_name === member.name) || (a.average_score > 0)
@@ -393,7 +447,7 @@ const AdminPortal = () => {
       if (!matchYear) return false;
     }
     if (winnerFilterCategory !== 'ALL') {
-      if (w.category !== winnerFilterCategory) return false;
+      if (!isCategoryMatch(w.category, winnerFilterCategory)) return false;
     }
     return true;
   });
@@ -464,7 +518,7 @@ const AdminPortal = () => {
       displayId: String(app.id || idx + 1).padStart(2, '0'),
       name: app.applicant_name || app.user_name || 'Anonymous',
       organisation: app.company || app.institute_name || app.instituteName || '—',
-      category: app.category || 'OPPI Healthcare Communications Award',
+      category: app.category || '—',
       scores,
       total: finalTotal
     };
@@ -525,7 +579,7 @@ const AdminPortal = () => {
   const effectiveRankingItems = processedEvalItems.length > 0 ? processedEvalItems : demoRankingRows;
 
   const evaluationRankingList = effectiveRankingItems.filter(item => {
-    if (evalCategoryFilter !== 'ALL' && item.category !== evalCategoryFilter) return false;
+    if (evalCategoryFilter !== 'ALL' && !isCategoryMatch(item.category, evalCategoryFilter)) return false;
     if (evalStatusFilter !== 'ALL') {
       const posClean = (item.position || '').toLowerCase();
       const filterClean = evalStatusFilter.toLowerCase();
@@ -561,15 +615,18 @@ const AdminPortal = () => {
   const downloadUsersCSV = () => {
     const headers = ['Date & Time Stamp', 'Representative Name', 'Member Company', 'Email ID', 'Mobile', 'Nomination Category', 'Status'];
     const rows = filteredUsers.map((u) => {
-      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
-      const statusLabel = !userApp ? 'Registered' : (userApp.status === 'DRAFT' ? 'Draft' : 'Submitted');
+      const userApps = getUserApps(u);
+      const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
+      const statusLabel = userApps.length === 0 ? 'Registered' : (hasSubmitted ? 'Submitted' : 'Draft');
+      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
+      const categoryStr = validCategories.length > 0 ? validCategories.join(', ') : '—';
       return [
         formatDateTime(u.createdAt || u.created_at),
         `${u.firstName} ${u.lastName}`.trim(),
-        u.organisation || userApp?.company || userApp?.institute_name || '—',
+        u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—',
         u.email,
         u.mobile || '',
-        userApp?.category || '—',
+        categoryStr,
         statusLabel
       ];
     });
@@ -868,7 +925,7 @@ const AdminPortal = () => {
     setSelectedExistingApplicant('');
     setWinnerYear(new Date().getFullYear());
     setWinnerYearStr('2025-2026');
-    setWinnerCategory(ANNUAL_AWARD_CATEGORIES[7] || ANNUAL_AWARD_CATEGORIES[0]);
+    setWinnerCategory(AWARD_CATEGORIES[0]);
     setWinnerName('');
     setWinnerOrganisation('');
     setWinnerPosition('Winner');
@@ -887,7 +944,7 @@ const AdminPortal = () => {
     setSelectedExistingApplicant('');
     setWinnerYear(w.year || new Date().getFullYear());
     setWinnerYearStr(w.yearStr || (w.year ? `${w.year - 1}-${w.year}` : '2025-2026'));
-    setWinnerCategory(w.category || ANNUAL_AWARD_CATEGORIES[0]);
+    setWinnerCategory(w.category || AWARD_CATEGORIES[0]);
     setWinnerName(w.name || '');
     setWinnerOrganisation(w.organisation || '');
     setWinnerPosition(w.position || 'Winner');
@@ -1163,11 +1220,21 @@ const AdminPortal = () => {
                     </tr>
                   ) : (
                     paginatedUsers.map((u, idx) => {
-                      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+                      const userApps = getUserApps(u);
                       const appDisplayId = String((userPage - 1) * userPageSize + idx + 1).padStart(2, '0');
-                      const organisation = u.organisation || userApp?.company || userApp?.institute_name || '—';
+                      const organisation = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
                       const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
-                      const category = userApp?.category || 'OPPI Marketing Excellence Awards New Product';
+                      
+                      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
+                      let categoryDisplay = '—';
+                      if (validCategories.length > 0) {
+                        if (userCategoryFilter !== 'ALL') {
+                          const matched = validCategories.find(c => isCategoryMatch(c, userCategoryFilter));
+                          categoryDisplay = matched || validCategories.join(', ');
+                        } else {
+                          categoryDisplay = validCategories.join(', ');
+                        }
+                      }
 
                       return (
                         <tr key={u.id}>
@@ -1175,7 +1242,7 @@ const AdminPortal = () => {
                           <td>{organisation}</td>
                           <td className="bold-text">{fullName}</td>
                           <td className="email-text">{u.email}</td>
-                          <td>{category}</td>
+                          <td>{categoryDisplay}</td>
                         </tr>
                       );
                     })
@@ -1396,7 +1463,7 @@ const AdminPortal = () => {
               <div className="card-title-group">
                 <h3 className="card-title">Jury Members</h3>
                 <span className="card-subtitle">
-                  {juryCategoryFilter !== 'ALL' ? juryCategoryFilter : 'OPPI Sustainability Excellence Award'}
+                  {juryCategoryFilter !== 'ALL' ? juryCategoryFilter : 'All Categories'}
                 </span>
               </div>
 

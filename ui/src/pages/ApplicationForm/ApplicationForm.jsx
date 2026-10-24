@@ -37,19 +37,9 @@ import exactFigmaBg from '../../assets/exact-figma-bg.png';
 import Footer from '../../components/Footer/Footer';
 import './ApplicationForm.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+import { AWARD_CATEGORIES } from '../../constants/categories';
 
-const AWARD_CATEGORIES = [
-  'OPPI Marketing Excellence Awards - Existing Pharma Product',
-  'OPPI Marketing Excellence Awards - New Pharma Product',
-  'OPPI Sales Force Excellence Award',
-  'OPPI HR Award - HR Excellence Award',
-  'OPPI HR Award - D&I Award',
-  'OPPI Healthcare Communications Award',
-  'OPPI Medical Excellence Award',
-  'OPPI Sustainability Excellence Award',
-  'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
-];
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const normalizeCategory = (cat) => {
   if (!cat) return '';

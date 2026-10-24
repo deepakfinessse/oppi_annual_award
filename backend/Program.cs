@@ -1482,10 +1482,7 @@ api.MapGet("/admin/applications", async (HttpContext ctx, InnovationDbContext db
         .ThenByDescending(a => a.Id)
         .ToListAsync();
 
-    // Deduplicate by UserId so each user has a single application entry
-    var uniqueApps = rawApps.GroupBy(a => a.UserId).Select(g => g.First()).ToList();
-
-    var apps = uniqueApps.Select(a => {
+    var apps = rawApps.Select(a => {
         var pInfo = db.PersonalInfos.FirstOrDefault(p => p.ApplicationId == a.Id);
         var appName = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
             .Select(ad => ad.FirstName + " " + ad.LastName).FirstOrDefault();
@@ -1508,7 +1505,10 @@ api.MapGet("/admin/applications", async (HttpContext ctx, InnovationDbContext db
             cat = db.ApplicationDetails.Where(apd => apd.Category != null && apd.ApplicationId == a.Id).Select(apd => apd.Category).FirstOrDefault();
 
         return new {
-            a.Id, a.Status, a.SubmittedAt,
+            a.Id,
+            user_id = a.UserId,
+            a.Status,
+            a.SubmittedAt,
             user_name = a.User.FirstName + " " + a.User.LastName,
             user_email = a.User.Email,
             applicant_name = appName,
