@@ -635,6 +635,17 @@ const ApplicationForm = () => {
   const handleFileUpload = async (section, files) => {
     if (!appId || !files || files.length === 0) return;
 
+    if (section === 'document') {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+        if (!isPdf) {
+          alert(`File "${file.name}" is not a PDF. Only PDF files are allowed.`);
+          return;
+        }
+      }
+    }
+
     const maxSizeBytes = section === 'video' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
     const maxMB = section === 'video' ? 10 : 5;
     for (let i = 0; i < files.length; i++) {
@@ -1368,8 +1379,11 @@ const ApplicationForm = () => {
                     <p>Drop your Document here, or <span className="browse-text">browse</span></p>
                     <input
                       type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileUpload('document', e.target.files)}
+                      accept=".pdf,application/pdf"
+                      onChange={(e) => {
+                        handleFileUpload('document', e.target.files);
+                        e.target.value = '';
+                      }}
                       disabled={isReadOnly}
                     />
                   </div>

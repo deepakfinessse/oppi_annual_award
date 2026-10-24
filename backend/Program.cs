@@ -1152,6 +1152,12 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
     var uploadedFiles = new List<object>();
     foreach (var file in files)
     {
+        var ext = Path.GetExtension(file.FileName).ToLower();
+        if (section == "document" && ext != ".pdf")
+        {
+            return Results.BadRequest(new { message = $"Document file '{file.FileName}' must be a PDF. Only PDF files are allowed." });
+        }
+
         if (section == "video" && file.Length > 10 * 1024 * 1024)
         {
             return Results.BadRequest(new { message = $"Video file '{file.FileName}' exceeds maximum allowed size of 10 MB." });
@@ -1160,8 +1166,6 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
         {
             return Results.BadRequest(new { message = $"Document file '{file.FileName}' exceeds maximum allowed size of 5 MB." });
         }
-
-        var ext = Path.GetExtension(file.FileName).ToLower();
         var uniqueName = $"{Guid.NewGuid()}{ext}";
         var fUrl = await storage.UploadFileAsync(file, appId.ToString(), uniqueName);
 
