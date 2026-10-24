@@ -578,20 +578,30 @@ static bool IsJuryCategoryMatch(string? juryCategory, string? appCategory)
 
     if (jc == ac) return true;
 
-    // Marketing (covers both New & Existing products)
+    // Marketing (covers both New & Existing products unless specifically assigned to one)
     if ((jc.Contains("marketing") || jc.Contains("nanji")) &&
         (ac.Contains("marketing") || ac.Contains("nanji")))
-        return true;
+    {
+        bool jExisting = jc.Contains("existing");
+        bool jNew = jc.Contains("new");
+        bool aExisting = ac.Contains("existing");
+        bool aNew = ac.Contains("new");
+
+        if (jExisting && jNew) return true; // covers both
+        if (jExisting && aExisting) return true;
+        if (jNew && aNew) return true;
+        if (!jExisting && !jNew) return true;
+        return false;
+    }
 
     // HR Diversity & Inclusion
-    if ((jc.Contains("diversity") || jc.Contains("d&i") || jc.Contains("dni")) &&
-        (ac.Contains("diversity") || ac.Contains("d&i") || ac.Contains("dni")))
-        return true;
+    bool jDni = jc.Contains("diversity") || jc.Contains("d&i") || jc.Contains("dni");
+    bool aDni = ac.Contains("diversity") || ac.Contains("d&i") || ac.Contains("dni");
+    if (jDni || aDni) return jDni && aDni;
 
     // HR Excellence (must not match D&I)
-    if ((jc.Contains("hr excellence") || jc.Contains("hr award")) &&
-        (ac.Contains("hr excellence") || ac.Contains("hr award")) &&
-        !ac.Contains("diversity") && !ac.Contains("d&i") && !ac.Contains("dni"))
+    if ((jc.Contains("hr excellence") || jc.Contains("hr award") || jc.Contains("hr")) &&
+        (ac.Contains("hr excellence") || ac.Contains("hr award") || ac.Contains("hr")))
         return true;
 
     // Healthcare Communications
@@ -615,7 +625,7 @@ static bool IsJuryCategoryMatch(string? juryCategory, string? appCategory)
         (ac.Contains("patient") || ac.Contains("shahani")))
         return true;
 
-    return false;
+    return jc.Contains(ac) || ac.Contains(jc);
 }
 
 
@@ -2234,8 +2244,10 @@ api.MapGet("/jury/applications", async (HttpContext ctx, InnovationDbContext db)
     {
         var cleanEmail = (user.Email ?? "").Trim();
         var allPanel = await db.PanelMembers.ToListAsync();
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
         var pm = allPanel.FirstOrDefault(p =>
-            !string.IsNullOrEmpty(p.Email) && p.Email.Trim().Equals(cleanEmail, StringComparison.OrdinalIgnoreCase));
+            (!string.IsNullOrEmpty(p.Email) && p.Email.Trim().Equals(cleanEmail, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(p.Name) && (p.Name.Trim().Equals(fullName, StringComparison.OrdinalIgnoreCase) || p.Name.Trim().Equals((user.FirstName ?? "").Trim(), StringComparison.OrdinalIgnoreCase))));
         assignedCategory = pm?.Category;
     }
 
@@ -2272,6 +2284,7 @@ api.MapGet("/jury/applications", async (HttpContext ctx, InnovationDbContext db)
         return new {
             a.Id, a.Status, a.SubmittedAt,
             a.user_name, a.user_email, a.applicant_name, a.applicant_email, a.company, a.institute_name, a.category,
+            assigned_category = assignedCategory,
             review = hasReview ? new {
                 jr.InnovationIpScore,
                 jr.TeamStrengthScore,
