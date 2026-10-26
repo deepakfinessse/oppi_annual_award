@@ -6,6 +6,7 @@ import ApplicationPreview from '../../components/ApplicationPreview/ApplicationP
 import { getJuryApplications, juryApprove, saveJuryDraft, getUser, getPublicPanelMembers, clearTokens, logout } from '../../utils/api';
 import { Eye, X, Download, CheckCircle2, ChevronDown, LogOut, Award, Filter } from 'lucide-react';
 import { exportJuryApplicationsExcel } from '../../utils/excelExport';
+import { AWARD_CATEGORIES, isCategoryMatch } from '../../constants/categories';
 import './JuryPortal.css';
 
 const formatDate = (dateStr) => {
@@ -33,16 +34,8 @@ const formatDate = (dateStr) => {
 
 export const getCategoryShortName = (catName) => {
   if (!catName) return '';
-  const c = catName.toLowerCase().trim();
-  if (c.includes('new pharma') || (c.includes('new') && c.includes('product'))) return 'New Product';
-  if (c.includes('existing pharma') || (c.includes('existing') && c.includes('product'))) return 'Existing Product';
-  if (c.includes('sales')) return 'Sales Force Excellence';
-  if (c.includes('diversity') || c.includes('d&i') || c.includes('dni')) return 'D&I Award';
-  if (c.includes('hr excellence') || c.includes('hr award')) return 'HR Excellence Award';
-  if (c.includes('communication')) return 'Healthcare Communications';
-  if (c.includes('medical')) return 'Medical Excellence';
-  if (c.includes('sustainab')) return 'Sustainability Excellence';
-  if (c.includes('patient') || c.includes('shahani')) return 'Patient Centricity';
+  const match = AWARD_CATEGORIES.find(c => isCategoryMatch(c, catName));
+  if (match) return match;
   return catName;
 };
 
@@ -70,7 +63,7 @@ export const CATEGORY_CRITERIA_MAP = {
     ]
   },
   marketing_new: {
-    categoryName: 'Dr. H. R. Nanji Memorial OPPI Marketing Excellence Awards New Product',
+    categoryName: 'OPPI Marketing Excellence Awards - New Pharma Product',
     criteria: [
       { name: 'Product & Therapy Area', weight: 10 },
       { name: 'Product Specific Market Environment', weight: 10 },
@@ -81,7 +74,7 @@ export const CATEGORY_CRITERIA_MAP = {
     ]
   },
   marketing_existing: {
-    categoryName: 'Dr. H. R. Nanji Memorial OPPI Marketing Excellence Awards Existing Product',
+    categoryName: 'OPPI Marketing Excellence Awards - Existing Pharma Product',
     criteria: [
       { name: 'Product & Therapy Area', weight: 10 },
       { name: 'Product Specific Market Environment', weight: 10 },
@@ -129,7 +122,7 @@ export const CATEGORY_CRITERIA_MAP = {
     ]
   },
   patient_centricity: {
-    categoryName: 'Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
+    categoryName: 'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
     criteria: [
       { name: 'Impact of the initiative/strategy', weight: 40 },
       { name: 'Scalability of the initiative/strategy', weight: 20 },
@@ -238,66 +231,32 @@ const JuryPortal = () => {
     fetchPanelCategory();
   }, [currentUser]);
 
-  // Derive dropdown options for this jury panel (e.g. New Product, Existing Product for Marketing)
+  // Derive dropdown options for this jury panel (uses same official OPPI award categories)
   const dropdownOptions = useMemo(() => {
-    const assigned = (assignedCategory || '').toLowerCase();
-    const isMarketing = assigned.includes('marketing') || assigned.includes('nanji');
-    const isHrExcellence = assigned.includes('hr excellence');
-    const isHrDni = assigned.includes('diversity') || assigned.includes('d&i') || assigned.includes('dni');
-    const isSales = assigned.includes('sales');
-    const isMedical = assigned.includes('medical');
-    const isComm = assigned.includes('communicat');
-    const isSustain = assigned.includes('sustainab');
-    const isPatient = assigned.includes('patient') || assigned.includes('shahani');
-
-    if (isMarketing) {
-      return [
-        { label: 'New Product', value: 'New Product' },
-        { label: 'Existing Product', value: 'Existing Product' }
-      ];
-    }
-    if (isHrExcellence) {
-      return [{ label: 'HR Excellence Award', value: 'HR Excellence Award' }];
-    }
-    if (isHrDni) {
-      return [{ label: 'D&I Award', value: 'D&I Award' }];
-    }
-    if (isSales) {
-      return [{ label: 'Sales Force Excellence', value: 'Sales Force Excellence' }];
-    }
-    if (isMedical) {
-      return [{ label: 'Medical Excellence', value: 'Medical Excellence' }];
-    }
-    if (isComm) {
-      return [{ label: 'Healthcare Communications', value: 'Healthcare Communications' }];
-    }
-    if (isSustain) {
-      return [{ label: 'Sustainability Excellence', value: 'Sustainability Excellence' }];
-    }
-    if (isPatient) {
-      return [{ label: 'Patient Centricity', value: 'Patient Centricity' }];
+    // If admin or general/all, allow selecting from all standard OPPI categories
+    if (!assignedCategory || assignedCategory.toLowerCase().includes('all') || currentUser?.role === 'ADMIN') {
+      return AWARD_CATEGORIES.map(cat => ({ label: cat, value: cat }));
     }
 
-    // Dynamic extraction from loaded apps
-    const foundCategories = Array.from(new Set(apps.map(a => getCategoryShortName(a.category)).filter(Boolean)));
+    // Filter categories that match this jury member's assigned category
+    const matched = AWARD_CATEGORIES.filter(cat => isCategoryMatch(cat, assignedCategory));
+    if (matched.length > 0) {
+      return matched.map(cat => ({ label: cat, value: cat }));
+    }
+
+    // Dynamic extraction from loaded apps as fallback
+    const foundCategories = Array.from(new Set(apps.map(a => getCategoryShortName(a.category) || a.category).filter(Boolean)));
     if (foundCategories.length > 0) {
       return foundCategories.map(c => ({ label: c, value: c }));
     }
-    if (assignedCategory) {
-      return [{ label: getCategoryShortName(assignedCategory), value: getCategoryShortName(assignedCategory) }];
-    }
-    return [];
-  }, [assignedCategory, apps]);
+
+    return [{ label: assignedCategory, value: assignedCategory }];
+  }, [assignedCategory, apps, currentUser]);
 
   // Filter applications by category
   const categoryFilteredApps = useMemo(() => {
     if (selectedCategoryFilter === 'ALL') return apps;
-    return apps.filter(a => {
-      const shortName = getCategoryShortName(a.category);
-      if (shortName.toLowerCase() === selectedCategoryFilter.toLowerCase()) return true;
-      if (a.category && a.category.toLowerCase().includes(selectedCategoryFilter.toLowerCase())) return true;
-      return false;
-    });
+    return apps.filter(a => isCategoryMatch(a.category, selectedCategoryFilter));
   }, [apps, selectedCategoryFilter]);
 
   // Categorize into pending and scored based on filtered apps
@@ -487,9 +446,13 @@ const JuryPortal = () => {
     }
   };
 
-  const activeFilterLabel = selectedCategoryFilter === 'ALL'
-    ? 'CATEGORY'
-    : `CATEGORY: ${selectedCategoryFilter}`;
+  const activeFilterLabel = useMemo(() => {
+    if (selectedCategoryFilter === 'ALL') return 'CATEGORY';
+    const label = selectedCategoryFilter.length > 30 
+      ? selectedCategoryFilter.slice(0, 28) + '...' 
+      : selectedCategoryFilter;
+    return `CATEGORY: ${label}`;
+  }, [selectedCategoryFilter]);
 
 
 
@@ -592,6 +555,7 @@ const JuryPortal = () => {
                     <th>App ID</th>
                     <th>Applicant Name</th>
                     <th>Company</th>
+                    <th>Category</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Score</th>
                     <th style={{ textAlign: 'center' }}>Action</th>
@@ -609,11 +573,11 @@ const JuryPortal = () => {
                         <td><strong>#{String(app.id).padStart(2, '0')}</strong></td>
                         <td>{app.applicant_name || app.user_name || '—'}</td>
                         <td><span className="figma-company-cell">{app.company || app.institute_name || '—'}</span></td>
-                        {/* <td>
-                          <span className="figma-category-cell">
+                        <td>
+                          <span className="figma-category-cell" title={getCategoryShortName(app.category) || app.category || ''}>
                             {getCategoryShortName(app.category) || app.category || '—'}
                           </span>
-                        </td> */}
+                        </td>
                         <td>
                           {isScored ? (
                             <span className="figma-status-badge completed">Completed</span>

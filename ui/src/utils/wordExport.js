@@ -146,10 +146,20 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
   let rowsHtml = '';
 
   users.forEach((u, idx) => {
-    const userApp = apps.find(a => (a.user_email === u.email || a.applicant_email === u.email));
-    const status = !userApp ? 'REGISTERED' : userApp.status;
-    const category = userApp?.category || '—';
-    const company = u.organisation || userApp?.company || userApp?.institute_name || '—';
+    const userEmail = (u.email || '').toLowerCase().trim();
+    const userId = u.id || u.Id;
+    const userApps = apps.filter(a => {
+      const aUserEmail = (a.user_email || '').toLowerCase().trim();
+      const aApplicantEmail = (a.applicant_email || '').toLowerCase().trim();
+      const matchesEmail = (aUserEmail && aUserEmail === userEmail) || (aApplicantEmail && aApplicantEmail === userEmail);
+      const matchesUserId = userId && (a.user_id || a.UserId) && String(a.user_id || a.UserId) === String(userId);
+      return matchesEmail || matchesUserId;
+    });
+    const hasSubmitted = userApps.some(a => a.status && a.status !== 'DRAFT');
+    const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
+    const validCats = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
+    const category = validCats.length > 0 ? validCats.join(', ') : '—';
+    const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
 
     rowsHtml += `
       <tr>

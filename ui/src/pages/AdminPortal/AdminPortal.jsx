@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer/Footer';
 import ApplicationPreview from '../../components/ApplicationPreview/ApplicationPreview';
@@ -46,6 +46,7 @@ import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
 import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
+import { AWARD_CATEGORIES } from '../../constants/categories';
 import './AdminPortal.css';
 
 const formatDate = (dateStr) => {
@@ -76,6 +77,55 @@ const formatDateTime = (dateStr) => {
   } catch (e) {
     return '—';
   }
+};
+
+const cleanCat = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const isCategoryMatch = (catA, catB) => {
+  if (!catA || !catB) return false;
+  if (catA === catB) return true;
+  const a = cleanCat(catA);
+  const b = cleanCat(catB);
+  if (a === b) return true;
+
+  // Marketing: distinguish Existing vs New
+  if (a.includes('marketing') && b.includes('marketing')) {
+    const aExisting = a.includes('existing');
+    const bExisting = b.includes('existing');
+    const aNew = a.includes('new');
+    const bNew = b.includes('new');
+    if (aExisting && bExisting) return true;
+    if (aNew && bNew) return true;
+    if (!aExisting && !aNew && (bExisting || bNew)) return true;
+    if (!bExisting && !bNew && (aExisting || aNew)) return true;
+    return false;
+  }
+
+  // HR: distinguish HR Excellence vs D&I
+  const aDni = a.includes('diversity') || a.includes('di') || a.includes('inclusion');
+  const bDni = b.includes('diversity') || b.includes('di') || b.includes('inclusion');
+  if (aDni || bDni) return aDni && bDni;
+
+  const aHr = a.includes('hrexcellence') || a.includes('hr');
+  const bHr = b.includes('hrexcellence') || b.includes('hr');
+  if (aHr && bHr && !aDni && !bDni) return true;
+
+  // Healthcare Communications
+  if (a.includes('communication') && b.includes('communication')) return true;
+
+  // Medical Excellence
+  if (a.includes('medical') && b.includes('medical')) return true;
+
+  // Sales Force Excellence
+  if (a.includes('sales') && b.includes('sales')) return true;
+
+  // Sustainability
+  if (a.includes('sustainab') && b.includes('sustainab')) return true;
+
+  // Patient Centricity
+  if ((a.includes('patient') || a.includes('shahani')) && (b.includes('patient') || b.includes('shahani'))) return true;
+
+  return a.includes(b) || b.includes(a);
 };
 
 const AdminPortal = () => {
@@ -110,7 +160,7 @@ const AdminPortal = () => {
   const [showAppStatusDropdown, setShowAppStatusDropdown] = useState(false);
   const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
 
-  const [juryCategoryFilter, setJuryCategoryFilter] = useState('OPPI Sustainability Excellence Award');
+  const [juryCategoryFilter, setJuryCategoryFilter] = useState('ALL');
   const [showJuryCatDropdown, setShowJuryCatDropdown] = useState(false);
   const [showJuryExportDropdown, setShowJuryExportDropdown] = useState(false);
 
@@ -153,6 +203,7 @@ const AdminPortal = () => {
   const [panelName, setPanelName] = useState('');
   const [panelRole, setPanelRole] = useState('');
   const [panelType, setPanelType] = useState('JURY');
+  const [panelCategory, setPanelCategory] = useState('');
   const [panelImagePath, setPanelImagePath] = useState('');
   const [panelSortOrder, setPanelSortOrder] = useState(0);
   const [panelEmail, setPanelEmail] = useState('');
@@ -167,7 +218,7 @@ const AdminPortal = () => {
   const [selectedExistingApplicant, setSelectedExistingApplicant] = useState('');
   const [winnerYear, setWinnerYear] = useState(new Date().getFullYear());
   const [winnerYearStr, setWinnerYearStr] = useState('2025-2026');
-  const [winnerCategory, setWinnerCategory] = useState('OPPI Sustainability Excellence Award');
+  const [winnerCategory, setWinnerCategory] = useState(AWARD_CATEGORIES[0]);
   const [winnerName, setWinnerName] = useState('');
   const [winnerOrganisation, setWinnerOrganisation] = useState('');
   const [winnerPosition, setWinnerPosition] = useState('Winner');
@@ -296,72 +347,134 @@ const AdminPortal = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Helper to find all applications belonging to a user
+  const getUserApps = (u) => {
+    const userEmail = (u.email || '').toLowerCase().trim();
+    const userId = u.id || u.Id;
+    return apps.filter(app => {
+      const appUserEmail = (app.user_email || '').toLowerCase().trim();
+      const appApplicantEmail = (app.applicant_email || '').toLowerCase().trim();
+      const matchesEmail = (appUserEmail && appUserEmail === userEmail) || (appApplicantEmail && appApplicantEmail === userEmail);
+      const matchesUserId = userId && (app.user_id || app.UserId) && String(app.user_id || app.UserId) === String(userId);
+      return matchesEmail || matchesUserId;
+    });
+  };
+
   // Filter handlers
   const filteredUsers = users.filter(u => {
     // Only show users with the role 'USER'
-    if (u.role.toUpperCase() !== 'USER') return false;
+    if (u.role?.toUpperCase() !== 'USER') return false;
 
-    // Get user's application status
-    const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+    const userApps = getUserApps(u);
     
     // Category filter
     if (userCategoryFilter !== 'ALL') {
-      if (!userApp || userApp.category !== userCategoryFilter) return false;
+      const hasCat = userApps.some(app => isCategoryMatch(app.category, userCategoryFilter));
+      if (!hasCat) return false;
     }
 
-    const status = !userApp ? 'REGISTERED' : (userApp.status === 'DRAFT' ? 'DRAFT' : 'SUBMITTED');
+    const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
+    const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
 
     if (userFilter === 'ALL') return true;
     if (userFilter === 'REGISTERED' || userFilter === 'NEW') return status === 'REGISTERED';
     return status === userFilter;
   });
 
-  const ANNUAL_AWARD_CATEGORIES = [
-    'OPPI Marketing Excellence Awards - Existing Pharma Product',
-    'OPPI Marketing Excellence Awards - New Pharma Product',
-    'OPPI Sales Force Excellence Award',
-    'OPPI HR Award - HR Excellence Award',
-    'OPPI HR Award - D&I Award',
-    'OPPI Healthcare Communications Award',
-    'OPPI Medical Excellence Award',
-    'OPPI Sustainability Excellence Award',
-    'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity'
-  ];
+  const ANNUAL_AWARD_CATEGORIES = AWARD_CATEGORIES;
 
   const filteredApps = apps.filter(app => {
     // Category filter
-    if (appCategoryFilter !== 'ALL' && app.category !== appCategoryFilter) return false;
+    if (appCategoryFilter !== 'ALL' && !isCategoryMatch(app.category, appCategoryFilter)) return false;
 
     // Status filter
     if (appStatusFilter === 'ALL') return true;
     if (appStatusFilter === 'DRAFT') return app.status === 'DRAFT';
     if (appStatusFilter === 'SUBMITTED') return app.status === 'SUBMITTED' || app.status !== 'DRAFT';
-    if (appStatusFilter === 'JURY') return app.status.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
-    if (appStatusFilter === 'PANEL_CHAIR') return app.status.startsWith('PANEL');
+    if (appStatusFilter === 'JURY') return app.status?.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
+    if (appStatusFilter === 'PANEL_CHAIR') return app.status?.startsWith('PANEL');
     if (appStatusFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
     return true;
   });
 
-  const displayedJuryMembers = panelMembers.filter(m => m.type === 'JURY').length > 0
-    ? panelMembers.filter(m => m.type === 'JURY')
-    : panelMembers;
+  const displayedJuryMembers = useMemo(() => {
+    const juryOnly = panelMembers.filter(m => {
+      const type = (m.type || m.Type || '').toUpperCase();
+      return type === 'JURY' || type === 'JURY_MEMBER';
+    });
+    const baseList = juryOnly.length > 0 ? juryOnly : panelMembers;
+
+    if (juryCategoryFilter === 'ALL') return baseList;
+
+    return baseList.filter(m => {
+      const cat = m.category || m.Category;
+      if (cat && isCategoryMatch(cat, juryCategoryFilter)) return true;
+
+      const ej = evalReport?.juries?.find(j =>
+        (j.id && Number(j.id) === Number(m.id)) ||
+        (j.email && m.email && j.email.toLowerCase() === m.email.toLowerCase()) ||
+        (j.name && m.name && j.name.toLowerCase() === m.name.toLowerCase())
+      );
+      if (ej?.category && isCategoryMatch(ej.category, juryCategoryFilter)) return true;
+
+      if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+        const juryIdList = [Number(m.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+        const reviewedInCat = evalReport.reviews.some(r => {
+          if (!juryIdList.includes(Number(r.jury_id))) return false;
+          const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
+                            evalReport?.applications?.find(a => Number(a.id) === Number(r.application_id));
+          return targetApp && isCategoryMatch(targetApp.category, juryCategoryFilter);
+        });
+        if (reviewedInCat) return true;
+      }
+
+      return false;
+    });
+  }, [panelMembers, juryCategoryFilter, evalReport, apps]);
 
   const getEvaluationStatus = (member) => {
-    const categoryApps = apps.filter(a => juryCategoryFilter === 'ALL' ? a.status !== 'DRAFT' : a.category === juryCategoryFilter && a.status !== 'DRAFT');
-    const totalCount = Math.max(categoryApps.length, 3);
-    const reviewedCount = categoryApps.filter(a => 
-      a.jury_reviews?.some(r => r.jury_email === member.email || r.jury_name === member.name) || (a.average_score > 0)
-    ).length;
+    const memberCat = member.category || member.Category;
+    const targetCategory = juryCategoryFilter !== 'ALL' ? juryCategoryFilter : memberCat;
+    const categoryApps = apps.filter(a => a.status !== 'DRAFT' && (!targetCategory || isCategoryMatch(a.category, targetCategory)));
+    const totalCount = categoryApps.length;
+
+    const ej = evalReport?.juries?.find(j => 
+      (j.id && Number(j.id) === Number(member.id)) ||
+      (j.email && member.email && j.email.toLowerCase() === member.email.toLowerCase()) ||
+      (j.name && member.name && j.name.toLowerCase() === member.name.toLowerCase())
+    );
+    const juryIdList = [Number(member.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+
+    let reviewedCount = 0;
+    if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+      reviewedCount = evalReport.reviews.filter(r => {
+        if (!juryIdList.includes(Number(r.jury_id))) return false;
+        if (!targetCategory) return true;
+        const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
+                          evalReport?.applications?.find(a => Number(a.id) === Number(r.application_id));
+        return targetApp && isCategoryMatch(targetApp.category, targetCategory);
+      }).length;
+    } else {
+      reviewedCount = categoryApps.filter(a => 
+        a.jury_reviews?.some(r => 
+          (r.jury_email && member.email && r.jury_email.toLowerCase() === member.email.toLowerCase()) || 
+          (r.jury_name && member.name && r.jury_name.toLowerCase() === member.name.toLowerCase()) ||
+          (r.jury_id && Number(r.jury_id) === Number(member.id))
+        )
+      ).length;
+    }
+
     return `${String(reviewedCount).padStart(2, '0')}/${String(totalCount).padStart(2, '0')}`;
   };
 
   const downloadJuryCSV = () => {
-    const headers = ['S. No.', 'Name', 'Email', 'Role / Designation', 'Evaluation Status'];
+    const headers = ['S. No.', 'Name', 'Email', 'Role / Designation', 'Category', 'Evaluation Status'];
     const rows = displayedJuryMembers.map((m, idx) => [
       String(idx + 1).padStart(2, '0'),
       m.name,
       m.email || '—',
       m.role || '—',
+      m.category || m.Category || '—',
       getEvaluationStatus(m)
     ]);
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -393,7 +506,7 @@ const AdminPortal = () => {
       if (!matchYear) return false;
     }
     if (winnerFilterCategory !== 'ALL') {
-      if (w.category !== winnerFilterCategory) return false;
+      if (!isCategoryMatch(w.category, winnerFilterCategory)) return false;
     }
     return true;
   });
@@ -464,7 +577,7 @@ const AdminPortal = () => {
       displayId: String(app.id || idx + 1).padStart(2, '0'),
       name: app.applicant_name || app.user_name || 'Anonymous',
       organisation: app.company || app.institute_name || app.instituteName || '—',
-      category: app.category || 'OPPI Healthcare Communications Award',
+      category: app.category || '—',
       scores,
       total: finalTotal
     };
@@ -525,7 +638,7 @@ const AdminPortal = () => {
   const effectiveRankingItems = processedEvalItems.length > 0 ? processedEvalItems : demoRankingRows;
 
   const evaluationRankingList = effectiveRankingItems.filter(item => {
-    if (evalCategoryFilter !== 'ALL' && item.category !== evalCategoryFilter) return false;
+    if (evalCategoryFilter !== 'ALL' && !isCategoryMatch(item.category, evalCategoryFilter)) return false;
     if (evalStatusFilter !== 'ALL') {
       const posClean = (item.position || '').toLowerCase();
       const filterClean = evalStatusFilter.toLowerCase();
@@ -561,15 +674,18 @@ const AdminPortal = () => {
   const downloadUsersCSV = () => {
     const headers = ['Date & Time Stamp', 'Representative Name', 'Member Company', 'Email ID', 'Mobile', 'Nomination Category', 'Status'];
     const rows = filteredUsers.map((u) => {
-      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
-      const statusLabel = !userApp ? 'Registered' : (userApp.status === 'DRAFT' ? 'Draft' : 'Submitted');
+      const userApps = getUserApps(u);
+      const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
+      const statusLabel = userApps.length === 0 ? 'Registered' : (hasSubmitted ? 'Submitted' : 'Draft');
+      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
+      const categoryStr = validCategories.length > 0 ? validCategories.join(', ') : '—';
       return [
         formatDateTime(u.createdAt || u.created_at),
         `${u.firstName} ${u.lastName}`.trim(),
-        u.organisation || userApp?.company || userApp?.institute_name || '—',
+        u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—',
         u.email,
         u.mobile || '',
-        userApp?.category || '—',
+        categoryStr,
         statusLabel
       ];
     });
@@ -746,6 +862,7 @@ const AdminPortal = () => {
     setPanelName('');
     setPanelRole('');
     setPanelType('JURY');
+    setPanelCategory(juryCategoryFilter !== 'ALL' ? juryCategoryFilter : ANNUAL_AWARD_CATEGORIES[0]);
     setPanelImagePath('');
     setPanelSortOrder(panelMembers.length + 1);
     setPanelEmail('');
@@ -762,6 +879,7 @@ const AdminPortal = () => {
     setPanelName(member.name);
     setPanelRole(member.role);
     setPanelType(member.type);
+    setPanelCategory(member.category || member.Category || ANNUAL_AWARD_CATEGORIES[0]);
     setPanelImagePath(member.imagePath || '');
     setPanelSortOrder(member.sortOrder);
     setPanelEmail(member.email || '');
@@ -832,6 +950,7 @@ const AdminPortal = () => {
       name: panelName,
       role: panelRole,
       type: panelType,
+      category: panelType === 'JURY' ? panelCategory : null,
       imagePath: panelImagePath,
       sortOrder: parseInt(panelSortOrder) || 0,
       email: panelEmail,
@@ -868,7 +987,7 @@ const AdminPortal = () => {
     setSelectedExistingApplicant('');
     setWinnerYear(new Date().getFullYear());
     setWinnerYearStr('2025-2026');
-    setWinnerCategory(ANNUAL_AWARD_CATEGORIES[7] || ANNUAL_AWARD_CATEGORIES[0]);
+    setWinnerCategory(AWARD_CATEGORIES[0]);
     setWinnerName('');
     setWinnerOrganisation('');
     setWinnerPosition('Winner');
@@ -887,7 +1006,7 @@ const AdminPortal = () => {
     setSelectedExistingApplicant('');
     setWinnerYear(w.year || new Date().getFullYear());
     setWinnerYearStr(w.yearStr || (w.year ? `${w.year - 1}-${w.year}` : '2025-2026'));
-    setWinnerCategory(w.category || ANNUAL_AWARD_CATEGORIES[0]);
+    setWinnerCategory(w.category || AWARD_CATEGORIES[0]);
     setWinnerName(w.name || '');
     setWinnerOrganisation(w.organisation || '');
     setWinnerPosition(w.position || 'Winner');
@@ -1163,11 +1282,21 @@ const AdminPortal = () => {
                     </tr>
                   ) : (
                     paginatedUsers.map((u, idx) => {
-                      const userApp = apps.find(app => (app.user_email === u.email || app.applicant_email === u.email));
+                      const userApps = getUserApps(u);
                       const appDisplayId = String((userPage - 1) * userPageSize + idx + 1).padStart(2, '0');
-                      const organisation = u.organisation || userApp?.company || userApp?.institute_name || '—';
+                      const organisation = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
                       const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
-                      const category = userApp?.category || 'OPPI Marketing Excellence Awards New Product';
+                      
+                      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
+                      let categoryDisplay = '—';
+                      if (validCategories.length > 0) {
+                        if (userCategoryFilter !== 'ALL') {
+                          const matched = validCategories.find(c => isCategoryMatch(c, userCategoryFilter));
+                          categoryDisplay = matched || validCategories.join(', ');
+                        } else {
+                          categoryDisplay = validCategories.join(', ');
+                        }
+                      }
 
                       return (
                         <tr key={u.id}>
@@ -1175,7 +1304,7 @@ const AdminPortal = () => {
                           <td>{organisation}</td>
                           <td className="bold-text">{fullName}</td>
                           <td className="email-text">{u.email}</td>
-                          <td>{category}</td>
+                          <td>{categoryDisplay}</td>
                         </tr>
                       );
                     })
@@ -1396,7 +1525,7 @@ const AdminPortal = () => {
               <div className="card-title-group">
                 <h3 className="card-title">Jury Members</h3>
                 <span className="card-subtitle">
-                  {juryCategoryFilter !== 'ALL' ? juryCategoryFilter : 'OPPI Sustainability Excellence Award'}
+                  {juryCategoryFilter !== 'ALL' ? juryCategoryFilter : 'All Categories'}
                 </span>
               </div>
 
@@ -1448,6 +1577,7 @@ const AdminPortal = () => {
                     <th>S. No.</th>
                     <th>Name</th>
                     <th>Email</th>
+                    <th>Category</th>
                     <th>Evaluation Status</th>
                     <th>Profile</th>
                   </tr>
@@ -1455,11 +1585,11 @@ const AdminPortal = () => {
                 <tbody>
                   {loading && panelMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-loading">Loading jury members...</td>
+                      <td colSpan="6" className="table-loading">Loading jury members...</td>
                     </tr>
                   ) : displayedJuryMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-empty">No jury members configured.</td>
+                      <td colSpan="6" className="table-empty">No jury members configured for this category.</td>
                     </tr>
                   ) : (
                     displayedJuryMembers.map((m, idx) => (
@@ -1467,6 +1597,7 @@ const AdminPortal = () => {
                         <td className="id-col">{String(idx + 1).padStart(2, '0')}</td>
                         <td className="bold-text">{m.name}</td>
                         <td className="email-text">{m.email || '—'}</td>
+                        <td style={{ fontSize: '0.82rem', color: '#475569', maxWidth: '240px' }}>{m.category || m.Category || '—'}</td>
                         <td>{getEvaluationStatus(m)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
@@ -1513,22 +1644,21 @@ const AdminPortal = () => {
 
                   {showWinnerYearDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '150px', right: 0, zIndex: 100 }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${winnerFilterYear === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${winnerFilterYear === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setWinnerFilterYear('ALL'); setShowWinnerYearDropdown(false); }}
                       >
-                        All Years
-                      </button>
+                        <strong>All Years</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {availableWinnerYears.map(yr => (
-                        <button
+                        <div
                           key={yr}
-                          type="button"
-                          className={`filter-dropdown-item ${winnerFilterYear === yr ? 'active' : ''}`}
+                          className={`filter-menu-item ${winnerFilterYear === yr ? 'active' : ''}`}
                           onClick={() => { setWinnerFilterYear(yr); setShowWinnerYearDropdown(false); }}
                         >
                           {yr}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1552,23 +1682,21 @@ const AdminPortal = () => {
 
                   {showWinnerCatDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${winnerFilterCategory === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setWinnerFilterCategory('ALL'); setShowWinnerCatDropdown(false); }}
                       >
                         <strong>All Categories</strong>
-                      </button>
+                      </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
-                        <button
+                        <div
                           key={cat}
-                          type="button"
-                          className={`filter-dropdown-item ${winnerFilterCategory === cat ? 'active' : ''}`}
+                          className={`filter-menu-item ${winnerFilterCategory === cat ? 'active' : ''}`}
                           onClick={() => { setWinnerFilterCategory(cat); setShowWinnerCatDropdown(false); }}
                         >
                           {cat}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1716,23 +1844,21 @@ const AdminPortal = () => {
 
                   {showEvalCatDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '320px', right: 0, zIndex: 100, maxHeight: '350px', overflowY: 'auto' }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalCategoryFilter === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${evalCategoryFilter === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setEvalCategoryFilter('ALL'); setShowEvalCatDropdown(false); }}
                       >
                         <strong>All Categories</strong>
-                      </button>
+                      </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
                       {ANNUAL_AWARD_CATEGORIES.map(cat => (
-                        <button
+                        <div
                           key={cat}
-                          type="button"
-                          className={`filter-dropdown-item ${evalCategoryFilter === cat ? 'active' : ''}`}
+                          className={`filter-menu-item ${evalCategoryFilter === cat ? 'active' : ''}`}
                           onClick={() => { setEvalCategoryFilter(cat); setShowEvalCatDropdown(false); }}
                         >
                           {cat}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1754,34 +1880,31 @@ const AdminPortal = () => {
 
                   {showEvalStatusDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '160px', right: 0, zIndex: 100 }}>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === 'ALL' ? 'active' : ''}`}
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === 'ALL' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('ALL'); setShowEvalStatusDropdown(false); }}
                       >
-                        All Status
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === 'Winner' ? 'active' : ''}`}
+                        <strong>All Status</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === 'Winner' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('Winner'); setShowEvalStatusDropdown(false); }}
                       >
                         Winner
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
+                      </div>
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('1st runner up'); setShowEvalStatusDropdown(false); }}
                       >
                         1st runner up
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-dropdown-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
+                      </div>
+                      <div
+                        className={`filter-menu-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
                         onClick={() => { setEvalStatusFilter('2nd runner up'); setShowEvalStatusDropdown(false); }}
                       >
                         2nd runner up
-                      </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2003,6 +2126,20 @@ const AdminPortal = () => {
                     </select>
                   </div>
                 </div>
+
+                {panelType === 'JURY' && (
+                  <div className="modal-form-group full-width">
+                    <label>Award Category</label>
+                    <select
+                      value={panelCategory}
+                      onChange={(e) => setPanelCategory(e.target.value)}
+                    >
+                      {ANNUAL_AWARD_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className={`modal-form-group full-width ${fieldErrors.role ? 'has-error' : ''}`}>
                   <label>Designation &amp; Affiliation Description <span className="req">*</span></label>
