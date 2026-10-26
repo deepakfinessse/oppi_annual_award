@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import JSZip from 'jszip';
 import oppiLogo from '../../assets/Oppi-logo.png';
-import exactFigmaBg from '../../assets/exact-figma-bg.png';
+import exactFigmaBg from '../../assets/form-bg.jpg';
 import Footer from '../../components/Footer/Footer';
 import './ApplicationForm.css';
 
@@ -305,7 +305,18 @@ const ApplicationForm = () => {
       setDeleteModalState(prev => ({ ...prev, isDeleting: false }));
     }
   };
+// ─── Effects ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    // Scroll to top when the application form loads
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
+    // Also ensure the header is visible
+    const header = document.querySelector('.app-portal-header');
+    if (header) {
+      header.scrollIntoView({ block: 'start' });
+    }
+
+  }, []);
   const formatSubmissionId = (sub) => {
     if (!sub) return '—';
     if (sub.submission_id) return sub.submission_id;

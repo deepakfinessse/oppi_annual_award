@@ -51,9 +51,23 @@
 .category-card:hover,
 .category-card.selected {
   transform: translateY(-4px);
-  box-shadow: 0 16px 36px rgba(11, 114, 196, 0.12);
+  box-shadow: 0 8px 24px rgb(18 255 39 / 24%);
   border-color: #10b981;
   background: radial-gradient(105.78% 90.75% at 97.13% 120.7%, #83CBF0 0%, #F8FFF7 100%) /* warning: gradient uses a rotation that is not supported by CSS and may not behave as expected */;
+}
+
+.divider-line {
+  width: 100%;
+  height: 1px;
+  flex: none;
+  border: none;
+  margin-bottom: 1rem;
+  background: linear-gradient(
+    90deg,
+    rgba(56, 155, 46, 0) 0%,
+    #389B2E 50%,
+    rgba(56, 155, 46, 0) 100%
+  );
 }
 
 .category-card-top {

@@ -678,6 +678,8 @@ const Categories = () => {
                     <h3 className="category-card-title">{cat.title}</h3>
                   </div>
                 </div>
+
+                <div className="divider-line"></div>
                 
                 <button 
                   className="category-view-details-btn"
