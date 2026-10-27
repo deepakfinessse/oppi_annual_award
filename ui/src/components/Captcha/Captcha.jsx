@@ -39,7 +39,11 @@ const Captcha = ({ onChange, errors, trigger }) => {
   useEffect(() => {
     if (!scriptLoaded || !containerRef.current) return;
 
-    const siteKey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"; // TEST MODE
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (!siteKey) {
+      console.error("VITE_RECAPTCHA_SITE_KEY is not set");
+      return;
+    }
 
     // Clear container to avoid double render errors
     containerRef.current.innerHTML = '';
