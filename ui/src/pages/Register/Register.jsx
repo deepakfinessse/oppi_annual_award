@@ -8,27 +8,7 @@ import { register, saveTokens } from '../../utils/api';
 import Captcha from '../../components/Captcha/Captcha';
 import './Register.css';
 import arrowIcon from '../../assets/Vector.png';
-
-const ORGANISATIONS = [
-  'AbbVie India',
-  'Amgen India',
-  'AstraZeneca Pharma India Ltd',
-  'Bayer Pharmaceuticals',
-  'Boehringer Ingelheim India',
-  'Bristol Myers Squibb',
-  'Eli Lilly and Company India',
-  'GlaxoSmithKline Pharmaceuticals',
-  'Janssen India (Johnson & Johnson)',
-  'Merck Specialties Pvt Ltd',
-  'Novartis Healthcare Pvt Ltd',
-  'Novo Nordisk India',
-  'Pfizer Limited',
-  'Roche Products India Pvt Ltd',
-  'Sanofi India Limited',
-  'Takeda Biopharmaceuticals India',
-  'Viatris India',
-  'Other Organisation'
-];
+import { ORGANISATIONS } from '../../constants/organisations';
 
 const Register = () => {
   const navigate = useNavigate();

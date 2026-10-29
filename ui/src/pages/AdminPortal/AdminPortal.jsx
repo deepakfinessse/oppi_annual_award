@@ -45,8 +45,8 @@ import shekharImg from '../../assets/Shekhar.png';
 import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
-import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
 import { AWARD_CATEGORIES } from '../../constants/categories';
+import { ORGANISATIONS, isOrgMatch } from '../../constants/organisations';
 import './AdminPortal.css';
 
 const formatDate = (dateStr) => {
@@ -147,15 +147,19 @@ const AdminPortal = () => {
 
   // Filters
   const [userFilter, setUserFilter] = useState('ALL');
+  const [userOrgFilter, setUserOrgFilter] = useState('ALL');
   const [userCategoryFilter, setUserCategoryFilter] = useState('ALL');
   const [showUserFilterDropdown, setShowUserFilterDropdown] = useState(false);
+  const [showUserOrgDropdown, setShowUserOrgDropdown] = useState(false);
   const [showUserCatDropdown, setShowUserCatDropdown] = useState(false);
   const [showUserExportDropdown, setShowUserExportDropdown] = useState(false);
 
   const [appFilter, setAppFilter] = useState('ALL');
+  const [appOrgFilter, setAppOrgFilter] = useState('ALL');
   const [appCategoryFilter, setAppCategoryFilter] = useState('ALL');
   const [appStatusFilter, setAppStatusFilter] = useState('ALL');
   const [showAppFilterDropdown, setShowAppFilterDropdown] = useState(false);
+  const [showAppOrgDropdown, setShowAppOrgDropdown] = useState(false);
   const [showAppCatDropdown, setShowAppCatDropdown] = useState(false);
   const [showAppStatusDropdown, setShowAppStatusDropdown] = useState(false);
   const [showAppExportDropdown, setShowAppExportDropdown] = useState(false);
@@ -179,10 +183,12 @@ const AdminPortal = () => {
   const userPageSize = 10;
 
   const userDropdownRef = useRef(null);
+  const userOrgDropdownRef = useRef(null);
   const userCatDropdownRef = useRef(null);
   const userExportDropdownRef = useRef(null);
 
   const appDropdownRef = useRef(null);
+  const appOrgDropdownRef = useRef(null);
   const appCatDropdownRef = useRef(null);
   const appStatusDropdownRef = useRef(null);
   const appExportDropdownRef = useRef(null);
@@ -303,6 +309,9 @@ const AdminPortal = () => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
         setShowUserFilterDropdown(false);
       }
+      if (userOrgDropdownRef.current && !userOrgDropdownRef.current.contains(e.target)) {
+        setShowUserOrgDropdown(false);
+      }
       if (userCatDropdownRef.current && !userCatDropdownRef.current.contains(e.target)) {
         setShowUserCatDropdown(false);
       }
@@ -311,6 +320,9 @@ const AdminPortal = () => {
       }
       if (appDropdownRef.current && !appDropdownRef.current.contains(e.target)) {
         setShowAppFilterDropdown(false);
+      }
+      if (appOrgDropdownRef.current && !appOrgDropdownRef.current.contains(e.target)) {
+        setShowAppOrgDropdown(false);
       }
       if (appCatDropdownRef.current && !appCatDropdownRef.current.contains(e.target)) {
         setShowAppCatDropdown(false);
@@ -366,6 +378,12 @@ const AdminPortal = () => {
     if (u.role?.toUpperCase() !== 'USER') return false;
 
     const userApps = getUserApps(u);
+    const org = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '';
+
+    // Organisation filter
+    if (userOrgFilter !== 'ALL') {
+      if (!isOrgMatch(org, userOrgFilter)) return false;
+    }
     
     // Category filter
     if (userCategoryFilter !== 'ALL') {
@@ -384,6 +402,13 @@ const AdminPortal = () => {
   const ANNUAL_AWARD_CATEGORIES = AWARD_CATEGORIES;
 
   const filteredApps = apps.filter(app => {
+    const org = app.company || app.institute_name || app.instituteName || '';
+
+    // Organisation filter
+    if (appOrgFilter !== 'ALL') {
+      if (!isOrgMatch(org, appOrgFilter)) return false;
+    }
+
     // Category filter
     if (appCategoryFilter !== 'ALL' && !isCategoryMatch(app.category, appCategoryFilter)) return false;
 
@@ -1212,11 +1237,53 @@ const AdminPortal = () => {
               </div>
 
               <div className="card-actions">
+                {/* Organisation Dropdown */}
+                <div className="filter-dropdown-container" ref={userOrgDropdownRef}>
+                  <button
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowUserOrgDropdown(!showUserOrgDropdown);
+                      setShowUserCatDropdown(false);
+                      setShowUserExportDropdown(false);
+                    }}
+                  >
+                    <span>
+                      {userOrgFilter === 'ALL'
+                        ? 'ORGANISATION'
+                        : (userOrgFilter.length > 25 ? userOrgFilter.slice(0, 22) + '...' : userOrgFilter)}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showUserOrgDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '300px', maxHeight: '350px', overflowY: 'auto', right: 0 }}>
+                      <div
+                        className={`filter-menu-item ${userOrgFilter === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setUserOrgFilter('ALL'); setUserPage(1); setShowUserOrgDropdown(false); }}
+                      >
+                        <strong>All Organisations</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      {ORGANISATIONS.map(org => (
+                        <div
+                          key={org}
+                          className={`filter-menu-item ${userOrgFilter === org ? 'active' : ''}`}
+                          onClick={() => { setUserOrgFilter(org); setUserPage(1); setShowUserOrgDropdown(false); }}
+                        >
+                          {org}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Category Dropdown */}
                 <div className="filter-dropdown-container" ref={userCatDropdownRef}>
                   <button
                     className="btn-filter-pill-select"
-                    onClick={() => setShowUserCatDropdown(!showUserCatDropdown)}
+                    onClick={() => {
+                      setShowUserCatDropdown(!showUserCatDropdown);
+                      setShowUserOrgDropdown(false);
+                    }}
                   >
                     <span>{userCategoryFilter === 'ALL' ? 'CATEGORY' : (userCategoryFilter.length > 25 ? userCategoryFilter.slice(0, 22) + '...' : userCategoryFilter)}</span>
                     <ChevronDown size={14} />
@@ -1349,12 +1416,53 @@ const AdminPortal = () => {
               </div>
 
               <div className="card-actions">
+                {/* Organisation Dropdown */}
+                <div className="filter-dropdown-container" ref={appOrgDropdownRef}>
+                  <button
+                    className="btn-filter-pill-select"
+                    onClick={() => {
+                      setShowAppOrgDropdown(!showAppOrgDropdown);
+                      setShowAppCatDropdown(false);
+                      setShowAppStatusDropdown(false);
+                      setShowAppExportDropdown(false);
+                    }}
+                  >
+                    <span>
+                      {appOrgFilter === 'ALL'
+                        ? 'ORGANISATION'
+                        : (appOrgFilter.length > 25 ? appOrgFilter.slice(0, 22) + '...' : appOrgFilter)}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showAppOrgDropdown && (
+                    <div className="filter-dropdown-menu" style={{ minWidth: '300px', maxHeight: '350px', overflowY: 'auto' }}>
+                      <div
+                        className={`filter-menu-item ${appOrgFilter === 'ALL' ? 'active' : ''}`}
+                        onClick={() => { setAppOrgFilter('ALL'); setAppPage(1); setShowAppOrgDropdown(false); }}
+                      >
+                        <strong>All Organisations</strong>
+                      </div>
+                      <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
+                      {ORGANISATIONS.map(org => (
+                        <div
+                          key={org}
+                          className={`filter-menu-item ${appOrgFilter === org ? 'active' : ''}`}
+                          onClick={() => { setAppOrgFilter(org); setAppPage(1); setShowAppOrgDropdown(false); }}
+                        >
+                          {org}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Category Dropdown */}
                 <div className="filter-dropdown-container" ref={appCatDropdownRef}>
                   <button
                     className="btn-filter-pill-select"
                     onClick={() => {
                       setShowAppCatDropdown(!showAppCatDropdown);
+                      setShowAppOrgDropdown(false);
                       setShowAppStatusDropdown(false);
                     }}
                   >
@@ -1386,6 +1494,7 @@ const AdminPortal = () => {
                     className="btn-filter-pill-select"
                     onClick={() => {
                       setShowAppStatusDropdown(!showAppStatusDropdown);
+                      setShowAppOrgDropdown(false);
                       setShowAppCatDropdown(false);
                     }}
                   >
