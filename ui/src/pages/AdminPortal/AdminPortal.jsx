@@ -265,6 +265,15 @@ const AdminPortal = () => {
     }
   };
 
+  const handleDeleteApplicationClick = (app) => {
+    const displayName = app.applicant_name || app.user_name || `Application #${app.id}`;
+    setDeleteTarget({
+      type: 'APPLICATION',
+      id: app.id,
+      name: `${displayName} (App #${String(app.id).padStart(2, '0')})`
+    });
+  };
+
   const handleDeleteApp = async (appId) => {
     if (!window.confirm(`Are you sure you want to permanently delete application #${appId}? This action cannot be undone.`)) {
       return;
@@ -1156,7 +1165,11 @@ const AdminPortal = () => {
     setSuccess('');
     setLoading(true);
     try {
-      if (type === 'MEMBER') {
+      if (type === 'APPLICATION') {
+        await adminDeleteApplication(id);
+        setSuccess(`Application #${id} deleted successfully.`);
+        await loadData();
+      } else if (type === 'MEMBER') {
         await adminDeletePanelMember(id);
         setSuccess('Panel member deleted.');
         const updatedList = await getPublicPanelMembers();
@@ -1589,6 +1602,13 @@ const AdminPortal = () => {
                               </button>
                               <button className="action-btn-pill-edit" onClick={() => navigate(`/application?appId=${app.id}`)}>
                                 Edit
+                              </button>
+                              <button
+                                className="action-btn-trash"
+                                onClick={() => handleDeleteApplicationClick(app)}
+                                title="Delete Application"
+                              >
+                                <Trash2 size={13} />
                               </button>
                             </div>
                           </td>
@@ -2607,7 +2627,13 @@ const AdminPortal = () => {
             <div className="admin-modal-body" style={{ padding: '1.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '0.75rem', lineHeight: 1 }}>⚠️</div>
               <p style={{ fontSize: '1rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
-                Are you sure you want to delete this {deleteTarget.type === 'MEMBER' ? 'panel member' : 'winner record'}?
+                Are you sure you want to delete this {
+                  deleteTarget.type === 'APPLICATION'
+                    ? 'application'
+                    : deleteTarget.type === 'MEMBER'
+                    ? 'panel member'
+                    : 'winner record'
+                }?
               </p>
               <p style={{ fontSize: '1.1rem', fontWeight: '800', color: '#dc2626', marginBottom: '1.25rem' }}>
                 {deleteTarget.name}
