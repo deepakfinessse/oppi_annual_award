@@ -15,7 +15,7 @@ import { isLoggedIn, getUser, isTokenExpired, clearTokens } from './utils/api'
 import './App.css'
 
 const ProtectedRoute = ({ children }) => {
-  return isLoggedIn() ? children : <Navigate to="/login?reason=expired" replace />
+  return isLoggedIn() ? children : <Navigate to="/" replace />
 }
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
@@ -23,7 +23,7 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const user = getUser();
 
   if (!isAuth) {
-    return <Navigate to="/login?reason=expired" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && (!user || !allowedRoles.includes(user.role))) {
@@ -46,23 +46,26 @@ const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes idle timeout
 
 const AutoLogoutListener = () => {
   useEffect(() => {
-    let lastActivity = Date.now();
+    let lastThrottleTime = 0;
 
     const updateActivity = () => {
-      lastActivity = Date.now();
-    };
-
-    const getBasePath = () => {
-      return window.location.pathname.startsWith('/') ? '/' : '';
+      const now = Date.now();
+      // Throttle localStorage updates to at most once every 2 seconds
+      if (now - lastThrottleTime > 2000) {
+        lastThrottleTime = now;
+        if (localStorage.getItem('access_token')) {
+          localStorage.setItem('last_activity_time', now.toString());
+        }
+      }
     };
 
     const performLogout = (reason) => {
       console.warn(`Session limit reached or inactive (${reason}). Auto logging out...`);
       clearTokens();
-      const basePath = getBasePath();
-      const loginUrl = `${basePath}/login?reason=${reason}`;
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = loginUrl;
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      } else {
+        window.location.reload();
       }
     };
 
@@ -70,16 +73,20 @@ const AutoLogoutListener = () => {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      // 1. Check token expiration
+      // 1. Check token expiration / inactivity stored in localStorage
       if (isTokenExpired()) {
         performLogout('expired');
         return;
       }
 
-      // 2. Check idle inactivity (30 mins of no user interaction)
-      if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) {
-        performLogout('idle');
-        return;
+      // 2. Check idle inactivity directly against last_activity_time
+      const lastActiveStr = localStorage.getItem('last_activity_time');
+      if (lastActiveStr) {
+        const lastActive = parseInt(lastActiveStr, 10);
+        if (!isNaN(lastActive) && Date.now() - lastActive >= IDLE_TIMEOUT_MS) {
+          performLogout('idle');
+          return;
+        }
       }
     };
 
@@ -87,14 +94,25 @@ const AutoLogoutListener = () => {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     events.forEach(evt => window.addEventListener(evt, updateActivity, { passive: true }));
 
+    // Check immediately when tab becomes visible or receives focus (e.g. reopened or switched back after 30 mins)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkSession();
+      }
+    };
+    window.addEventListener('focus', checkSession);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Check session status immediately on mount
     checkSession();
 
-    // Periodically check session status every 15 seconds
-    const intervalId = setInterval(checkSession, 15000);
+    // Periodically check session status every 10 seconds
+    const intervalId = setInterval(checkSession, 10000);
 
     return () => {
       events.forEach(evt => window.removeEventListener(evt, updateActivity));
+      window.removeEventListener('focus', checkSession);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
   }, []);

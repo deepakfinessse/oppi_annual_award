@@ -15,17 +15,20 @@ export const getHeaders = (isJson = true) => {
   const token = localStorage.getItem('access_token');
   const headers = {};
   if (isJson) headers['Content-Type'] = 'application/json';
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('last_activity_time', Date.now().toString());
+    }
+  }
   return headers;
 };
 
 const handle = async (res) => {
   if (res.status === 401) {
     clearTokens();
-    const isScientistSubpath = window.location.pathname.startsWith('/scientist/');
-    const basePath = isScientistSubpath ? '/scientist' : '';
-    if (!window.location.pathname.includes('/login')) {
-      window.location.href = `${basePath}/login?reason=expired`;
+    if (window.location.pathname !== '/') {
+      window.location.href = '/';
     }
     throw new Error('Session expired. Please log in again.');
   }
@@ -166,13 +169,22 @@ export const submitApplication = (appId) =>
   }).then(handle);
 
 // ── Helpers ───────────────────────────────────────────────────────────
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes session timeout
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 24 Hours in Milliseconds
 
+export const updateLastActivity = () => {
+  if (localStorage.getItem('access_token')) {
+    localStorage.setItem('last_activity_time', Date.now().toString());
+  }
+};
+
 export const saveTokens = ({ access_token, refresh_token, user }) => {
+  const now = Date.now().toString();
   localStorage.setItem('access_token', access_token);
   localStorage.setItem('refresh_token', refresh_token);
   localStorage.setItem('user', JSON.stringify(user));
-  localStorage.setItem('login_time', Date.now().toString());
+  localStorage.setItem('login_time', now);
+  localStorage.setItem('last_activity_time', now);
 };
 
 export const clearTokens = () => {
@@ -180,6 +192,7 @@ export const clearTokens = () => {
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
   localStorage.removeItem('login_time');
+  localStorage.removeItem('last_activity_time');
 };
 
 export const getUser = () => {
@@ -191,7 +204,25 @@ export const isTokenExpired = () => {
   const token = localStorage.getItem('access_token');
   if (!token) return true;
 
-  // Enforce 1-day (24 hours) session lifetime
+  // 1. Inactivity check (30 minutes of no user interaction)
+  const lastActivityStr = localStorage.getItem('last_activity_time');
+  if (lastActivityStr) {
+    const lastActivity = parseInt(lastActivityStr, 10);
+    if (!isNaN(lastActivity) && Date.now() - lastActivity >= SESSION_TIMEOUT_MS) {
+      return true;
+    }
+  } else {
+    // Fallback to login_time if last_activity_time is not set
+    const loginTimeStr = localStorage.getItem('login_time');
+    if (loginTimeStr) {
+      const loginTime = parseInt(loginTimeStr, 10);
+      if (!isNaN(loginTime) && Date.now() - loginTime >= SESSION_TIMEOUT_MS) {
+        return true;
+      }
+    }
+  }
+
+  // 2. Enforce 1-day (24 hours) session lifetime
   const loginTimeStr = localStorage.getItem('login_time');
   if (loginTimeStr) {
     const loginTime = parseInt(loginTimeStr, 10);
