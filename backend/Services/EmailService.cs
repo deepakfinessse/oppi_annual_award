@@ -77,10 +77,42 @@ public class EmailService
                 if (File.Exists(candidate1)) return candidate1;
                 if (File.Exists(candidate2)) return candidate2;
             }
+
+            var baseDir = AppContext.BaseDirectory;
+            var candBase1 = Path.Combine(baseDir, "wwwroot", "uploads", "Oppi-logo.png");
+            var candBase2 = Path.Combine(baseDir, "uploads", "Oppi-logo.png");
+            if (File.Exists(candBase1)) return candBase1;
+            if (File.Exists(candBase2)) return candBase2;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not resolve physical logo path for email, falling back to public URL.");
+            _logger.LogWarning(ex, "Could not resolve physical logo path for email, falling back to embedded resource or public URL.");
+        }
+        return null;
+    }
+
+    private byte[]? GetLogoBytes()
+    {
+        try
+        {
+            var logoPath = ResolveLogoPath();
+            if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+            {
+                return File.ReadAllBytes(logoPath);
+            }
+
+            var assembly = typeof(EmailService).Assembly;
+            using var stream = assembly.GetManifestResourceStream("Oppi-logo.png");
+            if (stream != null)
+            {
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                return ms.ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load logo bytes for email.");
         }
         return null;
     }
@@ -103,7 +135,7 @@ public class EmailService
                     <!-- Header -->
                     <tr>
                         <td align=""center"" style=""background-color: #ebf5f7; padding: 30px 20px; border-bottom: 1px solid #e1edf0;"">
-                            <img src=""{logoSrc}"" height=""65"" alt=""OPPI Logo"" style=""display: block; border: 0; outline: none; text-decoration: none;"" />
+                            <img src=""{logoSrc}"" height=""65"" alt=""OPPI Logo"" style=""display: block; border: 0; outline: none; text-decoration: none; height: 65px; width: auto; max-width: 220px;"" />
                         </td>
                     </tr>
                     <!-- Body Content -->
@@ -167,25 +199,29 @@ public class EmailService
             TextBody = plainTextBody
         };
 
-        var frontendUrl = _config["FrontendUrl"] ?? "https://annualawards.indiaoppi.com";
-        var publicLogoUrl = $"{frontendUrl.TrimEnd('/')}/uploads/Oppi-logo.png";
-        var logoPath = ResolveLogoPath();
+        var publicLogoUrl = _config["LogoUrl"] ?? "https://oppi.nivyam.com/uploads/Oppi-logo.png";
         string logoSrc = publicLogoUrl;
 
-        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+        var logoBytes = GetLogoBytes();
+        if (logoBytes != null && logoBytes.Length > 0)
         {
             try
             {
-                var logoResource = builder.LinkedResources.Add(logoPath);
+                var logoResource = builder.LinkedResources.Add("Oppi-logo.png", logoBytes, new ContentType("image", "png"));
                 logoResource.ContentId = "oppi_logo";
-                logoResource.ContentType.MediaType = "image";
-                logoResource.ContentType.MediaSubtype = "png";
+                logoResource.ContentDisposition = new ContentDisposition(ContentDisposition.Inline);
                 logoSrc = "cid:oppi_logo";
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to attach logo LinkedResource to email.");
+                _logger.LogWarning(ex, "Failed to attach logo LinkedResource to email, falling back to public URL: {Url}", publicLogoUrl);
+                logoSrc = publicLogoUrl;
             }
+        }
+        else
+        {
+            _logger.LogInformation("Using public URL for email logo: {Url}", publicLogoUrl);
+            logoSrc = publicLogoUrl;
         }
 
         builder.HtmlBody = BuildEmailHtml(htmlContent, logoSrc);

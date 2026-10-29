@@ -534,6 +534,33 @@ var rawUploadsDir = builder.Configuration["UploadsFolder"] ?? Path.Combine(build
 var uploadsDir = Path.IsPathRooted(rawUploadsDir) ? rawUploadsDir : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, rawUploadsDir));
 if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
 
+var targetLogo = Path.Combine(uploadsDir, "Oppi-logo.png");
+if (!File.Exists(targetLogo))
+{
+    try
+    {
+        using var resStream = typeof(Program).Assembly.GetManifestResourceStream("Oppi-logo.png");
+        if (resStream != null)
+        {
+            using var fs = File.Create(targetLogo);
+            resStream.CopyTo(fs);
+            Log.Information("Extracted Oppi-logo.png to uploads directory: {Path}", targetLogo);
+        }
+        else
+        {
+            var fallbackCand = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "Oppi-logo.png");
+            if (File.Exists(fallbackCand))
+            {
+                File.Copy(fallbackCand, targetLogo, true);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Could not ensure Oppi-logo.png in uploads directory.");
+    }
+}
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsDir),
