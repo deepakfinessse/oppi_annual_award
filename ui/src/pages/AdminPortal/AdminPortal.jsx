@@ -45,6 +45,7 @@ import shekharImg from '../../assets/Shekhar.png';
 import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
+import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
 import { AWARD_CATEGORIES } from '../../constants/categories';
 import { ORGANISATIONS, isOrgMatch } from '../../constants/organisations';
 import './AdminPortal.css';
