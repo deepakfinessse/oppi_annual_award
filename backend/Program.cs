@@ -935,6 +935,11 @@ api.MapDelete("/application/{appId}", async (int appId, InnovationDbContext db, 
     var a = await db.Applications.FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
     if (a == null) return Results.NotFound(new { message = "Application not found" });
 
+    if (a.Status != "DRAFT" && !isAdmin)
+    {
+        return Results.BadRequest(new { message = "Submitted applications cannot be deleted." });
+    }
+
     // Delete PersonalInfo
     var personalInfo = await db.PersonalInfos.FirstOrDefaultAsync(x => x.ApplicationId == appId);
     if (personalInfo != null) db.PersonalInfos.Remove(personalInfo);
@@ -1117,6 +1122,11 @@ api.MapPost("/application/save/{appId}", async (int appId, HttpContext ctx, Appl
         .FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
     if (a == null) return Results.NotFound();
 
+    if (a.Status != "DRAFT" && !isAdmin)
+    {
+        return Results.BadRequest(new { message = "Application has already been submitted and cannot be edited." });
+    }
+
     if (a.PersonalInfo == null) {
         a.PersonalInfo = new PersonalInfo { ApplicationId = appId };
         db.PersonalInfos.Add(a.PersonalInfo);
@@ -1152,8 +1162,20 @@ api.MapPost("/application/save/{appId}", async (int appId, HttpContext ctx, Appl
     return Results.Ok(new { message = "Application saved successfully" });
 });
 
-api.MapPost("/application/upload/{appId}/{section}", async (int appId, string section, HttpRequest req, InnovationDbContext db, IStorageService storage) =>
+api.MapPost("/application/upload/{appId}/{section}", async (int appId, string section, HttpRequest req, InnovationDbContext db, IStorageService storage, HttpContext ctx) =>
 {
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
+    var a = await db.Applications.FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
+    if (a == null) return Results.NotFound(new { message = "Application not found" });
+
+    if (a.Status != "DRAFT" && !isAdmin)
+    {
+        return Results.BadRequest(new { message = "Application has already been submitted and cannot be edited." });
+    }
+
     if (!req.HasFormContentType) return Results.BadRequest(new { message = "Invalid content type" });
     var form = await req.ReadFormAsync();
     var files = form.Files;
@@ -1187,10 +1209,23 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
     return Results.Ok(new { message = "Files uploaded", files = uploadedFiles });
 });
 
-api.MapDelete("/application/upload/{fileId}", async (int fileId, InnovationDbContext db, IStorageService storage) =>
+api.MapDelete("/application/upload/{fileId}", async (int fileId, InnovationDbContext db, IStorageService storage, HttpContext ctx) =>
 {
+    var uid = GetUid(ctx); if (uid == null) return Results.Unauthorized();
+    var currentUser = await db.Users.FindAsync(uid.Value);
+    var isAdmin = currentUser?.Role == "ADMIN" || currentUser?.Role == "SUPER_ADMIN";
+
     var f = await db.FileUploads.FindAsync(fileId);
     if (f == null) return Results.NotFound();
+
+    var a = await db.Applications.FirstOrDefaultAsync(x => x.Id == f.ApplicationId && (isAdmin || x.UserId == uid.Value));
+    if (a == null) return Results.NotFound(new { message = "Application not found" });
+
+    if (a.Status != "DRAFT" && !isAdmin)
+    {
+        return Results.BadRequest(new { message = "Application has already been submitted and cannot be edited." });
+    }
+
     await storage.DeleteFileAsync(f.FilePath);
     db.FileUploads.Remove(f);
     await db.SaveChangesAsync();
@@ -1205,6 +1240,11 @@ api.MapPost("/application/submit/{appId}", async (int appId, InnovationDbContext
 
     var a = await db.Applications.Include(x => x.User).Include(x => x.PersonalInfo).FirstOrDefaultAsync(x => x.Id == appId && (isAdmin || x.UserId == uid.Value));
     if (a == null) return Results.NotFound();
+
+    if (a.Status != "DRAFT" && !isAdmin)
+    {
+        return Results.BadRequest(new { message = "Application has already been submitted." });
+    }
 
     // Enforce "An OPPI member company - Only 1 entry per member company per category"
     var companyName = (a.PersonalInfo?.CompanyName ?? a.User?.Organisation ?? "").Trim();

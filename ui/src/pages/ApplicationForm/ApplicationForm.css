@@ -1404,6 +1404,26 @@
   transform: translateY(-1px);
 }
 
+.btn-table-view {
+  background: #0284c7;
+  color: #ffffff;
+  padding: 0.45rem 1.45rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.84rem;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-table-view:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
 .btn-table-delete {
   background: transparent;
   border: none;

@@ -136,11 +136,10 @@ const ApplicationForm = () => {
   const [submissions, setSubmissions] = useState([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true);
   const [isStartingNew, setIsStartingNew] = useState(false);
-  const [isEditingSubmitted, setIsEditingSubmitted] = useState(false);
   const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, submission: null, isDeleting: false });
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-  const isReadOnly = appStatus === 'SUBMITTED' && !isAdmin && !isEditingSubmitted;
+  const isReadOnly = appStatus !== 'DRAFT' && !isAdmin;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -224,8 +223,13 @@ const ApplicationForm = () => {
       const newParam = searchParams.get('new');
 
       if (queryAppId) {
-        await loadApplication(queryAppId);
-        setViewMode(modeParam === 'preview' ? 'preview' : 'form');
+        const app = await loadApplication(queryAppId);
+        const isSubSubmitted = app && app.status && app.status !== 'DRAFT';
+        if (isSubSubmitted && !isAdmin) {
+          setViewMode('preview');
+        } else {
+          setViewMode(modeParam === 'preview' ? 'preview' : 'form');
+        }
       } else if (newParam === '1') {
         await handleStartNewNomination();
       } else {
@@ -246,7 +250,6 @@ const ApplicationForm = () => {
       if (res && res.id) {
         setAppId(res.id);
         setAppStatus('DRAFT');
-        setIsEditingSubmitted(false);
         setFormData({
           awardCategory: '',
           organisationName: currentUser?.organisation || '',
@@ -273,14 +276,26 @@ const ApplicationForm = () => {
   const handleEditSubmission = async (selectedId) => {
     setMessage({ type: '', text: '' });
     setFieldErrors({});
-    setIsEditingSubmitted(true);
     await loadApplication(selectedId);
     setViewMode('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleViewSubmission = async (selectedId) => {
+    setMessage({ type: '', text: '' });
+    setFieldErrors({});
+    await loadApplication(selectedId);
+    setViewMode('preview');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const confirmDeleteSubmission = async () => {
     if (!deleteModalState.submission) return;
+    if (deleteModalState.submission.status && deleteModalState.submission.status !== 'DRAFT' && !isAdmin) {
+      alert('Submitted applications cannot be deleted.');
+      setDeleteModalState({ isOpen: false, submission: null, isDeleting: false });
+      return;
+    }
     setDeleteModalState(prev => ({ ...prev, isDeleting: true }));
     try {
       await deleteMyApplication(deleteModalState.submission.id);
@@ -369,7 +384,7 @@ const ApplicationForm = () => {
   };
 
   const saveApplicationData = async () => {
-    if (!appId) return false;
+    if (!appId || isReadOnly) return false;
     const res = await fetch(`${BASE_URL}/application/save/${appId}`, {
       method: 'POST',
       headers: getHeaders(),
@@ -496,7 +511,7 @@ const ApplicationForm = () => {
 
   // Final submit & exit handler
   const handleSubmitAndExit = async () => {
-    if (!appId) return;
+    if (!appId || isReadOnly) return;
 
     setIsSubmitting(true);
     setMessage({ type: '', text: '' });
@@ -644,7 +659,7 @@ const ApplicationForm = () => {
   };
 
   const handleFileUpload = async (section, files) => {
-    if (!appId || !files || files.length === 0) return;
+    if (!appId || !files || files.length === 0 || isReadOnly) return;
 
     const errorKey = section === 'document' ? 'documentFiles' : 'videoFiles';
     setFieldErrors(prev => ({ ...prev, [errorKey]: '' }));
@@ -712,6 +727,7 @@ const ApplicationForm = () => {
   };
 
   const handleDeleteFile = async (section, fileId) => {
+    if (isReadOnly) return;
     try {
       const res = await fetch(`${BASE_URL}/application/upload/${fileId}`, {
         method: 'DELETE',
@@ -747,7 +763,7 @@ const ApplicationForm = () => {
           </div>
 
           <div className="header-actions">
-            {/* {viewMode !== 'dashboard' && (
+            {viewMode !== 'dashboard' && (
               <button
                 type="button"
                 onClick={() => {
@@ -759,7 +775,7 @@ const ApplicationForm = () => {
                 <List size={15} />
                 <span>MY SUBMISSIONS</span>
               </button>
-            )} */}
+            )}
             <Link to="/change-password" className="btn-header-pill btn-change-pwd">
               {/* <Lock size={15} /> */}
               <span>CHANGE PASSWORD</span>
@@ -848,38 +864,43 @@ const ApplicationForm = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {submissions.map((sub) => (
-                        <tr key={sub.id}>
-                          <td className="submission-id-text">{formatSubmissionId(sub)}</td>
-                          <td className="nominee-name-text">{sub.nominee_name || 'Nominee Name Pvt. Ltd.'}</td>
-                          <td className="category-text">{sub.category || '—'}</td>
-                          <td>
-                            <span className={`submission-status-badge ${getStatusBadgeClass(sub.status)}`}>
-                              {formatStatus(sub.status)}
-                            </span>
-                          </td>
-                          <td className="submitted-on-text">{formatSubmittedDate(sub)}</td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                type="button"
-                                className="btn-table-edit"
-                                onClick={() => handleEditSubmission(sub.id)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-table-delete"
-                                onClick={() => setDeleteModalState({ isOpen: true, submission: sub, isDeleting: false })}
-                                title="Delete nomination"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {submissions.map((sub) => {
+                        const isSubSubmitted = sub.status && sub.status !== 'DRAFT';
+                        return (
+                          <tr key={sub.id}>
+                            <td className="submission-id-text">{formatSubmissionId(sub)}</td>
+                            <td className="nominee-name-text">{sub.nominee_name || 'Nominee Name Pvt. Ltd.'}</td>
+                            <td className="category-text">{sub.category || '—'}</td>
+                            <td>
+                              <span className={`submission-status-badge ${getStatusBadgeClass(sub.status)}`}>
+                                {formatStatus(sub.status)}
+                              </span>
+                            </td>
+                            <td className="submitted-on-text">{formatSubmittedDate(sub)}</td>
+                            <td>
+                              <div className="table-actions">
+                                <button
+                                  type="button"
+                                  className={isSubSubmitted ? "btn-table-view" : "btn-table-edit"}
+                                  onClick={() => isSubSubmitted ? handleViewSubmission(sub.id) : handleEditSubmission(sub.id)}
+                                >
+                                  {isSubSubmitted ? 'View' : 'Edit'}
+                                </button>
+                                {!isSubSubmitted && (
+                                  <button
+                                    type="button"
+                                    className="btn-table-delete"
+                                    onClick={() => setDeleteModalState({ isOpen: true, submission: sub, isDeleting: false })}
+                                    title="Delete nomination"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -888,7 +909,7 @@ const ApplicationForm = () => {
           </div>
         ) : (
           <>
-            {/* <button
+            <button
               type="button"
               className="btn-back-to-dashboard"
               onClick={() => {
@@ -898,7 +919,7 @@ const ApplicationForm = () => {
             >
               <ArrowLeft size={16} />
               <span>Back to My Submissions</span>
-            </button> */}
+            </button>
 
             {/* Page Title */}
             <div className="app-page-title-section">
@@ -915,9 +936,13 @@ const ApplicationForm = () => {
             {/* Header row matching Figma */}
             <div className="preview-header-row">
               <div className="preview-title-group">
-                <h2 className="preview-main-heading">Preview and Submit</h2>
+                <h2 className="preview-main-heading">
+                  {isReadOnly ? 'Submitted Application' : 'Preview and Submit'}
+                </h2>
                 <p className="preview-sub-heading">
-                  This is just the preview of your application. Check for any errors as you can not make changes after “Submit”
+                  {isReadOnly
+                    ? 'This is a view-only summary of your submitted nomination.'
+                    : 'This is just the preview of your application. Check for any errors as you can not make changes after “Submit”'}
                 </p>
               </div>
               <button
@@ -1089,8 +1114,20 @@ const ApplicationForm = () => {
                 <CheckCircle2 size={24} className="text-success" />
                 <div className="submitted-banner-text">
                   <strong>Application Submitted Successfully</strong>
-                  <span>Your application is locked and under review by the jury. You can download the full application archive above.</span>
+                  <span>Your application is locked and under review by the jury panel. No edits can be made.</span>
                 </div>
+                <button
+                  type="button"
+                  className="btn-back-to-dashboard"
+                  style={{ marginLeft: 'auto', marginBottom: 0 }}
+                  onClick={() => {
+                    loadSubmissions();
+                    setViewMode('dashboard');
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to My Submissions</span>
+                </button>
               </div>
             )}
           </div>
@@ -1400,26 +1437,28 @@ const ApplicationForm = () => {
                 <label>
                   Upload Document <span className="required">*</span>
                 </label>
-                <div className="upload-container-split">
-                  <div className={`upload-dropzone ${fieldErrors.documentFiles ? 'input-error' : ''}`}>
-                    <FileText className="upload-icon-large" size={38} />
-                    <p>Drop your Document here, or <span className="browse-text">browse</span></p>
-                    <input
-                      type="file"
-                      accept=".pdf,application/pdf"
-                      onChange={(e) => {
-                        handleFileUpload('document', e.target.files);
-                        e.target.value = '';
-                      }}
-                      disabled={isReadOnly}
-                    />
+                {!isReadOnly && (
+                  <div className="upload-container-split">
+                    <div className={`upload-dropzone ${fieldErrors.documentFiles ? 'input-error' : ''}`}>
+                      <FileText className="upload-icon-large" size={38} />
+                      <p>Drop your Document here, or <span className="browse-text">browse</span></p>
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => {
+                          handleFileUpload('document', e.target.files);
+                          e.target.value = '';
+                        }}
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="upload-requirements">
+                      <p className="req-title">Requirement</p>
+                      <p>• Format: PDF only</p>
+                      <p>• Size: Upto 5 mb</p>
+                    </div>
                   </div>
-                  <div className="upload-requirements">
-                    <p className="req-title">Requirement</p>
-                    <p>• Format: PDF only</p>
-                    <p>• Size: Upto 5 mb</p>
-                  </div>
-                </div>
+                )}
 
                 {fieldErrors.documentFiles && (
                   <span className="field-error-msg upload-field-error">
@@ -1468,26 +1507,28 @@ const ApplicationForm = () => {
               {/* Upload Video Section */}
               <div className="form-group full-width upload-section-block">
                 <label>Upload Video</label>
-                <div className="upload-container-split">
-                  <div className={`upload-dropzone ${fieldErrors.videoFiles ? 'input-error' : ''}`}>
-                    <Video className="upload-icon-large" size={38} />
-                    <p>Drop your Video here, or <span className="browse-text">browse</span></p>
-                    <input
-                      type="file"
-                      accept=".mp4,.mov,.webm"
-                      onChange={(e) => {
-                        handleFileUpload('video', e.target.files);
-                        e.target.value = '';
-                      }}
-                      disabled={isReadOnly}
-                    />
+                {!isReadOnly && (
+                  <div className="upload-container-split">
+                    <div className={`upload-dropzone ${fieldErrors.videoFiles ? 'input-error' : ''}`}>
+                      <Video className="upload-icon-large" size={38} />
+                      <p>Drop your Video here, or <span className="browse-text">browse</span></p>
+                      <input
+                        type="file"
+                        accept=".mp4,.mov,.webm"
+                        onChange={(e) => {
+                          handleFileUpload('video', e.target.files);
+                          e.target.value = '';
+                        }}
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="upload-requirements">
+                      <p className="req-title">Requirement</p>
+                      <p>• Format: mp4, mov only</p>
+                      <p>• Size: Upto 10 mb</p>
+                    </div>
                   </div>
-                  <div className="upload-requirements">
-                    <p className="req-title">Requirement</p>
-                    <p>• Format: mp4, mov only</p>
-                    <p>• Size: Upto 10 mb</p>
-                  </div>
-                </div>
+                )}
 
                 {fieldErrors.videoFiles && (
                   <span className="field-error-msg upload-field-error">
@@ -1572,9 +1613,23 @@ const ApplicationForm = () => {
                   </button>
                 </div>
               ) : (
-                <div className="submitted-notice">
-                  <CheckCircle size={20} />
-                  <span>Your application has been submitted and is currently under review.</span>
+                <div className="submitted-notice" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <CheckCircle size={20} />
+                    <span>Your application has been submitted and is locked for review. No editing is allowed.</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-back-to-dashboard"
+                    style={{ marginBottom: 0 }}
+                    onClick={() => {
+                      loadSubmissions();
+                      setViewMode('dashboard');
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to My Submissions</span>
+                  </button>
                 </div>
               )}
             </form>
