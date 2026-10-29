@@ -1190,6 +1190,11 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
             return Results.BadRequest(new { message = $"Document file '{file.FileName}' must be a PDF. Only PDF files are allowed." });
         }
 
+        if (section == "video" && ext != ".mp4" && ext != ".mov")
+        {
+            return Results.BadRequest(new { message = $"Video file '{file.FileName}' must be an MP4 or MOV. Only MP4 and MOV files are allowed." });
+        }
+
         if (section == "video" && file.Length > 10 * 1024 * 1024)
         {
             return Results.BadRequest(new { message = $"Video file '{file.FileName}' exceeds maximum allowed size of 10 MB." });

@@ -678,6 +678,22 @@ const ApplicationForm = () => {
       }
     }
 
+    if (section === 'video') {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = (file.name || '').toLowerCase();
+        const isAllowedVideo = fileName.endsWith('.mp4') || fileName.endsWith('.mov') ||
+                               file.type === 'video/mp4' || file.type === 'video/quicktime';
+        if (!isAllowedVideo) {
+          setFieldErrors(prev => ({
+            ...prev,
+            videoFiles: `File "${file.name}" is not an allowed video. Only MP4 and MOV files are allowed.`
+          }));
+          return;
+        }
+      }
+    }
+
     const maxSizeBytes = section === 'video' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
     const maxMB = section === 'video' ? 10 : 5;
     for (let i = 0; i < files.length; i++) {
@@ -1514,7 +1530,7 @@ const ApplicationForm = () => {
                       <p>Drop your Video here, or <span className="browse-text">browse</span></p>
                       <input
                         type="file"
-                        accept=".mp4,.mov,.webm"
+                        accept=".mp4,.mov,video/mp4,video/quicktime"
                         onChange={(e) => {
                           handleFileUpload('video', e.target.files);
                           e.target.value = '';
