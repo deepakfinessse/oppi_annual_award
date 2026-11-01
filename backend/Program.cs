@@ -1215,6 +1215,19 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
     var files = form.Files;
     if (files.Count == 0) return Results.BadRequest(new { message = "No files uploaded" });
 
+    if (files.Count > 1)
+    {
+        var secLabel = section == "document" ? "document" : "video";
+        return Results.BadRequest(new { message = $"You can only upload 1 {secLabel} file at a time." });
+    }
+
+    var existingCount = await db.FileUploads.CountAsync(x => x.ApplicationId == appId && x.Section == section);
+    if (existingCount >= 1 && !isAdmin)
+    {
+        var secLabel = section == "document" ? "document" : "video";
+        return Results.BadRequest(new { message = $"Only 1 {secLabel} file is allowed. Please remove the existing {secLabel} before uploading a new one." });
+    }
+
     var uploadedFiles = new List<object>();
     foreach (var file in files)
     {

@@ -122,6 +122,8 @@ const ApplicationForm = () => {
 
   const [documentFiles, setDocumentFiles] = useState([]);
   const [videoFiles, setVideoFiles] = useState([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSavingAndExiting, setIsSavingAndExiting] = useState(false);
@@ -466,7 +468,13 @@ const ApplicationForm = () => {
       errors.briefDescription = `Brief Description cannot exceed 500 words (currently ${descWords} words).`;
     }
     if (documentFiles.length === 0) {
-      errors.documentFiles = 'Please upload at least one required Document (PDF).';
+      errors.documentFiles = 'Please upload the required Document (PDF).';
+    } else if (documentFiles.length > 1) {
+      errors.documentFiles = 'Only 1 Document (PDF) is allowed. Please remove extra documents.';
+    }
+
+    if (videoFiles.length > 1) {
+      errors.videoFiles = 'Only 1 Video is allowed. Please remove extra videos.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -678,52 +686,67 @@ const ApplicationForm = () => {
     const errorKey = section === 'document' ? 'documentFiles' : 'videoFiles';
     setFieldErrors(prev => ({ ...prev, [errorKey]: '' }));
 
+    if (files.length > 1) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [errorKey]: `You can only upload 1 ${section === 'document' ? 'document' : 'video'} at a time.`
+      }));
+      return;
+    }
+
+    const currentFiles = section === 'document' ? documentFiles : videoFiles;
+    if (currentFiles.length >= 1) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [errorKey]: `Only 1 ${section === 'document' ? 'document' : 'video'} is allowed. Please remove the existing ${section === 'document' ? 'document' : 'video'} before uploading a new one.`
+      }));
+      return;
+    }
+
+    const file = files[0];
+
     if (section === 'document') {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
-        if (!isPdf) {
-          setFieldErrors(prev => ({
-            ...prev,
-            documentFiles: `File "${file.name}" is not a PDF. Only PDF files are allowed.`
-          }));
-          return;
-        }
-      }
-    }
-
-    if (section === 'video') {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileName = (file.name || '').toLowerCase();
-        const isAllowedVideo = fileName.endsWith('.mp4') || fileName.endsWith('.mov') ||
-                               file.type === 'video/mp4' || file.type === 'video/quicktime';
-        if (!isAllowedVideo) {
-          setFieldErrors(prev => ({
-            ...prev,
-            videoFiles: `File "${file.name}" is not an allowed video. Only MP4 and MOV files are allowed.`
-          }));
-          return;
-        }
-      }
-    }
-
-    const maxSizeBytes = section === 'video' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
-    const maxMB = section === 'video' ? 10 : 5;
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].size > maxSizeBytes) {
+      const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+      if (!isPdf) {
         setFieldErrors(prev => ({
           ...prev,
-          [errorKey]: `File "${files[i].name}" exceeds the maximum allowed size of ${maxMB} MB.`
+          documentFiles: `File "${file.name}" is not a PDF. Only PDF files are allowed.`
         }));
         return;
       }
     }
 
-    const fd = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      fd.append('files', files[i]);
+    if (section === 'video') {
+      const fileName = (file.name || '').toLowerCase();
+      const isAllowedVideo = fileName.endsWith('.mp4') || fileName.endsWith('.mov') ||
+                             file.type === 'video/mp4' || file.type === 'video/quicktime';
+      if (!isAllowedVideo) {
+        setFieldErrors(prev => ({
+          ...prev,
+          videoFiles: `File "${file.name}" is not an allowed video. Only MP4 and MOV files are allowed.`
+        }));
+        return;
+      }
     }
+
+    const maxSizeBytes = section === 'video' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxMB = section === 'video' ? 10 : 5;
+    if (file.size > maxSizeBytes) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [errorKey]: `File "${file.name}" exceeds the maximum allowed size of ${maxMB} MB.`
+      }));
+      return;
+    }
+
+    if (section === 'document') {
+      setIsUploadingDoc(true);
+    } else {
+      setIsUploadingVideo(true);
+    }
+
+    const fd = new FormData();
+    fd.append('files', file);
 
     try {
       const res = await fetch(`${BASE_URL}/application/upload/${appId}/${section}`, {
@@ -734,10 +757,10 @@ const ApplicationForm = () => {
       if (res.ok) {
         const data = await res.json();
         if (section === 'document') {
-          setDocumentFiles(prev => [...prev, ...data.files]);
+          setDocumentFiles(data.files || []);
           setFieldErrors(prev => ({ ...prev, documentFiles: '' }));
         } else {
-          setVideoFiles(prev => [...prev, ...data.files]);
+          setVideoFiles(data.files || []);
           setFieldErrors(prev => ({ ...prev, videoFiles: '' }));
         }
       } else {
@@ -753,6 +776,12 @@ const ApplicationForm = () => {
         ...prev,
         [errorKey]: `Error uploading ${section} file. Please check connection and try again.`
       }));
+    } finally {
+      if (section === 'document') {
+        setIsUploadingDoc(false);
+      } else {
+        setIsUploadingVideo(false);
+      }
     }
   };
 
@@ -766,8 +795,10 @@ const ApplicationForm = () => {
       if (res.ok) {
         if (section === 'document') {
           setDocumentFiles(prev => prev.filter(f => f.Id !== fileId && f.id !== fileId));
+          setFieldErrors(prev => ({ ...prev, documentFiles: '' }));
         } else {
           setVideoFiles(prev => prev.filter(f => f.Id !== fileId && f.id !== fileId));
+          setFieldErrors(prev => ({ ...prev, videoFiles: '' }));
         }
       }
     } catch (err) {
@@ -1482,9 +1513,23 @@ const ApplicationForm = () => {
                 </label>
                 {!isReadOnly && (
                   <div className="upload-container-split">
-                    <div className={`upload-dropzone ${fieldErrors.documentFiles ? 'input-error' : ''}`}>
-                      <FileText className="upload-icon-large" size={38} />
-                      <p>Drop your Document here, or <span className="browse-text">browse</span></p>
+                    <div className={`upload-dropzone ${documentFiles.length >= 1 || isUploadingDoc ? 'upload-dropzone-disabled' : ''} ${fieldErrors.documentFiles ? 'input-error' : ''}`}>
+                      {isUploadingDoc ? (
+                        <>
+                          <Loader2 className="upload-icon-large animate-spin" size={38} />
+                          <p>Uploading document, please wait...</p>
+                        </>
+                      ) : documentFiles.length >= 1 ? (
+                        <>
+                          <FileText className="upload-icon-large" size={38} />
+                          <p>1 Document uploaded. Remove the file below to upload a different one.</p>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="upload-icon-large" size={38} />
+                          <p>Drop your Document here, or <span className="browse-text">browse</span></p>
+                        </>
+                      )}
                       <input
                         type="file"
                         accept=".pdf,application/pdf"
@@ -1492,11 +1537,12 @@ const ApplicationForm = () => {
                           handleFileUpload('document', e.target.files);
                           e.target.value = '';
                         }}
-                        disabled={isReadOnly}
+                        disabled={isReadOnly || documentFiles.length >= 1 || isUploadingDoc}
                       />
                     </div>
                     <div className="upload-requirements">
                       <p className="req-title">Requirement</p>
+                      <p>• Only 1 file allowed</p>
                       <p>• Format: PDF only</p>
                       <p>• Size: Upto 5 mb</p>
                     </div>
@@ -1552,9 +1598,23 @@ const ApplicationForm = () => {
                 <label>Upload Video</label>
                 {!isReadOnly && (
                   <div className="upload-container-split">
-                    <div className={`upload-dropzone ${fieldErrors.videoFiles ? 'input-error' : ''}`}>
-                      <Video className="upload-icon-large" size={38} />
-                      <p>Drop your Video here, or <span className="browse-text">browse</span></p>
+                    <div className={`upload-dropzone ${videoFiles.length >= 1 || isUploadingVideo ? 'upload-dropzone-disabled' : ''} ${fieldErrors.videoFiles ? 'input-error' : ''}`}>
+                      {isUploadingVideo ? (
+                        <>
+                          <Loader2 className="upload-icon-large animate-spin" size={38} />
+                          <p>Uploading video, please wait...</p>
+                        </>
+                      ) : videoFiles.length >= 1 ? (
+                        <>
+                          <Video className="upload-icon-large" size={38} />
+                          <p>1 Video uploaded. Remove the file below to upload a different one.</p>
+                        </>
+                      ) : (
+                        <>
+                          <Video className="upload-icon-large" size={38} />
+                          <p>Drop your Video here, or <span className="browse-text">browse</span></p>
+                        </>
+                      )}
                       <input
                         type="file"
                         accept=".mp4,.mov,video/mp4,video/quicktime"
@@ -1562,11 +1622,12 @@ const ApplicationForm = () => {
                           handleFileUpload('video', e.target.files);
                           e.target.value = '';
                         }}
-                        disabled={isReadOnly}
+                        disabled={isReadOnly || videoFiles.length >= 1 || isUploadingVideo}
                       />
                     </div>
                     <div className="upload-requirements">
                       <p className="req-title">Requirement</p>
+                      <p>• Only 1 video allowed</p>
                       <p>• Format: mp4, mov only</p>
                       <p>• Size: Upto 10 mb</p>
                     </div>

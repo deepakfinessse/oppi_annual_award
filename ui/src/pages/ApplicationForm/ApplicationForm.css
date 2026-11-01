@@ -476,6 +476,28 @@
   background: #f0f9ff;
 }
 
+.upload-dropzone.upload-dropzone-disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  background: #f1f5f9;
+  border-style: solid;
+  border-color: #cbd5e1;
+}
+
+.upload-dropzone.upload-dropzone-disabled:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.upload-dropzone.upload-dropzone-disabled input[type="file"] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.upload-dropzone.upload-dropzone-disabled .upload-icon-large {
+  color: #94a3b8;
+}
+
 .upload-dropzone input[type="file"] {
   position: absolute;
   top: 0;
