@@ -111,7 +111,7 @@ const ApplicationForm = () => {
     organisationName: '',
     representativeName: '',
     designation: '',
-    gender: 'Male',
+    gender: currentUser?.gender || '',
     emailId: '',
     mobileNumber: '',
     briefDescription: '',
@@ -138,7 +138,12 @@ const ApplicationForm = () => {
   const [isStartingNew, setIsStartingNew] = useState(false);
   const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, submission: null, isDeleting: false });
 
-  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const loggedInUser = getUser();
+  const isAdmin =
+    currentUser?.role?.toUpperCase() === 'ADMIN' ||
+    currentUser?.role?.toUpperCase() === 'SUPER_ADMIN' ||
+    loggedInUser?.role?.toUpperCase() === 'ADMIN' ||
+    loggedInUser?.role?.toUpperCase() === 'SUPER_ADMIN';
   const isReadOnly = appStatus !== 'DRAFT' && !isAdmin;
 
   useEffect(() => {
@@ -196,7 +201,7 @@ const ApplicationForm = () => {
           organisationName: data.personal_info?.company_name || data.user?.organisation || '',
           representativeName: repName,
           designation: data.personal_info?.designation || '',
-          gender: data.user?.gender || 'Male',
+          gender: data.user?.gender || '',
           emailId: data.user?.email || '',
           mobileNumber: data.user?.mobile || '',
           briefDescription: data.personal_info?.company_brief || '',
@@ -218,7 +223,9 @@ const ApplicationForm = () => {
 
   useEffect(() => {
     const init = async () => {
-      const subs = await loadSubmissions();
+      if (!isAdmin) {
+        await loadSubmissions();
+      }
       const modeParam = searchParams.get('mode');
       const newParam = searchParams.get('new');
 
@@ -233,13 +240,17 @@ const ApplicationForm = () => {
       } else if (newParam === '1') {
         await handleStartNewNomination();
       } else {
+        if (isAdmin) {
+          navigate('/admin', { replace: true });
+          return;
+        }
         // By default, show the Figma dashboard
         setViewMode('dashboard');
       }
     };
 
     init();
-  }, [queryAppId]);
+  }, [queryAppId, isAdmin]);
 
   const handleStartNewNomination = async () => {
     setIsStartingNew(true);
@@ -255,7 +266,7 @@ const ApplicationForm = () => {
           organisationName: currentUser?.organisation || '',
           representativeName: `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim(),
           designation: '',
-          gender: currentUser?.gender || 'Male',
+          gender: currentUser?.gender || '',
           emailId: currentUser?.email || '',
           mobileNumber: currentUser?.mobile || '',
           briefDescription: '',
@@ -428,6 +439,9 @@ const ApplicationForm = () => {
     }
     if (!formData.designation?.trim()) {
       errors.designation = 'Please enter Designation.';
+    }
+    if (!formData.gender || !formData.gender.trim()) {
+      errors.gender = 'Please select Gender.';
     }
     if (!formData.emailId?.trim()) {
       errors.emailId = 'Please enter Email Id.';
@@ -779,7 +793,7 @@ const ApplicationForm = () => {
           </div>
 
           <div className="header-actions">
-            {viewMode !== 'dashboard' && (
+            {!isAdmin && viewMode !== 'dashboard' && (
               <button
                 type="button"
                 onClick={() => {
@@ -792,10 +806,12 @@ const ApplicationForm = () => {
                 <span>MY SUBMISSIONS</span>
               </button>
             )}
-            <Link to="/change-password" className="btn-header-pill btn-change-pwd">
-              {/* <Lock size={15} /> */}
-              <span>CHANGE PASSWORD</span>
-            </Link>
+            {!isAdmin && (
+              <Link to="/change-password" className="btn-header-pill btn-change-pwd">
+                {/* <Lock size={15} /> */}
+                <span>CHANGE PASSWORD</span>
+              </Link>
+            )}
             <button onClick={handleLogout} className="btn-header-pill btn-logout">
               <span>LOG OUT</span>
               <LogOut size={15} />
@@ -925,17 +941,19 @@ const ApplicationForm = () => {
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              className="btn-back-to-dashboard"
-              onClick={() => {
-                loadSubmissions();
-                setViewMode('dashboard');
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to My Submissions</span>
-            </button>
+            {!isAdmin && (
+              <button
+                type="button"
+                className="btn-back-to-dashboard"
+                onClick={() => {
+                  loadSubmissions();
+                  setViewMode('dashboard');
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to My Submissions</span>
+              </button>
+            )}
 
             {/* Page Title */}
             <div className="app-page-title-section">
@@ -943,6 +961,41 @@ const ApplicationForm = () => {
                 {viewMode === 'preview' ? '' : 'Application'}
               </h1>
             </div>
+
+            {isAdmin && queryAppId && (
+              <div style={{
+                background: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '10px',
+                padding: '12px 18px',
+                marginBottom: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                color: '#92400e',
+                fontWeight: 500
+              }}>
+                <div>
+                  <strong>Admin Mode:</strong> Editing Application #{queryAppId} &bull; Status: <strong>{appStatus}</strong>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  style={{
+                    background: '#92400e',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Exit to Admin Dashboard
+                </button>
+              </div>
+            )}
 
             {/* ============================================================ */}
             {/* PREVIEW AND SUBMIT VIEW (Exact Figma Design) */}
@@ -1132,18 +1185,20 @@ const ApplicationForm = () => {
                   <strong>Application Submitted Successfully</strong>
                   <span>Your application is locked and under review by the jury panel. No edits can be made.</span>
                 </div>
-                <button
-                  type="button"
-                  className="btn-back-to-dashboard"
-                  style={{ marginLeft: 'auto', marginBottom: 0 }}
-                  onClick={() => {
-                    loadSubmissions();
-                    setViewMode('dashboard');
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  <span>Back to My Submissions</span>
-                </button>
+                {!isAdmin && (
+                  <button
+                    type="button"
+                    className="btn-back-to-dashboard"
+                    style={{ marginLeft: 'auto', marginBottom: 0 }}
+                    onClick={() => {
+                      loadSubmissions();
+                      setViewMode('dashboard');
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back to My Submissions</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1152,40 +1207,6 @@ const ApplicationForm = () => {
           /* APPLICATION FORM VIEW (Edit / Draft Mode) */
           /* ============================================================ */
           <div className="application-card">
-            {isAdmin && queryAppId && (
-              <div style={{
-                background: '#fef3c7',
-                border: '1px solid #f59e0b',
-                borderRadius: '10px',
-                padding: '12px 18px',
-                marginBottom: '20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                color: '#92400e',
-                fontWeight: 500
-              }}>
-                <div>
-                  <strong>Admin Mode:</strong> Editing Application #{queryAppId} &bull; Status: <strong>{appStatus}</strong>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/admin')}
-                  style={{
-                    background: '#92400e',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 14px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Exit to Admin Dashboard
-                </button>
-              </div>
-            )}
             <div className="card-header">
               <h2>Fill in your details</h2>
               <p className="card-subtitle">
@@ -1329,7 +1350,7 @@ const ApplicationForm = () => {
                   <label>
                     Gender <span className="required">*</span>
                   </label>
-                  <div className="radio-options-group">
+                  <div className={`radio-options-group ${fieldErrors.gender ? 'input-error' : ''}`} style={fieldErrors.gender ? { border: '1px solid #ef4444', borderRadius: '8px', padding: '6px 12px' } : {}}>
                     <label className="radio-label">
                       <input
                         type="radio"
@@ -1366,6 +1387,12 @@ const ApplicationForm = () => {
                       <span>Others</span>
                     </label>
                   </div>
+                  {fieldErrors.gender && (
+                    <span className="field-error-msg">
+                      <AlertCircle size={14} className="field-error-icon" />
+                      {fieldErrors.gender}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1634,18 +1661,20 @@ const ApplicationForm = () => {
                     <CheckCircle size={20} />
                     <span>Your application has been submitted and is locked for review. No editing is allowed.</span>
                   </div>
-                  <button
-                    type="button"
-                    className="btn-back-to-dashboard"
-                    style={{ marginBottom: 0 }}
-                    onClick={() => {
-                      loadSubmissions();
-                      setViewMode('dashboard');
-                    }}
-                  >
-                    <ArrowLeft size={16} />
-                    <span>Back to My Submissions</span>
-                  </button>
+                  {!isAdmin && (
+                    <button
+                      type="button"
+                      className="btn-back-to-dashboard"
+                      style={{ marginBottom: 0 }}
+                      onClick={() => {
+                        loadSubmissions();
+                        setViewMode('dashboard');
+                      }}
+                    >
+                      <ArrowLeft size={16} />
+                      <span>Back to My Submissions</span>
+                    </button>
+                  )}
                 </div>
               )}
             </form>
@@ -1681,11 +1710,15 @@ const ApplicationForm = () => {
                 className="btn-modal-view-submissions"
                 onClick={() => {
                   setShowSubmitModal(false);
-                  loadSubmissions();
-                  setViewMode('dashboard');
+                  if (isAdmin) {
+                    navigate('/admin');
+                  } else {
+                    loadSubmissions();
+                    setViewMode('dashboard');
+                  }
                 }}
               >
-                <span>View My Submissions</span>
+                <span>{isAdmin ? 'Back to Admin Portal' : 'View My Submissions'}</span>
                 <ArrowRight size={16} />
               </button>
             </div>

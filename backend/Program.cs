@@ -1108,7 +1108,7 @@ api.MapGet("/application/{appId}", async (int appId, HttpContext ctx, Innovation
 
     var gender = applicant?.Gender;
     if (string.IsNullOrWhiteSpace(gender))
-        gender = targetUser?.Gender ?? "Male";
+        gender = targetUser?.Gender;
 
     var designation = pInfo?.Designation;
 
@@ -1125,7 +1125,7 @@ api.MapGet("/application/{appId}", async (int appId, HttpContext ctx, Innovation
             last_name = targetUser?.LastName ?? "",
             email = email ?? "",
             mobile = mobile ?? "",
-            gender = gender ?? "Male",
+            gender = gender ?? "",
             organisation = company ?? ""
         },
         personal_info = new {
@@ -1171,18 +1171,25 @@ api.MapPost("/application/save/{appId}", async (int appId, HttpContext ctx, Appl
     }
 
     var applicant = await db.ApplicantDetails.FirstOrDefaultAsync(x => x.ApplicationId == appId);
-    if (applicant != null)
+    if (applicant == null)
     {
-        if (!string.IsNullOrWhiteSpace(dto.RepresentativeName))
-        {
-            var parts = dto.RepresentativeName.Trim().Split(' ', 2);
-            applicant.FirstName = parts[0];
-            applicant.LastName = parts.Length > 1 ? parts[1] : "";
-        }
-        if (!string.IsNullOrWhiteSpace(dto.EmailId)) applicant.Email = dto.EmailId;
-        if (!string.IsNullOrWhiteSpace(dto.MobileNumber)) applicant.Mobile = dto.MobileNumber;
-        if (!string.IsNullOrWhiteSpace(dto.OrganisationName)) applicant.InstituteName = dto.OrganisationName;
-        if (!string.IsNullOrWhiteSpace(dto.Gender)) applicant.Gender = dto.Gender;
+        applicant = new ApplicantDetail { ApplicationId = appId };
+        db.ApplicantDetails.Add(applicant);
+    }
+    if (!string.IsNullOrWhiteSpace(dto.RepresentativeName))
+    {
+        var parts = dto.RepresentativeName.Trim().Split(' ', 2);
+        applicant.FirstName = parts[0];
+        applicant.LastName = parts.Length > 1 ? parts[1] : "";
+    }
+    if (!string.IsNullOrWhiteSpace(dto.EmailId)) applicant.Email = dto.EmailId;
+    if (!string.IsNullOrWhiteSpace(dto.MobileNumber)) applicant.Mobile = dto.MobileNumber;
+    if (!string.IsNullOrWhiteSpace(dto.OrganisationName)) applicant.InstituteName = dto.OrganisationName;
+    if (!string.IsNullOrWhiteSpace(dto.Gender))
+    {
+        applicant.Gender = dto.Gender;
+        var appUser = await db.Users.FindAsync(a.UserId);
+        if (appUser != null) appUser.Gender = dto.Gender;
     }
 
     await db.SaveChangesAsync();
