@@ -29,11 +29,17 @@ export const generatePanelChairExcel = async ({ juries = [], applications = [], 
       if (Array.isArray(publicMembers)) {
         activeJuries = publicMembers
           .filter(m => m && (m.type || m.Type || '').toUpperCase() === 'JURY')
-          .map(m => ({
-            id: m.id || m.Id,
-            name: m.name || m.Name || 'Jury Member',
-            email: m.email || m.Email || ''
-          }));
+          .map(m => {
+            const uId = m.user_id || m.userId || m.id || m.Id;
+            return {
+              id: uId,
+              userId: m.user_id || m.userId || null,
+              userIds: (m.user_id || m.userId) ? [Number(m.user_id || m.userId)] : [Number(m.id || m.Id)],
+              panelMemberId: m.id || m.Id,
+              name: m.name || m.Name || 'Jury Member',
+              email: m.email || m.Email || ''
+            };
+          });
       }
     } catch (err) {
       console.error('Error fetching jury panel members from DB:', err);
@@ -58,11 +64,14 @@ export const generatePanelChairExcel = async ({ juries = [], applications = [], 
 
       if (!jury) return false;
 
-      const juryId = typeof jury === 'object' ? jury.id : jury;
-      if (Number(rJuryId) === Number(juryId)) return true;
-
-      if (typeof jury === 'object' && Array.isArray(jury.userIds)) {
-        if (jury.userIds.some(id => Number(id) === Number(rJuryId))) return true;
+      if (typeof jury === 'object') {
+        if (Array.isArray(jury.userIds) && jury.userIds.length > 0) {
+          if (jury.userIds.map(Number).includes(Number(rJuryId))) return true;
+        }
+        if (jury.userId && Number(rJuryId) === Number(jury.userId)) return true;
+        if (jury.id && Number(rJuryId) === Number(jury.id)) return true;
+      } else {
+        if (Number(rJuryId) === Number(jury)) return true;
       }
 
       return false;

@@ -250,6 +250,7 @@ public class InnovationDbContext : DbContext
         mb.Entity<PanelMember>(e => {
             e.ToTable("panel_members");
             e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id");
             e.Property(x => x.Name).HasColumnName("name").HasMaxLength(150);
             e.Property(x => x.Role).HasColumnName("role").HasColumnType("text");
             e.Property(x => x.Type).HasColumnName("type").HasMaxLength(30); // VALIDATOR, JURY, PANEL_CHAIR

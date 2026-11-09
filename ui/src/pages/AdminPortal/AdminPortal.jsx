@@ -446,14 +446,17 @@ const AdminPortal = () => {
       if (cat && isCategoryMatch(cat, juryCategoryFilter)) return true;
 
       const ej = evalReport?.juries?.find(j =>
-        (j.id && Number(j.id) === Number(m.id)) ||
-        (j.email && m.email && j.email.toLowerCase() === m.email.toLowerCase()) ||
-        (j.name && m.name && j.name.toLowerCase() === m.name.toLowerCase())
+        (j.panelMemberId && Number(j.panelMemberId) === Number(m.id)) ||
+        (j.userId && (m.user_id || m.userId) && Number(j.userId) === Number(m.user_id || m.userId)) ||
+        (j.email && m.email && j.email.trim().toLowerCase() === m.email.trim().toLowerCase()) ||
+        (j.name && m.name && j.name.trim().toLowerCase() === m.name.trim().toLowerCase())
       );
       if (ej?.category && isCategoryMatch(ej.category, juryCategoryFilter)) return true;
 
       if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
-        const juryIdList = [Number(m.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+        const juryIdList = ej?.userIds && ej.userIds.length > 0
+          ? ej.userIds.map(Number)
+          : (ej?.userId ? [Number(ej.userId)] : (ej?.id ? [Number(ej.id)] : ((m.user_id || m.userId) ? [Number(m.user_id || m.userId)] : [])));
         const reviewedInCat = evalReport.reviews.some(r => {
           if (!juryIdList.includes(Number(r.jury_id))) return false;
           const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
@@ -474,11 +477,14 @@ const AdminPortal = () => {
     const totalCount = categoryApps.length;
 
     const ej = evalReport?.juries?.find(j => 
-      (j.id && Number(j.id) === Number(member.id)) ||
-      (j.email && member.email && j.email.toLowerCase() === member.email.toLowerCase()) ||
-      (j.name && member.name && j.name.toLowerCase() === member.name.toLowerCase())
+      (j.panelMemberId && Number(j.panelMemberId) === Number(member.id)) ||
+      (j.userId && (member.user_id || member.userId) && Number(j.userId) === Number(member.user_id || member.userId)) ||
+      (j.email && member.email && j.email.trim().toLowerCase() === member.email.trim().toLowerCase()) ||
+      (j.name && member.name && j.name.trim().toLowerCase() === member.name.trim().toLowerCase())
     );
-    const juryIdList = [Number(member.id), ...(ej?.userIds ? ej.userIds.map(Number) : [])];
+    const juryIdList = ej?.userIds && ej.userIds.length > 0
+      ? ej.userIds.map(Number)
+      : (ej?.userId ? [Number(ej.userId)] : (ej?.id ? [Number(ej.id)] : ((member.user_id || member.userId) ? [Number(member.user_id || member.userId)] : [])));
 
     let reviewedCount = 0;
     if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
@@ -494,7 +500,7 @@ const AdminPortal = () => {
         a.jury_reviews?.some(r => 
           (r.jury_email && member.email && r.jury_email.toLowerCase() === member.email.toLowerCase()) || 
           (r.jury_name && member.name && r.jury_name.toLowerCase() === member.name.toLowerCase()) ||
-          (r.jury_id && Number(r.jury_id) === Number(member.id))
+          (juryIdList.length > 0 && juryIdList.includes(Number(r.jury_id)))
         )
       ).length;
     }
@@ -558,16 +564,27 @@ const AdminPortal = () => {
   const paginatedUsers = filteredUsers.slice((userPage - 1) * userPageSize, userPage * userPageSize);
 
   // Final Evaluation and Ranking Juries and List
-  const evalJuries = (evalReport?.juries && evalReport.juries.length > 0)
-    ? evalReport.juries
-    : (panelMembers.filter(m => m.type === 'JURY').length > 0
-        ? panelMembers.filter(m => m.type === 'JURY').map(m => ({ id: m.id, name: m.name, email: m.email }))
-        : [
-            { id: 1, name: 'Aman Gupta' },
-            { id: 2, name: 'Dilip Yadav' },
-            { id: 3, name: 'Srikanth Srinivas' },
-            { id: 4, name: 'Shweta Roychowdhury' }
-          ]);
+  const evalJuries = useMemo(() => {
+    if (evalReport?.juries && evalReport.juries.length > 0) {
+      return evalReport.juries;
+    }
+    return panelMembers.filter(m => (m.type || m.Type || '').toUpperCase() === 'JURY').map(m => {
+      const matchingUser = users.find(u => 
+        (u.email && m.email && u.email.trim().toLowerCase() === m.email.trim().toLowerCase()) ||
+        (`${u.first_name || u.firstName || ''} ${u.last_name || u.lastName || ''}`.trim().toLowerCase() === (m.name || '').trim().toLowerCase())
+      );
+      const uId = matchingUser?.id || m.user_id || m.id;
+      return {
+        id: uId,
+        userId: matchingUser?.id || null,
+        userIds: matchingUser ? [matchingUser.id] : [uId],
+        panelMemberId: m.id,
+        name: m.name,
+        email: m.email,
+        category: m.category
+      };
+    });
+  }, [evalReport, panelMembers, users]);
 
   const candidateApps = apps.filter(a => a.status !== 'DRAFT');
 
@@ -577,10 +594,14 @@ const AdminPortal = () => {
 
     evalJuries.forEach(j => {
       let revScore = null;
+      const targetUserIds = j.userIds && j.userIds.length > 0 
+        ? j.userIds.map(Number) 
+        : (j.userId ? [Number(j.userId)] : [Number(j.id)]);
+
       if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
         const found = evalReport.reviews.find(r => 
           Number(r.application_id) === Number(app.id) &&
-          (Number(r.jury_id) === Number(j.id) || (j.userIds && j.userIds.includes(Number(r.jury_id))))
+          targetUserIds.includes(Number(r.jury_id))
         );
         if (found && typeof found.weighted_score === 'number') {
           revScore = found.weighted_score;
@@ -589,8 +610,9 @@ const AdminPortal = () => {
 
       if (revScore === null && app.jury_reviews && Array.isArray(app.jury_reviews)) {
         const found = app.jury_reviews.find(r => 
-          (r.jury_id && Number(r.jury_id) === Number(j.id)) ||
-          (r.jury_name && r.jury_name.toLowerCase() === j.name.toLowerCase())
+          targetUserIds.includes(Number(r.jury_id)) ||
+          (r.jury_email && j.email && r.jury_email.toLowerCase() === j.email.toLowerCase()) ||
+          (r.jury_name && j.name && r.jury_name.toLowerCase() === j.name.toLowerCase())
         );
         if (found && typeof found.weightedScore === 'number') {
           revScore = found.weightedScore;

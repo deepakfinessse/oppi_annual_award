@@ -237,6 +237,7 @@ public class Patent
 public class PanelMember
 {
     public int Id { get; set; }
+    public int? UserId { get; set; }
     public string Name { get; set; } = null!;
     public string Role { get; set; } = null!; // description/affiliation
     public string Type { get; set; } = null!; // VALIDATOR, JURY, PANEL_CHAIR

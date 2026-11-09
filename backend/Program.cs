@@ -144,6 +144,7 @@ using (var scope = app.Services.CreateScope())
         ("jury_reviews", "comments", "ALTER TABLE `jury_reviews` ADD COLUMN `comments` TEXT NULL"),
         ("panel_members", "sort_order", "ALTER TABLE `panel_members` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0"),
         ("panel_members", "category", "ALTER TABLE `panel_members` ADD COLUMN `category` VARCHAR(100) NULL"),
+        ("panel_members", "user_id", "ALTER TABLE `panel_members` ADD COLUMN `user_id` INT NULL"),
         ("jury_reviews", "is_draft", "ALTER TABLE `jury_reviews` ADD COLUMN `is_draft` TINYINT(1) NOT NULL DEFAULT 0"),
         ("past_winners", "color", "ALTER TABLE `past_winners` ADD COLUMN `color` VARCHAR(50) NULL")
     };
@@ -423,6 +424,7 @@ using (var scope = app.Services.CreateScope())
                 Type = item.Type,
                 Category = item.Category,
                 Email = cleanEmail,
+                UserId = u?.Id,
                 Password = null,
                 SortOrder = item.SortOrder,
                 ImagePath = item.ImagePath,
@@ -437,12 +439,26 @@ using (var scope = app.Services.CreateScope())
             pm.Type = item.Type;
             pm.Category = item.Category;
             pm.Email = cleanEmail;
+            if (u != null) pm.UserId = u.Id;
             pm.Password = null;
             pm.SortOrder = item.SortOrder;
             if (!string.IsNullOrEmpty(item.ImagePath)) pm.ImagePath = item.ImagePath;
         }
     }
 
+    await db2.SaveChangesAsync();
+
+    // Ensure all panel members have UserId linked
+    var allExistingUsers = await db2.Users.ToListAsync();
+    var allExistingPms = await db2.PanelMembers.ToListAsync();
+    foreach (var p in allExistingPms)
+    {
+        if (!p.UserId.HasValue && !string.IsNullOrEmpty(p.Email))
+        {
+            var matchedU = allExistingUsers.FirstOrDefault(ux => ux.Email.Equals(p.Email.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (matchedU != null) p.UserId = matchedU.Id;
+        }
+    }
     await db2.SaveChangesAsync();
     Log.Information("Panel members & User accounts synchronization complete");
 
@@ -820,6 +836,7 @@ app.MapGet("/public/panel-members", async (InnovationDbContext db) =>
         .OrderBy(m => m.SortOrder)
         .Select(m => new {
             m.Id,
+            user_id = m.UserId ?? db.Users.Where(u => u.Email == m.Email).Select(u => (int?)u.Id).FirstOrDefault(),
             m.Name,
             m.Role,
             m.Type,
@@ -1418,7 +1435,8 @@ api.MapGet("/application/review/{id}", async (int id, HttpContext ctx, Innovatio
             .Select(jr => new {
                 jr.Id,
                 jr.JuryId,
-                jury_name = db.Users.Where(u => u.Id == jr.JuryId).Select(u => u.FirstName + " " + u.LastName).FirstOrDefault() ?? "Jury",
+                jury_name = db.Users.Where(u => u.Id == jr.JuryId).Select(u => (u.FirstName + " " + (u.LastName ?? "")).Trim()).FirstOrDefault() ?? "Jury",
+                jury_email = db.Users.Where(u => u.Id == jr.JuryId).Select(u => u.Email).FirstOrDefault() ?? "",
                 jr.InnovationIpScore,
                 jr.TeamStrengthScore,
                 jr.BusinessPlanScore,
@@ -1660,19 +1678,28 @@ api.MapGet("/admin/panel-chair-report", async (HttpContext ctx, InnovationDbCont
 
         foreach (var pm in panelJuries)
         {
+            var cleanPmEmail = (pm.Email ?? "").Trim();
+            var pmName = (pm.Name ?? "").Trim();
+
             var matchingUsers = allUsers.Where(u =>
-                (!string.IsNullOrEmpty(u.Email) && !string.IsNullOrEmpty(pm.Email) && u.Email.Trim().Equals(pm.Email.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(u.FirstName) && !string.IsNullOrEmpty(pm.Name) && u.FirstName.Trim().Equals(pm.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+                (!string.IsNullOrEmpty(cleanPmEmail) && !string.IsNullOrEmpty(u.Email) && u.Email.Trim().Equals(cleanPmEmail, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(pmName) && (
+                    ($"{u.FirstName} {u.LastName}".Trim().Equals(pmName, StringComparison.OrdinalIgnoreCase)) ||
+                    ((u.FirstName ?? "").Trim().Equals(pmName, StringComparison.OrdinalIgnoreCase))
+                ))
             ).ToList();
 
-            var ids = matchingUsers.Select(u => u.Id).ToList();
-            if (!ids.Contains(pm.Id)) ids.Add(pm.Id);
+            var ids = matchingUsers.Select(u => u.Id).Distinct().ToList();
+            if (pm.UserId.HasValue && !ids.Contains(pm.UserId.Value)) ids.Add(pm.UserId.Value);
 
-            int primaryId = matchingUsers.FirstOrDefault()?.Id ?? pm.Id;
+            int primaryId = ids.FirstOrDefault();
+            if (primaryId == 0) primaryId = pm.Id;
 
             juriesList.Add(new {
                 id = primaryId,
-                userIds = ids,
+                userId = primaryId,
+                userIds = ids.Count > 0 ? ids : new List<int> { primaryId },
+                panelMemberId = pm.Id,
                 name = pm.Name,
                 email = pm.Email ?? "",
                 category = pm.Category ?? ""
@@ -1778,25 +1805,33 @@ api.MapPost("/admin/panel-members", async (PanelMemberDto dto, InnovationDbConte
     db.PanelMembers.Add(member);
 
     // Sync with users table
+    var nameParts = dto.Name.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+    var firstName = nameParts.Length > 0 ? nameParts[0] : dto.Name;
+    var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
     var matchingUser = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email.Trim());
     if (matchingUser == null)
     {
         var newUser = new User
         {
-            FirstName = dto.Name,
-            LastName = "",
+            FirstName = firstName,
+            LastName = lastName,
             Email = dto.Email.Trim(),
             Role = dto.Type.ToUpper(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim()),
             CreatedAt = DateTime.UtcNow
         };
         db.Users.Add(newUser);
+        await db.SaveChangesAsync();
+        member.UserId = newUser.Id;
     }
     else
     {
-        matchingUser.FirstName = dto.Name;
+        matchingUser.FirstName = firstName;
+        matchingUser.LastName = lastName;
         matchingUser.Role = dto.Type.ToUpper();
         matchingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim());
+        member.UserId = matchingUser.Id;
     }
 
     await db.SaveChangesAsync();
@@ -1845,28 +1880,36 @@ api.MapPut("/admin/panel-members/{id}", async (int id, PanelMemberDto dto, Innov
         matchingUser = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email.Trim());
     }
 
+    var namePartsUpdate = dto.Name.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+    var firstNameUpdate = namePartsUpdate.Length > 0 ? namePartsUpdate[0] : dto.Name;
+    var lastNameUpdate = namePartsUpdate.Length > 1 ? namePartsUpdate[1] : "";
+
     if (matchingUser == null)
     {
         var newUser = new User
         {
-            FirstName = dto.Name,
-            LastName = "",
+            FirstName = firstNameUpdate,
+            LastName = lastNameUpdate,
             Email = dto.Email.Trim(),
             Role = dto.Type.ToUpper(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(string.IsNullOrWhiteSpace(dto.Password) ? "Password123!" : dto.Password.Trim()),
             CreatedAt = DateTime.UtcNow
         };
         db.Users.Add(newUser);
+        await db.SaveChangesAsync();
+        member.UserId = newUser.Id;
     }
     else
     {
-        matchingUser.FirstName = dto.Name;
+        matchingUser.FirstName = firstNameUpdate;
+        matchingUser.LastName = lastNameUpdate;
         matchingUser.Email = dto.Email.Trim();
         matchingUser.Role = dto.Type.ToUpper();
         if (!string.IsNullOrWhiteSpace(dto.Password))
         {
             matchingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim());
         }
+        member.UserId = matchingUser.Id;
     }
 
     await db.SaveChangesAsync();
