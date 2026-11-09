@@ -1045,7 +1045,7 @@ const ApplicationForm = () => {
                     : 'This is just the preview of your application. Check for any errors as you can not make changes after “Submit”'}
                 </p>
               </div>
-              <button
+              {/* <button
                 type="button"
                 className="btn-download-zip"
                 onClick={handleDownloadZip}
@@ -1053,7 +1053,7 @@ const ApplicationForm = () => {
               >
                 <Download size={16} />
                 <span>{isDownloadingZip ? 'DOWNLOADING...' : 'DOWNLOAD APPLICATION FORM(ZIP)'}</span>
-              </button>
+              </button> */}
             </div>
 
             {message.text && (
