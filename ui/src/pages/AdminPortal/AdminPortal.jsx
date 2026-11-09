@@ -2273,8 +2273,8 @@ const AdminPortal = () => {
                     <label>Panel Role Type <span className="req">*</span></label>
                     <select value={panelType} onChange={(e) => setPanelType(e.target.value)}>
                       <option value="JURY">Jury Member</option>
-                      <option value="VALIDATOR">Validator</option>
-                      <option value="PANEL_CHAIR">Panel Chair</option>
+                      {/* <option value="VALIDATOR">Validator</option>
+                      <option value="PANEL_CHAIR">Panel Chair</option> */}
                     </select>
                   </div>
                 </div>
@@ -2638,7 +2638,7 @@ const AdminPortal = () => {
         <div className="admin-modal-overlay">
           <div className="admin-modal-container compact-modal confirmation-modal">
             <div className="admin-modal-header" style={{ borderBottom: '1px solid #fee2e2' }}>
-              <h2 style={{ color: '#dc2626' }}>Confirm Deletion</h2>
+              <h2 style={{ color: 'white' }}>Confirm Deletion</h2>
               <button
                 className="admin-modal-close-btn"
                 onClick={() => setDeleteTarget(null)}
