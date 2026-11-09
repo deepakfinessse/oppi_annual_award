@@ -46,7 +46,7 @@ import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
 import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
-import { AWARD_CATEGORIES } from '../../constants/categories';
+import { AWARD_CATEGORIES, isCategoryMatch } from '../../constants/categories';
 import { ORGANISATIONS, isOrgMatch } from '../../constants/organisations';
 import './AdminPortal.css';
 
@@ -80,54 +80,7 @@ const formatDateTime = (dateStr) => {
   }
 };
 
-const cleanCat = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-const isCategoryMatch = (catA, catB) => {
-  if (!catA || !catB) return false;
-  if (catA === catB) return true;
-  const a = cleanCat(catA);
-  const b = cleanCat(catB);
-  if (a === b) return true;
-
-  // Marketing: distinguish Existing vs New
-  if (a.includes('marketing') && b.includes('marketing')) {
-    const aExisting = a.includes('existing');
-    const bExisting = b.includes('existing');
-    const aNew = a.includes('new');
-    const bNew = b.includes('new');
-    if (aExisting && bExisting) return true;
-    if (aNew && bNew) return true;
-    if (!aExisting && !aNew && (bExisting || bNew)) return true;
-    if (!bExisting && !bNew && (aExisting || aNew)) return true;
-    return false;
-  }
-
-  // HR: distinguish HR Excellence vs D&I
-  const aDni = a.includes('diversity') || a.includes('di') || a.includes('inclusion');
-  const bDni = b.includes('diversity') || b.includes('di') || b.includes('inclusion');
-  if (aDni || bDni) return aDni && bDni;
-
-  const aHr = a.includes('hrexcellence') || a.includes('hr');
-  const bHr = b.includes('hrexcellence') || b.includes('hr');
-  if (aHr && bHr && !aDni && !bDni) return true;
-
-  // Healthcare Communications
-  if (a.includes('communication') && b.includes('communication')) return true;
-
-  // Medical Excellence
-  if (a.includes('medical') && b.includes('medical')) return true;
-
-  // Sales Force Excellence
-  if (a.includes('sales') && b.includes('sales')) return true;
-
-  // Sustainability
-  if (a.includes('sustainab') && b.includes('sustainab')) return true;
-
-  // Patient Centricity
-  if ((a.includes('patient') || a.includes('shahani')) && (b.includes('patient') || b.includes('shahani'))) return true;
-
-  return a.includes(b) || b.includes(a);
-};
 
 const AdminPortal = () => {
   const navigate = useNavigate();
@@ -1222,7 +1175,7 @@ const AdminPortal = () => {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
       return path;
     }
-    if (path.includes('winner') || type === 'WINNER') return ceremonyPhoto;
+    // Note: do NOT return ceremonyPhoto for winner paths — uploaded images should display
     if (path.includes('Prabhat') || path.includes('validator.png')) return prabhatImg;
     if (path.includes('Welling') || path.includes('jury1.png')) return wellingImg;
     if (path.includes('Shekhar') || path.includes('jury2.png')) return shekharImg;
