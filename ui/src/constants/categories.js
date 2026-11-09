@@ -10,55 +10,63 @@ export const AWARD_CATEGORIES = [
   'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
 ];
 
-export const cleanCat = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+export const normalizeCategoryKey = (cat) => {
+  if (!cat) return '';
+  const s = String(cat).trim().toLowerCase();
+  if (s === 'all' || s === 'all categories') return 'all';
+
+  if (s.includes('patient') || s.includes('shahani')) return 'patient_centricity';
+  if (s.includes('sustainab')) return 'sustainability';
+  if (s.includes('communication')) return 'communications';
+  if (s.includes('medical')) return 'medical';
+  if (s.includes('sales')) return 'sales_force';
+
+  // D&I: check diversity, inclusion, d&i, dni, or word di
+  if (s.includes('diversity') || s.includes('inclusion') || s.includes('d&i') || s.includes('dni') || /\bdi\b/.test(s)) {
+    return 'dni';
+  }
+
+  // HR Excellence
+  if (s.includes('hr excellence') || (s.includes('hr') && s.includes('excellence')) || (s.includes('hr award') && !s.includes('d&i') && !s.includes('di'))) {
+    return 'hr_excellence';
+  }
+
+  // Marketing: existing, new, or both
+  if (s.includes('marketing') || s.includes('nanji')) {
+    const hasExisting = s.includes('existing');
+    const hasNew = s.includes('new');
+    if (hasExisting && hasNew) return 'marketing_all';
+    if (hasExisting) return 'marketing_existing';
+    if (hasNew) return 'marketing_new';
+    return 'marketing_all';
+  }
+
+  return '';
+};
 
 export const isCategoryMatch = (catA, catB) => {
   if (!catA || !catB) return false;
   if (catA === catB) return true;
+
   const aRaw = String(catA).trim().toLowerCase();
   const bRaw = String(catB).trim().toLowerCase();
   if (aRaw === 'all' || aRaw === 'all categories' || bRaw === 'all' || bRaw === 'all categories') return true;
 
-  const a = cleanCat(catA);
-  const b = cleanCat(catB);
-  if (a === b) return true;
+  const keyA = normalizeCategoryKey(catA);
+  const keyB = normalizeCategoryKey(catB);
 
-  // Marketing: distinguish Existing vs New
-  if (a.includes('marketing') && b.includes('marketing')) {
-    const aExisting = a.includes('existing');
-    const bExisting = b.includes('existing');
-    const aNew = a.includes('new');
-    const bNew = b.includes('new');
-    if (aExisting && bExisting) return true;
-    if (aNew && bNew) return true;
-    if (!aExisting && !aNew && (bExisting || bNew)) return true;
-    if (!bExisting && !bNew && (aExisting || aNew)) return true;
-    return false;
+  if (!keyA || !keyB) {
+    const cleanA = aRaw.replace(/[^a-z0-9]/g, '');
+    const cleanB = bRaw.replace(/[^a-z0-9]/g, '');
+    return cleanA === cleanB;
   }
 
-  // HR: distinguish HR Excellence vs D&I
-  const aDni = a.includes('diversity') || a.includes('di') || a.includes('inclusion');
-  const bDni = b.includes('diversity') || b.includes('di') || b.includes('inclusion');
-  if (aDni || bDni) return aDni && bDni;
+  if (keyA === keyB) return true;
 
-  const aHr = a.includes('hrexcellence') || a.includes('hr');
-  const bHr = b.includes('hrexcellence') || b.includes('hr');
-  if (aHr && bHr && !aDni && !bDni) return true;
+  if ((keyA === 'marketing_all' && (keyB === 'marketing_existing' || keyB === 'marketing_new')) ||
+      (keyB === 'marketing_all' && (keyA === 'marketing_existing' || keyA === 'marketing_new'))) {
+    return true;
+  }
 
-  // Healthcare Communications
-  if (a.includes('communication') && b.includes('communication')) return true;
-
-  // Medical Excellence
-  if (a.includes('medical') && b.includes('medical')) return true;
-
-  // Sales Force Excellence
-  if (a.includes('sales') && b.includes('sales')) return true;
-
-  // Sustainability
-  if (a.includes('sustainab') && b.includes('sustainab')) return true;
-
-  // Patient Centricity
-  if ((a.includes('patient') || a.includes('shahani')) && (b.includes('patient') || b.includes('shahani'))) return true;
-
-  return a.includes(b) || b.includes(a);
+  return false;
 };
