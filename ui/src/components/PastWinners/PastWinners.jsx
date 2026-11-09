@@ -97,7 +97,7 @@ const PastWinners = () => {
   };
 
   const getWinnerImage = (path) => {
-    if (!path || (typeof path === 'string' && (path.includes('winner') || !path.trim()))) {
+    if (!path || (typeof path === 'string' && !path.trim())) {
       return ceremonyPhoto;
     }
     if (typeof path !== 'string') return path;

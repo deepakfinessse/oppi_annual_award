@@ -1175,7 +1175,7 @@ const AdminPortal = () => {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
       return path;
     }
-    if (path.includes('winner') || type === 'WINNER') return ceremonyPhoto;
+    // Note: do NOT return ceremonyPhoto for winner paths — uploaded images should display
     if (path.includes('Prabhat') || path.includes('validator.png')) return prabhatImg;
     if (path.includes('Welling') || path.includes('jury1.png')) return wellingImg;
     if (path.includes('Shekhar') || path.includes('jury2.png')) return shekharImg;
