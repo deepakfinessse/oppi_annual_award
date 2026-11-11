@@ -80,6 +80,41 @@ const formatDateTime = (dateStr) => {
   }
 };
 
+export const getAppStatusPill = (status) => {
+  const s = (status || '').toUpperCase().trim();
+  if (!s || s === 'DRAFT') {
+    return { label: 'Draft', className: 'pill-draft' };
+  }
+  if (s === 'SUBMITTED') {
+    return { label: 'Submitted', className: 'pill-submitted' };
+  }
+  if (s === 'UNDER_JURY_REVIEW') {
+    return { label: 'Under Jury Review', className: 'pill-under-review' };
+  }
+  if (s === 'VALIDATOR_APPROVED') {
+    return { label: 'Validator Approved', className: 'pill-reviewed' };
+  }
+  if (s === 'VALIDATOR_REJECTED') {
+    return { label: 'Validator Rejected', className: 'pill-rejected' };
+  }
+  if (s === 'JURY_APPROVED') {
+    return { label: 'Jury Approved', className: 'pill-reviewed' };
+  }
+  if (s === 'JURY_REJECTED') {
+    return { label: 'Jury Rejected', className: 'pill-rejected' };
+  }
+  if (s === 'PANEL_APPROVED') {
+    return { label: 'Panel Approved', className: 'pill-reviewed' };
+  }
+  if (s === 'PANEL_REJECTED') {
+    return { label: 'Panel Rejected', className: 'pill-rejected' };
+  }
+  return {
+    label: s.replace(/_/g, ' '),
+    className: 'pill-submitted'
+  };
+};
+
 
 
 const AdminPortal = () => {
@@ -378,8 +413,9 @@ const AdminPortal = () => {
     // Status filter
     if (appStatusFilter === 'ALL') return true;
     if (appStatusFilter === 'DRAFT') return app.status === 'DRAFT';
-    if (appStatusFilter === 'SUBMITTED') return app.status === 'SUBMITTED' || app.status !== 'DRAFT';
-    if (appStatusFilter === 'JURY') return app.status?.startsWith('JURY') || app.status === 'UNDER_JURY_REVIEW';
+    if (appStatusFilter === 'SUBMITTED') return app.status === 'SUBMITTED';
+    if (appStatusFilter === 'UNDER_JURY_REVIEW') return app.status === 'UNDER_JURY_REVIEW';
+    if (appStatusFilter === 'JURY') return app.status === 'JURY_APPROVED' || app.status?.startsWith('JURY');
     if (appStatusFilter === 'PANEL_CHAIR') return app.status?.startsWith('PANEL');
     if (appStatusFilter === 'REJECTED') return app.status?.endsWith('_REJECTED') || ['VALIDATOR_REJECTED', 'JURY_REJECTED', 'PANEL_REJECTED'].includes(app.status);
     return true;
@@ -722,6 +758,8 @@ const AdminPortal = () => {
         juryScore = 'Rejected';
       }
 
+      const statusInfo = getAppStatusPill(app.status);
+
       return [
         formatDate(app.submittedAt || app.submitted_at),
         `#${app.id}`,
@@ -729,7 +767,7 @@ const AdminPortal = () => {
         app.company || app.institute_name || '',
         app.category || '',
         app.applicant_email || app.user_email || '',
-        app.status.replace('_', ' '),
+        statusInfo.label,
         juryScore
       ];
     });
@@ -1489,18 +1527,21 @@ const AdminPortal = () => {
                   >
                     <span>
                       {appStatusFilter === 'SUBMITTED' ? 'Submitted' :
+                       appStatusFilter === 'UNDER_JURY_REVIEW' ? 'Under Jury Review' :
                        appStatusFilter === 'DRAFT' ? 'Draft' :
-                       appStatusFilter === 'JURY' ? 'Jury' : 'FILTER'}
+                       appStatusFilter === 'JURY' ? 'Jury Approved' :
+                       appStatusFilter === 'REJECTED' ? 'Rejected' : 'STATUS'}
                     </span>
                     <ChevronDown size={14} />
                   </button>
                   {showAppStatusDropdown && (
-                    <div className="filter-dropdown-menu" style={{ minWidth: '160px' }}>
-                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('ALL'); setAppPage(1); setShowAppStatusDropdown(false); }}>All Status</div>
-                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('SUBMITTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Submitted</div>
-                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('DRAFT'); setAppPage(1); setShowAppStatusDropdown(false); }}>Draft</div>
-                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('JURY'); setAppPage(1); setShowAppStatusDropdown(false); }}>Jury Reviewed</div>
-                      <div className="filter-menu-item" onClick={() => { setAppStatusFilter('REJECTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Rejected</div>
+                    <div className="filter-dropdown-menu" style={{ minWidth: '180px' }}>
+                      <div className={`filter-menu-item ${appStatusFilter === 'ALL' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('ALL'); setAppPage(1); setShowAppStatusDropdown(false); }}>All Status</div>
+                      <div className={`filter-menu-item ${appStatusFilter === 'SUBMITTED' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('SUBMITTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Submitted</div>
+                      <div className={`filter-menu-item ${appStatusFilter === 'UNDER_JURY_REVIEW' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('UNDER_JURY_REVIEW'); setAppPage(1); setShowAppStatusDropdown(false); }}>Under Jury Review</div>
+                      <div className={`filter-menu-item ${appStatusFilter === 'DRAFT' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('DRAFT'); setAppPage(1); setShowAppStatusDropdown(false); }}>Draft</div>
+                      <div className={`filter-menu-item ${appStatusFilter === 'JURY' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('JURY'); setAppPage(1); setShowAppStatusDropdown(false); }}>Jury Approved</div>
+                      <div className={`filter-menu-item ${appStatusFilter === 'REJECTED' ? 'active' : ''}`} onClick={() => { setAppStatusFilter('REJECTED'); setAppPage(1); setShowAppStatusDropdown(false); }}>Rejected</div>
                     </div>
                   )}
                 </div>
@@ -1556,8 +1597,8 @@ const AdminPortal = () => {
                     </tr>
                   ) : (
                     paginatedApps.map((app, idx) => {
-                      const isDraft = app.status === 'DRAFT';
                       const displayId = String(app.id || idx + 1).padStart(2, '0');
+                      const statusInfo = getAppStatusPill(app.status);
 
                       return (
                         <tr key={app.id}>
@@ -1567,8 +1608,8 @@ const AdminPortal = () => {
                           <td>{app.company || app.institute_name || app.instituteName || '—'}</td>
                           <td>{app.category || '—'}</td>
                           <td>
-                            <span className={`oppi-status-pill ${isDraft ? 'pill-draft' : 'pill-submitted'}`}>
-                              {isDraft ? 'Draft' : 'Submitted'}
+                            <span className={`oppi-status-pill ${statusInfo.className}`}>
+                              {statusInfo.label}
                             </span>
                           </td>
                           <td>
@@ -2110,7 +2151,7 @@ const AdminPortal = () => {
                   <div className="modal-status-banner">
                     <span className="status-label">Current Stage Status:</span>
                     <span className={`oppi-status-tag status-${selectedAppDetail.status?.toLowerCase()}`}>
-                      {selectedAppDetail.status?.replace('_', ' ')}
+                      {getAppStatusPill(selectedAppDetail.status).label}
                     </span>
                   </div>
 

@@ -1249,6 +1249,12 @@
   color: #ffffff;
 }
 
+.pill-under-review,
+.pill-under_jury_review {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
 .pill-registered {
   background-color: #e2e8f0;
   color: #475569;
