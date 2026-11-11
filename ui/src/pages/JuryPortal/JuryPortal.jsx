@@ -448,8 +448,8 @@ const JuryPortal = () => {
 
   const activeFilterLabel = useMemo(() => {
     if (selectedCategoryFilter === 'ALL') return 'CATEGORY';
-    const label = selectedCategoryFilter.length > 30 
-      ? selectedCategoryFilter.slice(0, 28) + '...' 
+    const label = selectedCategoryFilter.length > 30
+      ? selectedCategoryFilter.slice(0, 28) + '...'
       : selectedCategoryFilter;
     return `CATEGORY: ${label}`;
   }, [selectedCategoryFilter]);
@@ -460,8 +460,8 @@ const JuryPortal = () => {
     <div className="jury-portal-page">
       <Navbar />
       <div className="jury-portal-container">
-        {successMsg && <div className="portal-success-banner">✓ {successMsg}</div>}
-        {error && <div className="portal-error-banner">⚠️ {error}</div>}
+        {/* {successMsg && <div className="portal-success-banner">✓ {successMsg}</div>}
+        {error && <div className="portal-error-banner">⚠️ {error}</div>} */}
 
         {/* Figma Table Card */}
         <div className="portal-section-card figma-main-card">
