@@ -1409,3 +1409,21 @@
   min-width: 90px;
 }
 
+/* Sticky header + scrollable body (Final Evaluation and Ranking) */
+.table-wrapper.sticky-header-wrapper {
+  max-height: 520px;      /* adjust to taste, e.g. 70vh */
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.sticky-header-table {
+  border-collapse: separate;  /* keeps borders visible on sticky cells */
+  border-spacing: 0;
+}
+
+.sticky-header-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;    /* solid, so rows don't show through while scrolling */
+}

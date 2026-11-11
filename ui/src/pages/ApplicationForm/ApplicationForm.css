@@ -1611,3 +1611,8 @@
   cursor: not-allowed;
 }
 
+.nomination-limit-note {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #b45309;
+}

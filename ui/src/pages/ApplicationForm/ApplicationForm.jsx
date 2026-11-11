@@ -254,7 +254,11 @@ const ApplicationForm = () => {
     init();
   }, [queryAppId, isAdmin]);
 
+  const MAX_NOMINATIONS = 9;
+  const isNominationLimitReached = submissions.length >= MAX_NOMINATIONS;
+
   const handleStartNewNomination = async () => {
+    if (isNominationLimitReached) return;
     setIsStartingNew(true);
     setMessage({ type: '', text: '' });
     setFieldErrors({});
@@ -868,13 +872,19 @@ const ApplicationForm = () => {
                 <div className="card-text-block">
                   <h3>Nomination Form</h3>
                   <p>Submit a new nomination for recognition.</p>
+                  {isNominationLimitReached && (
+                    <p className="nomination-limit-note">
+                      You have reached the maximum of {MAX_NOMINATIONS} nominations.
+                    </p>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
                 className="btn-start-nomination"
                 onClick={handleStartNewNomination}
-                disabled={isStartingNew}
+                disabled={isStartingNew || isNominationLimitReached}
+                title={isNominationLimitReached ? `Maximum of ${MAX_NOMINATIONS} nominations reached` : undefined}
               >
                 <span>{isStartingNew ? 'Starting...' : 'Start Nomination'}</span>
                 <ArrowRight size={18} />

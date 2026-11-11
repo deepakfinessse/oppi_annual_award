@@ -2028,8 +2028,8 @@ const AdminPortal = () => {
               </div>
             </div>
 
-            <div className="table-wrapper">
-              <table className="oppi-dashboard-table">
+            <div className="table-wrapper sticky-header-wrapper">
+              <table className="oppi-dashboard-table sticky-header-table">
                 <thead>
                   <tr>
                     <th style={{ width: '60px' }}>App ID</th>
