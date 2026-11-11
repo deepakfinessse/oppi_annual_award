@@ -639,9 +639,6 @@ const JuryPortal = () => {
               </button>
             </div>
 
-            {/* Error Message */}
-            {error && <div className="portal-error-banner" style={{ margin: '1rem 0' }}>⚠️ {error}</div>}
-
             {/* Score Banner matching Figma */}
             <div className="eval-score-banner">
               <div className="eval-total-score-box">
@@ -728,8 +725,11 @@ const JuryPortal = () => {
 
             {/* Modal Footer Buttons */}
             <div className="eval-modal-footer">
+              {error && (
+                <div className="portal-error-banner" style={{ width: '100%', marginBottom: '0.75rem' }}>⚠️ {error}</div>
+              )}
               {!isFinalized ? (
-                <>
+                <div className="eval-modal-footer-actions">
                   <button
                     type="button"
                     className="eval-btn-draft"
@@ -746,7 +746,7 @@ const JuryPortal = () => {
                   >
                     {actioning ? 'Submitting...' : 'Submit Score'}
                   </button>
-                </>
+                </div>
               ) : (
                 <div className="eval-finalized-badge">
                   <CheckCircle2 size={18} color="#16a34a" />
