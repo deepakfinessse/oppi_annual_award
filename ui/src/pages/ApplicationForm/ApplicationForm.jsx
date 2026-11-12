@@ -472,9 +472,9 @@ const ApplicationForm = () => {
       errors.briefDescription = `Brief Description cannot exceed 500 words (currently ${descWords} words).`;
     }
     if (documentFiles.length === 0) {
-      errors.documentFiles = 'Please upload the required Document (PDF).';
+      errors.documentFiles = 'Please upload the required Document (allowed formats: PDF, doc, ppt).';
     } else if (documentFiles.length > 1) {
-      errors.documentFiles = 'Only 1 Document (PDF) is allowed. Please remove extra documents.';
+      errors.documentFiles = 'Only 1 Document is allowed. Please remove extra documents.';
     }
 
     if (videoFiles.length > 1) {
@@ -710,11 +710,13 @@ const ApplicationForm = () => {
     const file = files[0];
 
     if (section === 'document') {
-      const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
-      if (!isPdf) {
+      const fileName = (file.name || '').toLowerCase();
+      const allowedDocExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+      const isAllowedDoc = allowedDocExtensions.some(ext => fileName.endsWith(ext));
+      if (!isAllowedDoc) {
         setFieldErrors(prev => ({
           ...prev,
-          documentFiles: `File "${file.name}" is not a PDF. Only PDF files are allowed.`
+          documentFiles: `File "${file.name}" is not an allowed format. Allowed formats: PDF, doc, ppt.`
         }));
         return;
       }
@@ -1542,7 +1544,7 @@ const ApplicationForm = () => {
                       )}
                       <input
                         type="file"
-                        accept=".pdf,application/pdf"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                         onChange={(e) => {
                           handleFileUpload('document', e.target.files);
                           e.target.value = '';
@@ -1553,7 +1555,7 @@ const ApplicationForm = () => {
                     <div className="upload-requirements">
                       <p className="req-title">Requirement</p>
                       <p>• Only 1 file allowed</p>
-                      <p>• Format: PDF only</p>
+                      <p>• Allowed formats: PDF, doc, ppt</p>
                       <p>• Size: Upto 5 mb</p>
                     </div>
                   </div>
@@ -1576,7 +1578,7 @@ const ApplicationForm = () => {
                             <div className="file-info-left">
                               <FileText size={20} className="file-type-icon" />
                               <div className="file-name-meta">
-                                <span className="file-name">{file.FileName || file.fileName || 'image.pdf'}</span>
+                                <span className="file-name">{file.FileName || file.fileName || 'document'}</span>
                                 <span className="file-size-sub">{sizeMb} MB</span>
                               </div>
                             </div>

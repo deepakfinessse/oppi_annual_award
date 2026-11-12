@@ -175,7 +175,7 @@ const PastWinners = () => {
                 <span 
                   className="winner-badge-green"
                   style={{
-                    color: isRunnerUp ? '#f97316' : (currentWinner.color || '#2f9a2f')
+                    color: currentWinner.color || (isRunnerUp ? '#f97316' : '#2f9a2f')
                   }}
                 >
                   {`${currentWinner.yearStr || currentWinner.year} ${(currentWinner.position || 'WINNER').toUpperCase()}`}

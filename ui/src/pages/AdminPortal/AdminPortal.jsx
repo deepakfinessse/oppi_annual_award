@@ -1061,7 +1061,8 @@ const AdminPortal = () => {
     setWinnerCaption(w.caption || w.description || '');
     setWinnerDescription(w.description || w.caption || '');
     setWinnerImagePath(w.imagePath || '');
-    setWinnerColor(w.color || (w.position === '1st Runner up' ? '#f97316' : '#00a3e0'));
+    const isRunner = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
+    setWinnerColor(w.color || (isRunner ? '#f97316' : '#00a3e0'));
     setError('');
     setSuccess('');
     setFieldErrors({});
@@ -1111,6 +1112,7 @@ const AdminPortal = () => {
       parsedYear = parseInt(yearMatches[yearMatches.length - 1]);
     }
 
+    const isRunner = winnerPosition && (winnerPosition.toLowerCase().includes('runner') || winnerPosition.includes('1st') || winnerPosition.includes('2nd'));
     const payload = {
       year: parsedYear,
       yearStr: winnerYearStr.trim(),
@@ -1121,7 +1123,7 @@ const AdminPortal = () => {
       position: winnerPosition || 'Winner',
       description: winnerDescription.trim() || winnerCaption.trim() || '',
       imagePath: winnerImagePath,
-      color: winnerColor || (winnerPosition === '1st Runner up' ? '#f97316' : '#00a3e0')
+      color: winnerColor || (isRunner ? '#f97316' : '#00a3e0')
     };
 
     setLoading(true);
@@ -1898,7 +1900,7 @@ const AdminPortal = () => {
                   ) : (
                     displayedWinners.map((w, idx) => {
                       const isRunnerUp = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
-                      const posColor = isRunnerUp ? '#f97316' : (w.color || '#00a3e0');
+                      const posColor = w.color || (isRunnerUp ? '#f97316' : '#00a3e0');
                       return (
                         <tr key={w.id}>
                           <td className="bold-text" style={{ color: '#64748b' }}>
@@ -2526,8 +2528,10 @@ const AdminPortal = () => {
                       onChange={(e) => {
                         const pos = e.target.value;
                         setWinnerPosition(pos);
-                        if (pos === '1st Runner up') setWinnerColor('#f97316');
-                        else if (pos === 'Winner') setWinnerColor('#00a3e0');
+                        if (!editingWinner) {
+                          if (pos.toLowerCase().includes('runner') || pos.includes('1st') || pos.includes('2nd')) setWinnerColor('#f97316');
+                          else if (pos === 'Winner') setWinnerColor('#00a3e0');
+                        }
                       }}
                     >
                       <option value="Winner">Winner</option>

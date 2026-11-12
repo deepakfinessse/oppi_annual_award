@@ -1249,9 +1249,10 @@ api.MapPost("/application/upload/{appId}/{section}", async (int appId, string se
     foreach (var file in files)
     {
         var ext = Path.GetExtension(file.FileName).ToLower();
-        if (section == "document" && ext != ".pdf")
+        var allowedDocExts = new[] { ".pdf", ".doc", ".docx", ".ppt", ".pptx" };
+        if (section == "document" && !allowedDocExts.Contains(ext))
         {
-            return Results.BadRequest(new { message = $"Document file '{file.FileName}' must be a PDF. Only PDF files are allowed." });
+            return Results.BadRequest(new { message = $"Document file '{file.FileName}' is not an allowed format. Allowed formats: PDF, DOC, PPT." });
         }
 
         if (section == "video" && ext != ".mp4" && ext != ".mov")
