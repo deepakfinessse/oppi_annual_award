@@ -161,16 +161,19 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
     const category = validCats.length > 0 ? validCats.join(', ') : '—';
     const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
 
+    const appDisplayId = userApps.length > 0 
+      ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
+      : '—';
+
     rowsHtml += `
       <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td><strong>${u.firstName || ''} ${u.lastName || ''}</strong></td>
+        <td>${formatDateTime(u.createdAt || u.created_at)}</td>
+        <td style="text-align: center;">${appDisplayId}</td>
         <td>${company}</td>
+        <td><strong>${u.firstName || ''} ${u.lastName || ''}</strong></td>
         <td>${u.email}</td>
         <td>${u.mobile || '—'}</td>
         <td>${category}</td>
-        <td><span class="badge badge-${status.toLowerCase().includes('sub') ? 'submitted' : (status.includes('DRAFT') ? 'draft' : 'registered')}">${status}</span></td>
-        <td>${formatDateTime(u.createdAt || u.created_at)}</td>
       </tr>
     `;
   });
@@ -182,18 +185,17 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
     <table>
       <thead>
         <tr>
-          <th style="width: 5%;">#</th>
-          <th style="width: 18%;">Representative Name</th>
-          <th style="width: 20%;">Member Company</th>
-          <th style="width: 18%;">Email ID</th>
+          <th style="width: 18%;">Date & Time</th>
+          <th style="width: 10%;">App ID</th>
+          <th style="width: 20%;">Organization</th>
+          <th style="width: 18%;">Applicant Name</th>
+          <th style="width: 18%;">Email id</th>
           <th style="width: 12%;">Mobile</th>
-          <th style="width: 15%;">Nomination Category</th>
-          <th style="width: 12%;">Status</th>
-          <th style="width: 15%;">Registered On</th>
+          <th style="width: 18%;">Category</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || '<tr><td colspan="8" style="text-align: center;">No registered users found.</td></tr>'}
+        ${rowsHtml || '<tr><td colspan="7" style="text-align: center;">No registered users found.</td></tr>'}
       </tbody>
     </table>
   `;

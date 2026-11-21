@@ -718,21 +718,22 @@ const AdminPortal = () => {
 
   // CSV download handlers
   const downloadUsersCSV = () => {
-    const headers = ['Date & Time Stamp', 'Representative Name', 'Member Company', 'Email ID', 'Mobile', 'Nomination Category', 'Status'];
+    const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name', 'Email id', 'Mobile', 'Category'];
     const rows = filteredUsers.map((u) => {
       const userApps = getUserApps(u);
-      const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
-      const statusLabel = userApps.length === 0 ? 'Registered' : (hasSubmitted ? 'Submitted' : 'Draft');
+      const appDisplayId = userApps.length > 0 
+        ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
+        : '—';
       const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
       const categoryStr = validCategories.length > 0 ? validCategories.join(', ') : '—';
       return [
         formatDateTime(u.createdAt || u.created_at),
-        `${u.firstName} ${u.lastName}`.trim(),
+        appDisplayId,
         u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—',
-        u.email,
-        u.mobile || '',
-        categoryStr,
-        statusLabel
+        `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
+        u.email || '—',
+        u.mobile || '—',
+        categoryStr
       ];
     });
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -747,28 +748,13 @@ const AdminPortal = () => {
   };
 
   const downloadAppsCSV = () => {
-    const headers = ['Submit Date', 'App ID', 'Representative Name', 'Member Company', 'Award Category', 'Email', 'Status', 'Jury Score'];
+    const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name'];
     const rows = filteredApps.map(app => {
-      let juryScore = '—';
-      if (app.average_score > 0) {
-        juryScore = app.average_score.toFixed(2);
-      } else if (app.status === 'SUBMITTED' || app.status === 'UNDER_JURY_REVIEW' || app.status === 'VALIDATOR_APPROVED') {
-        juryScore = 'Pending';
-      } else if (app.status === 'JURY_REJECTED') {
-        juryScore = 'Rejected';
-      }
-
-      const statusInfo = getAppStatusPill(app.status);
-
       return [
-        formatDate(app.submittedAt || app.submitted_at),
-        `#${app.id}`,
-        app.applicant_name || app.user_name || 'Anonymous',
-        app.company || app.institute_name || '',
-        app.category || '',
-        app.applicant_email || app.user_email || '',
-        statusInfo.label,
-        juryScore
+        formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at),
+        `#${String(app.id).padStart(2, '0')}`,
+        app.company || app.institute_name || app.instituteName || '—',
+        app.applicant_name || app.user_name || 'Anonymous'
       ];
     });
     const csvContent = "data:text/csv;charset=utf-8,"

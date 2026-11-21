@@ -159,27 +159,20 @@ const prepareAppRowData = (app) => {
 };
 
 const COMMON_HEADERS = [
+  { header: 'Date & Time', key: 'submittedAt', width: 22, align: 'center' },
   { header: 'App ID', key: 'id', width: 10, align: 'center' },
-  { header: 'Member Company / Organisation', key: 'institute_name', width: 30 },
-  { header: 'Award Category', key: 'category', width: 34 },
-  { header: 'Representative Name', key: 'applicant_name', width: 25 },
-  { header: 'Designation', key: 'designation', width: 22 },
-  { header: 'Email Address', key: 'applicant_email', width: 28 },
-  { header: 'Status', key: 'status', width: 16, align: 'center' },
-  { header: 'Submission Date', key: 'submittedAt', width: 22, align: 'center' },
-  { header: 'Evaluation Score', key: 'totalScore', width: 16, align: 'center' },
-  { header: 'Remarks / Comments', key: 'comments', width: 35 }
+  { header: 'Organization', key: 'institute_name', width: 30 },
+  { header: 'Applicant Name', key: 'applicant_name', width: 25 }
 ];
 
 const REGISTRATION_HEADERS = [
-  { header: 'S.No', key: 'sno', width: 8, align: 'center' },
-  { header: 'Representative Name', key: 'name', width: 26 },
-  { header: 'Member Company', key: 'company', width: 30 },
-  { header: 'Email ID', key: 'email', width: 28 },
-  { header: 'Mobile Number', key: 'mobile', width: 18, align: 'center' },
-  { header: 'Nomination Category', key: 'category', width: 34 },
-  { header: 'Application Status', key: 'status', width: 18, align: 'center' },
-  { header: 'Registration Date', key: 'registeredAt', width: 22, align: 'center' }
+  { header: 'Date & Time', key: 'registeredAt', width: 22, align: 'center' },
+  { header: 'App ID', key: 'appId', width: 12, align: 'center' },
+  { header: 'Organization', key: 'company', width: 30 },
+  { header: 'Applicant Name', key: 'name', width: 26 },
+  { header: 'Email id', key: 'email', width: 28 },
+  { header: 'Mobile', key: 'mobile', width: 18, align: 'center' },
+  { header: 'Category', key: 'category', width: 34 }
 ];
 
 /**
@@ -219,15 +212,18 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
       } catch (e) {}
     }
 
+    const appDisplayId = userApps.length > 0 
+      ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
+      : '—';
+
     return {
-      sno: idx + 1,
-      name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      registeredAt: regDate,
+      appId: appDisplayId,
       company,
-      email: u.email,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
+      email: u.email || '—',
       mobile: u.mobile || '—',
-      category,
-      status,
-      registeredAt: regDate
+      category
     };
   });
 
