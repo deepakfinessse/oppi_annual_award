@@ -713,7 +713,7 @@ const JuryPortal = () => {
                   if (e.target.value.trim()) setCommentsError('');
                 }}
                 disabled={isFinalized || actioning}
-                placeholder="Strong initiative with effective execution and measurable impact..."
+                placeholder="NA"
                 style={commentsError ? { borderColor: '#ef4444' } : {}}
               />
               {commentsError && (
