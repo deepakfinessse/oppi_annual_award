@@ -22,7 +22,7 @@ const fallbackWinners = [
     id: 2,
     year: 2026,
     yearStr: '2025-2026',
-    position: '1st Runner up',
+    position: 'Runner up',
     category: 'OPPI Sustainability Excellence Award',
     organisation: 'Company name 123',
     name: 'Shivam',

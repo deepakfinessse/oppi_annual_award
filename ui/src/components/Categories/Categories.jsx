@@ -24,7 +24,7 @@ const categoryData = [
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
-      'AIOCD-AWACS / IMS MAT DECEMBER 2023 to be considered as cut-off for Market Data. If the product is not reported in AIOCS-AWACS / IMS, Internal Sales certified by a Company Secretary / Chartered Accountant / Auditor will be considered',
+      'AIOCD-AWACS / IMS MAT DECEMBER 2026 to be considered as cut-off for Market Data. If the product is not reported in AIOCS-AWACS / IMS, Internal Sales certified by a Company Secretary / Chartered Accountant / Auditor will be considered',
       'Product that has been in the Market for more than three years, and has a turnover of over INR 10 Cr',
       'If you have applied for an existing product earlier and if your product has won in this category, kindly share the value edition & impact (please include in the Application form - uploaded pdf)'
     ],
@@ -74,7 +74,7 @@ const categoryData = [
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
-      'AIOCD-AWACS / IMS MAT DECEMBER 2023 to be considered as cut-off for Market Data. If the product is not reported in AIOCS-AWACS / IMS, Internal Sales certified by a Company Secretary / Chartered Accountant / Auditor will be considered',
+      'AIOCD-AWACS / IMS MAT DECEMBER 2026 to be considered as cut-off for Market Data. If the product is not reported in AIOCS-AWACS / IMS, Internal Sales certified by a Company Secretary / Chartered Accountant / Auditor will be considered',
       'Product that has been in the Market for less than three years, and has a turnover of over INR 4 Cr',
       'If you have applied for a new product earlier and if your product has won in this category, kindly share the value edition & impact (please include in the Application form - uploaded pdf)'
     ],
@@ -124,7 +124,7 @@ const categoryData = [
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
-      'The initiative/ project conducted between January 2023 - December 2023'
+      'The initiative/ project conducted between January 2026 - December 2026'
     ],
     judging: {
       items: [
@@ -148,7 +148,7 @@ const categoryData = [
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
-      'The initiative/ project conducted between January 2023 - December 2023'
+      'The initiative/ project conducted between January 2026 - December 2026'
     ],
     judging: {
       overview: 'OPPI HR Excellence Award will be bestowed upon organizations that have achieved overall excellence in their HR and people management practices, thus contributing to the needs of business, the profession, employees, industry and the nation. This award is not only the leading HR trailblazer and honors people management practices but also sets new benchmarks to inspire. OPPI HR Excellence Award stands for innovation used to solve problems and championing value creation through power of people by:',
@@ -174,7 +174,7 @@ const categoryData = [
       'An OPPI member company',
       'Only one entry per member company',
       'The submissions may cover one, some or all aspects of diversity- including but not limited to: age, ability, ethnicity, gender, sexual orientation, socio-economic status, race, and religion.',
-      'The initiative/ project conducted between January 2023 - December 2023'
+      'The initiative/ project conducted between January 2026 - December 2026'
     ],
     judging: {
       overview: 'This award recognizes an organization that has diversity and inclusion at the heart of its business, providing outstanding support and opportunities to - women, people from BME backgrounds, people from the LGBTI community, disabled people and other minorities.',
@@ -206,7 +206,7 @@ const categoryData = [
       'An OPPI member company',
       'Only one entry per member company',
       'All submissions must comply with Drugs and Cosmetics Act 1940; Drugs and Cosmetics Rules 1945; Drugs and Magic Remedies Act 1954',
-      'Entry must have aired, launched or been released to the public for the first time between January 2023 - December 2023, OR',
+      'Entry must have aired, launched or been released to the public for the first time between January 2026 - December 2026, OR',
       'If you are entering a campaign that has run over two or more years, you will need to provide proof of the campaign\'s evolution from year to year (OPPI will have the right to decide if the entry has evolved sufficiently and can be deemed as a new, eligible entry)',
       'If you are entering a "Campaign of Executions" (e.g. for Print & publishing, outdoor, film, film craft, industry craft, and radio & audio entries) the whole campaign must fall within the eligibility period, AND',
       'If you are showcasing a continuation of a campaign that aired before the eligibility period then you must clearly show how the campaign has progressed year (OPPI will have the right to decide if the entry has evolved sufficiently and can be deemed as a new, eligible entry)',
@@ -254,7 +254,7 @@ const categoryData = [
     eligibility: [
       'An OPPI member company',
       'Only one entry per member company',
-      'The initiative/ project conducted between January 2023 – December 2023 functional project touching at least 2 or more functions (MA/RA/CO/PV)',
+      'The initiative/ project conducted between January 2026 – December 2026 functional project touching at least 2 or more functions (MA/RA/CO/PV)',
       'Demonstrated impact on external stakeholders (e.g. HCPs/Patients)',
       {
         title: 'Nomination Categories',
