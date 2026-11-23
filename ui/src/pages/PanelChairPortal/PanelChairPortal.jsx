@@ -3,6 +3,7 @@ import Navbar from '../../components/Navbar/Navbar';
 import Footer from '../../components/Footer/Footer';
 import ApplicationPreview from '../../components/ApplicationPreview/ApplicationPreview';
 import { getPanelChairApplications, panelChairApprove, panelChairReject, getScientistApplication, getApplicationReview } from '../../utils/api';
+import { getCategoryCriteria, parseJuryReviewComments, getCriterionPoint } from '../../constants/scoringCriteria';
 import './PanelChairPortal.css';
 
 const PanelChairPortal = () => {
@@ -225,37 +226,59 @@ const PanelChairPortal = () => {
                   )}
 
                   {/* Jury Scorecard details */}
-                  {selectedAppDetail?.jury_reviews && selectedAppDetail.jury_reviews.length > 0 && (
-                    <div className="jury-reviews-summary-card">
-                      <h5>Jury Review Breakdown ({selectedAppDetail.jury_reviews.length} Approvals)</h5>
-                      <div className="reviews-table-wrapper">
-                        <table className="reviews-table">
-                          <thead>
-                            <tr>
-                              <th>Jury Member</th>
-                              <th>Innovation IP</th>
-                              <th>Team Strength</th>
-                              <th>Biz Plan</th>
-                              <th>Impact</th>
-                              <th>Avg Score</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedAppDetail.jury_reviews.map((r, i) => (
-                              <tr key={i}>
-                                <td className="jury-name-cell">{r.jury_name}</td>
-                                <td>{r.innovationIpScore} / 30</td>
-                                <td>{r.teamStrengthScore} / 25</td>
-                                <td>{r.businessPlanScore} / 25</td>
-                                <td>{r.impactScore} / 20</td>
-                                <td className="weighted-score-cell">{r.weightedScore.toFixed(2)}</td>
+                  {selectedAppDetail?.jury_reviews && selectedAppDetail.jury_reviews.length > 0 && (() => {
+                    const selectedAppRecord = apps.find(a => Number(a.id) === Number(selectedAppId));
+                    const selectedAppCategory =
+                      selectedAppDetail.personal_info?.award_category ||
+                      selectedAppDetail.application_detail?.category ||
+                      selectedAppRecord?.category ||
+                      '';
+                    const categoryCriteria = getCategoryCriteria(selectedAppCategory);
+
+                    return (
+                      <div className="jury-reviews-summary-card">
+                        <h5>Jury Review Breakdown ({selectedAppDetail.jury_reviews.length} Approvals)</h5>
+                        <div className="reviews-table-wrapper" style={{ overflowX: 'auto' }}>
+                          <table className="reviews-table">
+                            <thead>
+                              <tr>
+                                <th>Jury Member</th>
+                                {categoryCriteria.map(crit => (
+                                  <th key={crit.name}>
+                                    <div>{crit.name}</div>
+                                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#0284c7' }}>Weight: {crit.weight}%</div>
+                                  </th>
+                                ))}
+                                <th>Total Score</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {selectedAppDetail.jury_reviews.map((r, i) => {
+                                const { criterionScores } = parseJuryReviewComments(r.comments);
+                                return (
+                                  <tr key={i}>
+                                    <td className="jury-name-cell">{r.jury_name}</td>
+                                    {categoryCriteria.map(crit => {
+                                      const pt = getCriterionPoint(criterionScores, crit.name);
+                                      const weightedVal = pt !== null
+                                        ? Number(((pt / 10) * crit.weight).toFixed(2))
+                                        : null;
+                                      return (
+                                        <td key={crit.name}>
+                                          {pt !== null ? `${pt}/10 (${weightedVal}/${crit.weight})` : '—'}
+                                        </td>
+                                      );
+                                    })}
+                                    <td className="weighted-score-cell">{r.weightedScore.toFixed(2)}/100</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="preview-pane-scrollable">

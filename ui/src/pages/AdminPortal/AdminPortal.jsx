@@ -46,7 +46,8 @@ import balaramImg from '../../assets/Balaram.png';
 import akamanchiImg from '../../assets/Akamanchi.png';
 import ykImg from '../../assets/YK.png';
 import ceremonyPhoto from '../../assets/past-winner-ceremony.jpg';
-import { AWARD_CATEGORIES, isCategoryMatch } from '../../constants/categories';
+import { AWARD_CATEGORIES, isCategoryMatch, normalizeCategoryKey } from '../../constants/categories';
+import { getCategoryCriteria, getCategoryCriteriaMeta, parseJuryReviewComments, getCriterionPoint } from '../../constants/scoringCriteria';
 import { ORGANISATIONS, isOrgMatch } from '../../constants/organisations';
 import './AdminPortal.css';
 
@@ -555,40 +556,92 @@ const AdminPortal = () => {
   // Final Evaluation and Ranking Juries and List
   const evalJuries = useMemo(() => {
     if (evalReport?.juries && evalReport.juries.length > 0) {
-      return evalReport.juries;
+      return evalReport.juries.map((j, idx) => {
+        const matchedPm = panelMembers.find(m =>
+          (j.panelMemberId && Number(m.id) === Number(j.panelMemberId)) ||
+          (j.email && m.email && j.email.trim().toLowerCase() === m.email.trim().toLowerCase()) ||
+          (j.name && m.name && j.name.trim().toLowerCase() === m.name.trim().toLowerCase())
+        );
+        const category = j.category || matchedPm?.category || matchedPm?.Category || '';
+        const juryKey = j.panelMemberId ? `pm-${j.panelMemberId}` : `u-${j.id ?? idx}`;
+        return {
+          ...j,
+          category,
+          juryKey
+        };
+      });
     }
-    return panelMembers.filter(m => (m.type || m.Type || '').toUpperCase() === 'JURY').map(m => {
-      const matchingUser = users.find(u => 
-        (u.email && m.email && u.email.trim().toLowerCase() === m.email.trim().toLowerCase()) ||
-        (`${u.first_name || u.firstName || ''} ${u.last_name || u.lastName || ''}`.trim().toLowerCase() === (m.name || '').trim().toLowerCase())
-      );
-      const uId = matchingUser?.id || m.user_id || m.id;
-      return {
-        id: uId,
-        userId: matchingUser?.id || null,
-        userIds: matchingUser ? [matchingUser.id] : [uId],
-        panelMemberId: m.id,
-        name: m.name,
-        email: m.email,
-        category: m.category
-      };
-    });
+    return panelMembers
+      .filter(m => {
+        const type = (m.type || m.Type || '').toUpperCase();
+        return type === 'JURY' || type === 'JURY_MEMBER';
+      })
+      .map((m, idx) => {
+        const matchingUser = users.find(u =>
+          (u.email && m.email && u.email.trim().toLowerCase() === m.email.trim().toLowerCase()) ||
+          (`${u.first_name || u.firstName || ''} ${u.last_name || u.lastName || ''}`.trim().toLowerCase() === (m.name || '').trim().toLowerCase())
+        );
+        const uId = matchingUser?.id || m.user_id || m.id;
+        return {
+          id: uId,
+          userId: matchingUser?.id || null,
+          userIds: matchingUser ? [matchingUser.id] : [uId],
+          panelMemberId: m.id,
+          juryKey: m.id ? `pm-${m.id}` : `u-${uId ?? idx}`,
+          name: m.name,
+          email: m.email,
+          category: m.category || m.Category || ''
+        };
+      });
   }, [evalReport, panelMembers, users]);
+
+  // Show only jury members belonging to the selected award category (or all when 'ALL')
+  const displayedEvalJuries = useMemo(() => {
+    if (evalCategoryFilter === 'ALL') return evalJuries;
+
+    return evalJuries.filter(j => {
+      if (j.category && isCategoryMatch(j.category, evalCategoryFilter)) {
+        return true;
+      }
+
+      // Also include if this jury has submitted a finalized review for an application in the selected category
+      if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
+        const targetUserIds = j.userIds && j.userIds.length > 0
+          ? j.userIds.map(Number)
+          : (j.userId ? [Number(j.userId)] : [Number(j.id)]);
+
+        const reviewedInCat = evalReport.reviews.some(r => {
+          if (r.is_draft || r.isDraft) return false;
+          if (!targetUserIds.includes(Number(r.jury_id))) return false;
+          const targetApp = apps.find(a => Number(a.id) === Number(r.application_id)) ||
+                            evalReport?.applications?.find(a => Number(a.id) === Number(r.application_id));
+          return targetApp && isCategoryMatch(targetApp.category, evalCategoryFilter);
+        });
+        if (reviewedInCat) return true;
+      }
+
+      return false;
+    });
+  }, [evalJuries, evalCategoryFilter, evalReport, apps]);
 
   const candidateApps = apps.filter(a => a.status !== 'DRAFT');
 
   const processedEvalItems = candidateApps.map((app, idx) => {
     const scores = {};
     let totalScore = 0;
+    let evaluatedCount = 0;
 
     evalJuries.forEach(j => {
+      const key = j.juryKey;
       let revScore = null;
-      const targetUserIds = j.userIds && j.userIds.length > 0 
-        ? j.userIds.map(Number) 
+      const targetUserIds = j.userIds && j.userIds.length > 0
+        ? j.userIds.map(Number)
         : (j.userId ? [Number(j.userId)] : [Number(j.id)]);
 
       if (evalReport?.reviews && Array.isArray(evalReport.reviews)) {
-        const found = evalReport.reviews.find(r => 
+        const found = evalReport.reviews.find(r =>
+          !r.is_draft &&
+          !r.isDraft &&
           Number(r.application_id) === Number(app.id) &&
           targetUserIds.includes(Number(r.jury_id))
         );
@@ -598,10 +651,13 @@ const AdminPortal = () => {
       }
 
       if (revScore === null && app.jury_reviews && Array.isArray(app.jury_reviews)) {
-        const found = app.jury_reviews.find(r => 
-          targetUserIds.includes(Number(r.jury_id)) ||
-          (r.jury_email && j.email && r.jury_email.toLowerCase() === j.email.toLowerCase()) ||
-          (r.jury_name && j.name && r.jury_name.toLowerCase() === j.name.toLowerCase())
+        const found = app.jury_reviews.find(r =>
+          !r.isDraft &&
+          !r.is_draft && (
+            targetUserIds.includes(Number(r.jury_id)) ||
+            (r.jury_email && j.email && r.jury_email.toLowerCase() === j.email.toLowerCase()) ||
+            (r.jury_name && j.name && r.jury_name.toLowerCase() === j.name.toLowerCase())
+          )
         );
         if (found && typeof found.weightedScore === 'number') {
           revScore = found.weightedScore;
@@ -609,14 +665,19 @@ const AdminPortal = () => {
       }
 
       if (revScore !== null) {
-        scores[j.id] = revScore;
+        scores[key] = revScore;
         totalScore += revScore;
+        evaluatedCount += 1;
       } else {
-        scores[j.id] = null;
+        scores[key] = null;
       }
     });
 
-    const finalTotal = totalScore > 0 ? totalScore : (app.average_score > 0 ? Number(app.average_score.toFixed(2)) : 0);
+    const roundedTotal = Math.round(totalScore * 100) / 100;
+    const finalTotal = roundedTotal > 0 ? roundedTotal : (app.average_score > 0 ? Number(app.average_score.toFixed(2)) : 0);
+    const averageScore = evaluatedCount > 0
+      ? Math.round((totalScore / evaluatedCount) * 100) / 100
+      : (app.average_score > 0 ? Number(app.average_score.toFixed(2)) : 0);
 
     return {
       id: app.id,
@@ -625,25 +686,41 @@ const AdminPortal = () => {
       organisation: app.company || app.institute_name || app.instituteName || '—',
       category: app.category || '—',
       scores,
-      total: finalTotal
+      evaluatedCount,
+      total: finalTotal,
+      average: averageScore
     };
   });
 
-  // Group by category to rank
+  // Group by normalized category to rank within each award category.
+  // Ranks by Average score (identical to Total when all juries evaluate every application,
+  // and remains fair when a jury recuses from an application due to conflict of interest).
   const categoryRankedMap = {};
   processedEvalItems.forEach(item => {
-    const cat = item.category;
-    if (!categoryRankedMap[cat]) categoryRankedMap[cat] = [];
-    categoryRankedMap[cat].push(item);
+    const catKey = normalizeCategoryKey(item.category) || (item.category || 'uncategorized').trim().toLowerCase();
+    if (!categoryRankedMap[catKey]) categoryRankedMap[catKey] = [];
+    categoryRankedMap[catKey].push(item);
   });
 
-  Object.keys(categoryRankedMap).forEach(cat => {
-    categoryRankedMap[cat].sort((a, b) => b.total - a.total);
-    categoryRankedMap[cat].forEach((item, rIdx) => {
+  Object.keys(categoryRankedMap).forEach(catKey => {
+    const catItems = categoryRankedMap[catKey];
+    const scoredItems = catItems.filter(item => item.total > 0);
+    const unscoredItems = catItems.filter(item => item.total <= 0);
+
+    scoredItems.sort((a, b) => {
+      if (b.average !== a.average) return b.average - a.average;
+      return b.total - a.total;
+    });
+
+    scoredItems.forEach((item, rIdx) => {
       if (rIdx === 0) item.position = 'Winner';
       else if (rIdx === 1) item.position = '1st Runner up';
       else if (rIdx === 2) item.position = '2nd Runner up';
       else item.position = `Rank ${rIdx + 1}`;
+    });
+
+    unscoredItems.forEach(item => {
+      item.position = 'Pending';
     });
   });
 
@@ -655,8 +732,14 @@ const AdminPortal = () => {
       name: 'Shrey',
       organisation: 'Company name 123',
       category: 'OPPI Healthcare Communications Award',
-      scores: { [evalJuries[0]?.id || 1]: 6, [evalJuries[1]?.id || 2]: 6.5, [evalJuries[2]?.id || 3]: 7.5, [evalJuries[3]?.id || 4]: 7.5 },
+      scores: {
+        [evalJuries[0]?.juryKey || 'u-1']: 6,
+        [evalJuries[1]?.juryKey || 'u-2']: 6.5,
+        [evalJuries[2]?.juryKey || 'u-3']: 7.5,
+        [evalJuries[3]?.juryKey || 'u-4']: 5.75
+      },
       total: 25.75,
+      average: 6.44,
       position: 'Winner'
     },
     {
@@ -665,8 +748,14 @@ const AdminPortal = () => {
       name: 'Disha',
       organisation: 'Company name 124',
       category: 'OPPI Healthcare Communications Award',
-      scores: { [evalJuries[0]?.id || 1]: 6.75, [evalJuries[1]?.id || 2]: 6.25, [evalJuries[2]?.id || 3]: 8.25, [evalJuries[3]?.id || 4]: 8.25 },
+      scores: {
+        [evalJuries[0]?.juryKey || 'u-1']: 6.75,
+        [evalJuries[1]?.juryKey || 'u-2']: 6.25,
+        [evalJuries[2]?.juryKey || 'u-3']: 8.25,
+        [evalJuries[3]?.juryKey || 'u-4']: 4
+      },
       total: 25.25,
+      average: 6.31,
       position: '1st Runner up'
     },
     {
@@ -675,8 +764,14 @@ const AdminPortal = () => {
       name: 'Srishti',
       organisation: 'Company name 124',
       category: 'OPPI Healthcare Communications Award',
-      scores: { [evalJuries[0]?.id || 1]: 6.75, [evalJuries[1]?.id || 2]: 6.25, [evalJuries[2]?.id || 3]: 8.25, [evalJuries[3]?.id || 4]: 8.25 },
+      scores: {
+        [evalJuries[0]?.juryKey || 'u-1']: 6.75,
+        [evalJuries[1]?.juryKey || 'u-2']: 6.25,
+        [evalJuries[2]?.juryKey || 'u-3']: 8.25,
+        [evalJuries[3]?.juryKey || 'u-4']: 4
+      },
       total: 25.25,
+      average: 6.31,
       position: '2nd Runner up'
     }
   ];
@@ -877,7 +972,7 @@ const AdminPortal = () => {
     try {
       await exportEvaluationRankingExcel(
         evaluationRankingList,
-        evalJuries,
+        displayedEvalJuries,
         evalCategoryFilter !== 'ALL' ? evalCategoryFilter : 'All Categories'
       );
       setSuccess('Final Evaluation & Ranking Excel report downloaded successfully!');
@@ -2065,19 +2160,20 @@ const AdminPortal = () => {
                     <th>Name</th>
                     <th>Organisation</th>
                     <th>Category</th>
-                    {evalJuries.map(j => (
-                      <th key={j.id} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {displayedEvalJuries.map(j => (
+                      <th key={j.juryKey} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {j.name}
                       </th>
                     ))}
                     <th style={{ textAlign: 'center', width: '90px' }}>Total</th>
+                    <th style={{ textAlign: 'center', width: '90px' }}>Average</th>
                     <th style={{ textAlign: 'center', width: '130px' }}>Position</th>
                   </tr>
                 </thead>
                 <tbody>
                   {evaluationRankingList.length === 0 ? (
                     <tr>
-                      <td colSpan={6 + evalJuries.length} className="table-empty">
+                      <td colSpan={7 + displayedEvalJuries.length} className="table-empty">
                         No evaluation ranking records found matching filters.
                       </td>
                     </tr>
@@ -2095,13 +2191,16 @@ const AdminPortal = () => {
                           <td className="bold-text">{item.name}</td>
                           <td>{item.organisation}</td>
                           <td>{item.category}</td>
-                          {evalJuries.map(j => (
-                            <td key={j.id} style={{ textAlign: 'center', fontWeight: '600', color: '#1e293b' }}>
-                              {item.scores[j.id] !== undefined && item.scores[j.id] !== null ? item.scores[j.id] : '—'}
+                          {displayedEvalJuries.map(j => (
+                            <td key={j.juryKey} style={{ textAlign: 'center', fontWeight: '600', color: '#1e293b' }}>
+                              {item.scores[j.juryKey] !== undefined && item.scores[j.juryKey] !== null ? item.scores[j.juryKey] : '—'}
                             </td>
                           ))}
                           <td style={{ textAlign: 'center', fontWeight: '800', color: '#0f172a' }}>
                             {typeof item.total === 'number' ? item.total.toFixed(2).replace(/\.00$/, '') : item.total}
+                          </td>
+                          <td style={{ textAlign: 'center', fontWeight: '700', color: '#0369a1' }}>
+                            {typeof item.average === 'number' && item.average > 0 ? item.average.toFixed(2).replace(/\.00$/, '') : '—'}
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <span className={posClass}>
@@ -2144,51 +2243,78 @@ const AdminPortal = () => {
                   </div>
 
                   {/* Jury Reviews breakdown */}
-                  {selectedAppDetail.jury_reviews && selectedAppDetail.jury_reviews.length > 0 && (
-                    <div className="modal-reviews-section">
-                      <h3>Jury Review Score Breakdown ({selectedAppDetail.jury_reviews.length} reviews)</h3>
-                      <div className="table-wrapper">
-                        <table className="modal-reviews-table">
-                          <thead>
-                            <tr>
-                              <th>Jury Member</th>
-                              <th>Significance/Impact</th>
-                              <th>Approach</th>
-                              <th>Nature Innovation</th>
-                              <th>Credentials</th>
-                              <th>Total Score</th>
-                              <th>Comments</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedAppDetail.jury_reviews.map((r, i) => (
-                              <tr key={i}>
-                                <td className="bold-text">{r.jury_name}</td>
-                                <td>{r.innovationIpScore}/30</td>
-                                <td>{r.teamStrengthScore}/25</td>
-                                <td>{r.businessPlanScore}/25</td>
-                                <td>{r.impactScore}/20</td>
-                                <td className="modal-score-highlight">{r.weightedScore}/100</td>
-                                <td className="comment-text-cell">
-                                  {(() => {
-                                    if (!r.comments) return '—';
-                                    if (r.comments.startsWith('{')) {
-                                      try {
-                                        return JSON.parse(r.comments).remarks || r.comments;
-                                      } catch (e) {
-                                        return r.comments;
-                                      }
-                                    }
-                                    return r.comments;
-                                  })()}
-                                </td>
+                  {selectedAppDetail.jury_reviews && selectedAppDetail.jury_reviews.length > 0 && (() => {
+                    const selectedAppRecord = apps.find(a => Number(a.id) === Number(selectedAppId));
+                    const selectedAppCategory =
+                      selectedAppDetail.personal_info?.award_category ||
+                      selectedAppDetail.application_detail?.category ||
+                      selectedAppRecord?.category ||
+                      '';
+                    const criteriaMeta = getCategoryCriteriaMeta(selectedAppCategory);
+                    const categoryCriteria = getCategoryCriteria(selectedAppCategory);
+
+                    return (
+                      <div className="modal-reviews-section">
+                        <div className="modal-reviews-header-row">
+                          <h3>Jury Review Score Breakdown ({selectedAppDetail.jury_reviews.length} {selectedAppDetail.jury_reviews.length === 1 ? 'review' : 'reviews'})</h3>
+                          <span className="modal-reviews-category-pill">
+                            {selectedAppCategory || criteriaMeta.categoryName}
+                          </span>
+                        </div>
+                        <div className="table-wrapper modal-reviews-table-wrapper">
+                          <table className="modal-reviews-table">
+                            <thead>
+                              <tr>
+                                <th>Jury Member</th>
+                                {categoryCriteria.map(crit => (
+                                  <th key={crit.name} className="modal-crit-th">
+                                    <div className="modal-crit-th-name">{crit.name}</div>
+                                    <div className="modal-crit-th-weight">Weight: {crit.weight}%</div>
+                                  </th>
+                                ))}
+                                <th style={{ textAlign: 'center' }}>Total Score</th>
+                                <th>Comments</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {selectedAppDetail.jury_reviews.map((r, i) => {
+                                const { remarks, criterionScores } = parseJuryReviewComments(r.comments);
+                                return (
+                                  <tr key={i}>
+                                    <td className="bold-text">{r.jury_name}</td>
+                                    {categoryCriteria.map(crit => {
+                                      const pt = getCriterionPoint(criterionScores, crit.name);
+                                      const weightedVal = pt !== null
+                                        ? Number(((pt / 10) * crit.weight).toFixed(2))
+                                        : null;
+                                      return (
+                                        <td key={crit.name} className="modal-crit-td">
+                                          {pt !== null ? (
+                                            <div className="modal-crit-score-cell">
+                                              <span className="modal-crit-pt">{pt}/10</span>
+                                              <span className="modal-crit-weighted">({weightedVal}/{crit.weight})</span>
+                                            </div>
+                                          ) : (
+                                            '—'
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                    <td className="modal-score-highlight" style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      {typeof r.weightedScore === 'number'
+                                        ? `${Number(r.weightedScore.toFixed(2))}/100`
+                                        : `${r.weightedScore}/100`}
+                                    </td>
+                                    <td className="comment-text-cell">{remarks}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Rejection box if panel rejected */}
                   {selectedAppDetail.status === 'PANEL_REJECTED' && selectedAppDetail.rejection_reason && (

@@ -328,8 +328,9 @@ export const exportEvaluationRankingExcel = async (rankingData = [], juries = []
     { header: 'Name', key: 'name', width: 25 },
     { header: 'Organisation', key: 'organisation', width: 30 },
     { header: 'Category', key: 'category', width: 34 },
-    ...juries.map(j => ({ header: j.name, key: `jury_${j.id}`, width: 18, align: 'center' })),
+    ...juries.map((j, idx) => ({ header: j.name, key: `jury_${j.juryKey ?? j.id ?? idx}`, width: 18, align: 'center' })),
     { header: 'Total', key: 'total', width: 14, align: 'center' },
+    { header: 'Average', key: 'average', width: 14, align: 'center' },
     { header: 'Position', key: 'position', width: 18, align: 'center' }
   ];
 
@@ -340,10 +341,13 @@ export const exportEvaluationRankingExcel = async (rankingData = [], juries = []
       organisation: item.organisation,
       category: item.category,
       total: item.total,
+      average: typeof item.average === 'number' && item.average > 0 ? item.average : '—',
       position: item.position
     };
-    juries.forEach(j => {
-      rowObj[`jury_${j.id}`] = item.scores[j.id] !== undefined ? item.scores[j.id] : '—';
+    juries.forEach((j, idx) => {
+      const lookupKey = j.juryKey ?? j.id;
+      const val = item.scores ? item.scores[lookupKey] : undefined;
+      rowObj[`jury_${j.juryKey ?? j.id ?? idx}`] = val !== undefined && val !== null ? val : '—';
     });
     return rowObj;
   });

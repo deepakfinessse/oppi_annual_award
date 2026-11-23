@@ -7,7 +7,10 @@ import { getJuryApplications, juryApprove, saveJuryDraft, getUser, getPublicPane
 import { Eye, X, Download, CheckCircle2, ChevronDown, LogOut, Award, Filter } from 'lucide-react';
 import { exportJuryApplicationsExcel } from '../../utils/excelExport';
 import { AWARD_CATEGORIES, isCategoryMatch } from '../../constants/categories';
+import { CATEGORY_CRITERIA_MAP, getCategoryCriteria } from '../../constants/scoringCriteria';
 import './JuryPortal.css';
+
+export { CATEGORY_CRITERIA_MAP, getCategoryCriteria };
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
@@ -37,117 +40,6 @@ export const getCategoryShortName = (catName) => {
   const match = AWARD_CATEGORIES.find(c => isCategoryMatch(c, catName));
   if (match) return match;
   return catName;
-};
-
-export const CATEGORY_CRITERIA_MAP = {
-  hr_excellence: {
-    categoryName: 'OPPI HR Award - HR Excellence Award',
-    criteria: [
-      { name: 'Leadership & People Strategy', weight: 20 },
-      { name: 'Talent Acquisition & Management', weight: 20 },
-      { name: 'Talent and Organization Development', weight: 10 },
-      { name: 'Employee Engagement, Communication and Organization Culture', weight: 20 },
-      { name: 'Performance Management', weight: 10 },
-      { name: 'Total Rewards Management', weight: 10 },
-      { name: 'Digital, Analytics & Technological Innovation in HR', weight: 10 },
-    ]
-  },
-  dni: {
-    categoryName: 'OPPI HR Award - D&I Award',
-    criteria: [
-      { name: 'Diversity & Inclusion Strategy', weight: 20 },
-      { name: 'Recruitment', weight: 20 },
-      { name: 'Leadership and Internal Engagements', weight: 20 },
-      { name: 'Enabling Policies', weight: 20 },
-      { name: 'Talent Development and Growth', weight: 20 },
-    ]
-  },
-  marketing_new: {
-    categoryName: 'OPPI Marketing Excellence Awards - New Pharma Product',
-    criteria: [
-      { name: 'Product & Therapy Area', weight: 10 },
-      { name: 'Product Specific Market Environment', weight: 10 },
-      { name: 'Brand Performance', weight: 20 },
-      { name: 'Brand Strategy', weight: 20 },
-      { name: 'Sales Execution', weight: 20 },
-      { name: 'Innovation', weight: 20 },
-    ]
-  },
-  marketing_existing: {
-    categoryName: 'OPPI Marketing Excellence Awards - Existing Pharma Product',
-    criteria: [
-      { name: 'Product & Therapy Area', weight: 10 },
-      { name: 'Product Specific Market Environment', weight: 10 },
-      { name: 'Brand Performance', weight: 20 },
-      { name: 'Brand Strategy', weight: 20 },
-      { name: 'Sales Execution', weight: 20 },
-      { name: 'Innovation', weight: 20 },
-    ]
-  },
-  sales_force: {
-    categoryName: 'OPPI Sales Force Excellence Award',
-    criteria: [
-      { name: 'Improvement', weight: 10 },
-      { name: 'Alignment', weight: 10 },
-      { name: 'Execution', weight: 30 },
-      { name: 'Acceptance', weight: 25 },
-      { name: 'Impact', weight: 25 },
-    ]
-  },
-  medical: {
-    categoryName: 'OPPI Medical Excellence Award',
-    criteria: [
-      { name: 'Ethics', weight: 25 },
-      { name: 'Innovation', weight: 25 },
-      { name: 'Quality', weight: 25 },
-      { name: 'outcomes/impact', weight: 25 },
-    ]
-  },
-  communications: {
-    categoryName: 'OPPI Healthcare Communications Award',
-    criteria: [
-      { name: 'Communication Idea- Originationality/ Creativity; Authentic', weight: 25 },
-      { name: 'Choice of Medium & relevance', weight: 25 },
-      { name: 'Impact', weight: 25 },
-      { name: 'Measurability', weight: 25 },
-    ]
-  },
-  sustainability: {
-    categoryName: 'OPPI Sustainability Excellence Award',
-    criteria: [
-      { name: 'Environmental Impact', weight: 30 },
-      { name: 'Sustainability', weight: 30 },
-      { name: 'Collaboration & Partnerships', weight: 20 },
-      { name: 'Transparency', weight: 20 },
-    ]
-  },
-  patient_centricity: {
-    categoryName: 'OPPI Ranjit Shahani Memorial Award For Excellence In Patient Centricity',
-    criteria: [
-      { name: 'Impact of the initiative/strategy', weight: 40 },
-      { name: 'Scalability of the initiative/strategy', weight: 20 },
-      { name: 'Awareness', weight: 20 },
-      { name: 'Collaborations', weight: 10 },
-      { name: 'Innovation', weight: 10 },
-    ]
-  }
-};
-
-export const getCategoryCriteria = (catName) => {
-  if (!catName) return CATEGORY_CRITERIA_MAP.sales_force.criteria;
-  const c = catName.toLowerCase().trim();
-
-  if (c.includes('patient')) return CATEGORY_CRITERIA_MAP.patient_centricity.criteria;
-  if (c.includes('sustainab')) return CATEGORY_CRITERIA_MAP.sustainability.criteria;
-  if (c.includes('communicat')) return CATEGORY_CRITERIA_MAP.communications.criteria;
-  if (c.includes('medical')) return CATEGORY_CRITERIA_MAP.medical.criteria;
-  if (c.includes('sales')) return CATEGORY_CRITERIA_MAP.sales_force.criteria;
-  if (c.includes('diversity') || c.includes('d&i') || c.includes('dni')) return CATEGORY_CRITERIA_MAP.dni.criteria;
-  if (c.includes('hr excellence') || c.includes('hr award')) return CATEGORY_CRITERIA_MAP.hr_excellence.criteria;
-  if (c.includes('new')) return CATEGORY_CRITERIA_MAP.marketing_new.criteria;
-  if (c.includes('existing') || c.includes('marketing')) return CATEGORY_CRITERIA_MAP.marketing_existing.criteria;
-
-  return CATEGORY_CRITERIA_MAP.sales_force.criteria;
 };
 
 const JuryPortal = () => {

@@ -21,8 +21,8 @@ export const normalizeCategoryKey = (cat) => {
   if (s.includes('medical')) return 'medical';
   if (s.includes('sales')) return 'sales_force';
 
-  // D&I: check diversity, inclusion, d&i, dni, or word di
-  if (s.includes('diversity') || s.includes('inclusion') || s.includes('d&i') || s.includes('dni') || /\bdi\b/.test(s)) {
+  // D&I: check diversity, inclusion, d&i, d&amp;i, dni, or word di
+  if (s.includes('diversity') || s.includes('inclusion') || s.includes('d&i') || s.includes('d&amp;i') || s.includes('dni') || /\bdi\b/.test(s)) {
     return 'dni';
   }
 
