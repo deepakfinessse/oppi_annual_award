@@ -2059,9 +2059,10 @@ api.MapPost("/admin/past-winners", async (PastWinnerDto dto, InnovationDbContext
     var user = await db.Users.FindAsync(uid.Value);
     if (user?.Role != "ADMIN") return Results.Forbid();
 
-    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Category))
+    var resolvedOrg = !string.IsNullOrWhiteSpace(dto.Organisation) ? dto.Organisation.Trim() : dto.Name?.Trim();
+    if (string.IsNullOrWhiteSpace(resolvedOrg) || string.IsNullOrWhiteSpace(dto.Category))
     {
-        return Results.BadRequest(new { message = "Name and Category are required." });
+        return Results.BadRequest(new { message = "Organisation and Category are required." });
     }
 
     var yearStr = dto.YearStr?.Trim();
@@ -2079,10 +2080,10 @@ api.MapPost("/admin/past-winners", async (PastWinnerDto dto, InnovationDbContext
         Year = yearVal,
         YearStr = yearStr,
         Category = dto.Category,
-        Name = dto.Name,
-        Organisation = dto.Organisation,
-        Description = dto.Description ?? dto.Caption ?? "",
-        Caption = dto.Caption ?? dto.Description ?? "",
+        Name = !string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : resolvedOrg,
+        Organisation = resolvedOrg,
+        Description = dto.Description ?? "",
+        Caption = dto.Caption ?? "",
         Position = string.IsNullOrWhiteSpace(dto.Position) ? "Winner" : dto.Position,
         ImagePath = dto.ImagePath,
         Color = dto.Color ?? "#00a3e0",
@@ -2103,9 +2104,10 @@ api.MapPut("/admin/past-winners/{id}", async (int id, PastWinnerDto dto, Innovat
     var winner = await db.PastWinners.FindAsync(id);
     if (winner == null) return Results.NotFound();
 
-    if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Category))
+    var resolvedOrg = !string.IsNullOrWhiteSpace(dto.Organisation) ? dto.Organisation.Trim() : dto.Name?.Trim();
+    if (string.IsNullOrWhiteSpace(resolvedOrg) || string.IsNullOrWhiteSpace(dto.Category))
     {
-        return Results.BadRequest(new { message = "Name and Category are required." });
+        return Results.BadRequest(new { message = "Organisation and Category are required." });
     }
 
     var yearStr = dto.YearStr?.Trim();
@@ -2121,10 +2123,10 @@ api.MapPut("/admin/past-winners/{id}", async (int id, PastWinnerDto dto, Innovat
     winner.Year = yearVal;
     winner.YearStr = yearStr;
     winner.Category = dto.Category;
-    winner.Name = dto.Name;
-    winner.Organisation = dto.Organisation;
-    winner.Description = dto.Description ?? dto.Caption ?? "";
-    winner.Caption = dto.Caption ?? dto.Description ?? "";
+    winner.Name = !string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : resolvedOrg;
+    winner.Organisation = resolvedOrg;
+    winner.Description = dto.Description ?? "";
+    winner.Caption = dto.Caption ?? "";
     winner.Position = string.IsNullOrWhiteSpace(dto.Position) ? "Winner" : dto.Position;
     winner.ImagePath = dto.ImagePath;
     winner.Color = dto.Color ?? "#00a3e0";

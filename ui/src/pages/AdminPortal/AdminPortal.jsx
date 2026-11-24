@@ -215,10 +215,8 @@ const AdminPortal = () => {
   const [winnerYear, setWinnerYear] = useState(new Date().getFullYear());
   const [winnerYearStr, setWinnerYearStr] = useState('2025-2026');
   const [winnerCategory, setWinnerCategory] = useState(AWARD_CATEGORIES[0]);
-  const [winnerName, setWinnerName] = useState('');
   const [winnerOrganisation, setWinnerOrganisation] = useState('');
   const [winnerPosition, setWinnerPosition] = useState('Winner');
-  const [winnerCaption, setWinnerCaption] = useState('');
   const [winnerDescription, setWinnerDescription] = useState('');
   const [winnerImagePath, setWinnerImagePath] = useState('');
   const [winnerColor, setWinnerColor] = useState('#00a3e0');
@@ -1140,10 +1138,8 @@ const AdminPortal = () => {
     setWinnerYear(new Date().getFullYear());
     setWinnerYearStr('2025-2026');
     setWinnerCategory(AWARD_CATEGORIES[0]);
-    setWinnerName('');
     setWinnerOrganisation('');
     setWinnerPosition('Winner');
-    setWinnerCaption('');
     setWinnerDescription('');
     setWinnerImagePath('');
     setWinnerColor('#00a3e0');
@@ -1159,11 +1155,9 @@ const AdminPortal = () => {
     setWinnerYear(w.year || new Date().getFullYear());
     setWinnerYearStr(w.yearStr || (w.year ? `${w.year - 1}-${w.year}` : '2025-2026'));
     setWinnerCategory(w.category || AWARD_CATEGORIES[0]);
-    setWinnerName(w.name || '');
-    setWinnerOrganisation(w.organisation || '');
+    setWinnerOrganisation(w.organisation || w.name || '');
     setWinnerPosition(w.position || 'Winner');
-    setWinnerCaption(w.caption || w.description || '');
-    setWinnerDescription(w.description || w.caption || '');
+    setWinnerDescription(w.description || '');
     setWinnerImagePath(w.imagePath || '');
     const isRunner = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
     setWinnerColor(w.color || (isRunner ? '#f97316' : '#00a3e0'));
@@ -1198,8 +1192,8 @@ const AdminPortal = () => {
     setFieldErrors({});
 
     const validationErrors = {};
-    if (!winnerName || !winnerName.trim()) {
-      validationErrors.name = "Winner's Name is required.";
+    if (!winnerOrganisation || !winnerOrganisation.trim()) {
+      validationErrors.organisation = 'Organisation / Company is required.';
     }
     if (!winnerYearStr || !winnerYearStr.trim()) {
       validationErrors.yearStr = 'Award Year / Session is required (e.g. 2025-2026).';
@@ -1217,15 +1211,16 @@ const AdminPortal = () => {
     }
 
     const isRunner = winnerPosition && (winnerPosition.toLowerCase().includes('runner') || winnerPosition.includes('1st') || winnerPosition.includes('2nd'));
+    const orgTrimmed = winnerOrganisation.trim();
     const payload = {
       year: parsedYear,
       yearStr: winnerYearStr.trim(),
       category: winnerCategory,
-      name: winnerName.trim(),
-      organisation: winnerOrganisation.trim() || '—',
-      caption: winnerCaption.trim() || winnerDescription.trim() || '',
+      name: orgTrimmed,
+      organisation: orgTrimmed,
+      caption: '',
       position: winnerPosition || 'Winner',
-      description: winnerDescription.trim() || winnerCaption.trim() || '',
+      description: winnerDescription.trim() || '',
       imagePath: winnerImagePath,
       color: winnerColor || (isRunner ? '#f97316' : '#00a3e0')
     };
@@ -1252,12 +1247,10 @@ const AdminPortal = () => {
 
   const downloadPastWinnersCSV = () => {
     const winnersToExport = displayedWinners;
-    const headers = ['S. No.', 'Organisation', 'Name', 'Caption', 'Category', 'Year', 'Position'];
+    const headers = ['S. No.', 'Organisation', 'Category', 'Year', 'Position'];
     const rows = winnersToExport.map((w, idx) => [
       String(idx + 1).padStart(2, '0'),
       `"${(w.organisation || '').replace(/"/g, '""')}"`,
-      `"${(w.name || '').replace(/"/g, '""')}"`,
-      `"${(w.caption || w.description || '').replace(/"/g, '""')}"`,
       `"${(w.category || '').replace(/"/g, '""')}"`,
       `"${(w.yearStr || w.year || '').replace(/"/g, '""')}"`,
       `"${(w.position || 'Winner').replace(/"/g, '""')}"`
@@ -1274,7 +1267,7 @@ const AdminPortal = () => {
   };
 
   const handleDeleteWinner = (winner) => {
-    setDeleteTarget({ type: 'WINNER', id: winner.id, name: winner.name });
+    setDeleteTarget({ type: 'WINNER', id: winner.id, name: winner.organisation || winner.name || 'Winner' });
   };
 
   const handleConfirmDelete = async () => {
@@ -1994,9 +1987,7 @@ const AdminPortal = () => {
                   <tr>
                     <th style={{ width: '60px' }}>S. No.</th>
                     <th>Organisation</th>
-                    <th>Name</th>
                     <th style={{ width: '80px', textAlign: 'center' }}>Photo</th>
-                    <th>Caption</th>
                     <th>Category</th>
                     <th style={{ width: '110px' }}>Year</th>
                     <th style={{ width: '130px', textAlign: 'center' }}>Position</th>
@@ -2006,11 +1997,11 @@ const AdminPortal = () => {
                 <tbody>
                   {loading && pastWinners.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="table-loading">Loading winners...</td>
+                      <td colSpan="7" className="table-loading">Loading winners...</td>
                     </tr>
                   ) : displayedWinners.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="table-empty">No winners found matching filters.</td>
+                      <td colSpan="7" className="table-empty">No winners found matching filters.</td>
                     </tr>
                   ) : (
                     displayedWinners.map((w, idx) => {
@@ -2024,20 +2015,12 @@ const AdminPortal = () => {
                           <td className="bold-text" style={{ color: '#0f172a' }}>
                             {w.organisation || '—'}
                           </td>
-                          <td className="bold-text" style={{ color: '#0f172a' }}>
-                            {w.name}
-                          </td>
                           <td style={{ textAlign: 'center' }}>
                             <img
                               src={getResolvedImage(w.imagePath, 'WINNER')}
-                              alt={w.name}
+                              alt={w.organisation || 'Past Winner'}
                               style={{ width: '48px', height: '32px', borderRadius: '4px', objectFit: 'cover', border: '1px solid #cbd5e1', verticalAlign: 'middle' }}
                             />
-                          </td>
-                          <td>
-                            <div className="past-winner-caption-pill" title={w.caption || w.description}>
-                              {w.caption || w.description || '—'}
-                            </div>
                           </td>
                           <td style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>
                             {w.category}
@@ -2584,14 +2567,14 @@ const AdminPortal = () => {
                       if (val) {
                         const selectedApp = apps.find(a => String(a.Id || a.id) === String(val));
                         if (selectedApp) {
-                          const name = selectedApp.applicant_name || selectedApp.user_name || '';
                           const category = selectedApp.category || ANNUAL_AWARD_CATEGORIES[0];
                           const institute = selectedApp.company || '';
 
-                          if (name) setWinnerName(name);
                           if (category) setWinnerCategory(category);
-                          if (institute) setWinnerOrganisation(institute);
-                          setWinnerCaption(`Excellence in ${category}`);
+                          if (institute) {
+                            setWinnerOrganisation(institute);
+                            if (fieldErrors.organisation) setFieldErrors(prev => ({ ...prev, organisation: null }));
+                          }
                           setWinnerDescription(`Excellence in ${category}`);
                         }
                       }
@@ -2612,32 +2595,19 @@ const AdminPortal = () => {
                   <span className="field-hint-text">Select an approved applicant to pre-fill winner details, or leave as custom to manually add an external winner.</span>
                 </div>
 
-                <div className="modal-form-row">
-                  <div className={`modal-form-group ${fieldErrors.name ? 'has-error' : ''}`}>
-                    <label>Winner's Name <span className="req">*</span></label>
-                    <input
-                      type="text"
-                      value={winnerName}
-                      onChange={(e) => {
-                        setWinnerName(e.target.value);
-                        if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: null }));
-                      }}
-                      placeholder="e.g. Shrey"
-                      required
-                    />
-                    {fieldErrors.name && <span className="field-error-message">⚠️ {fieldErrors.name}</span>}
-                  </div>
-
-                  <div className="modal-form-group">
-                    <label>Organisation / Company <span className="req">*</span></label>
-                    <input
-                      type="text"
-                      value={winnerOrganisation}
-                      onChange={(e) => setWinnerOrganisation(e.target.value)}
-                      placeholder="e.g. Company name 123"
-                      required
-                    />
-                  </div>
+                <div className={`modal-form-group full-width ${fieldErrors.organisation ? 'has-error' : ''}`}>
+                  <label>Organisation / Company <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    value={winnerOrganisation}
+                    onChange={(e) => {
+                      setWinnerOrganisation(e.target.value);
+                      if (fieldErrors.organisation) setFieldErrors(prev => ({ ...prev, organisation: null }));
+                    }}
+                    placeholder="e.g. Company name 123"
+                    required
+                  />
+                  {fieldErrors.organisation && <span className="field-error-message">⚠️ {fieldErrors.organisation}</span>}
                 </div>
 
                 <div className="modal-form-row">
@@ -2705,16 +2675,6 @@ const AdminPortal = () => {
                       />
                     </div>
                   </div>
-                </div>
-
-                <div className="modal-form-group full-width">
-                  <label>Caption / Short Highlight</label>
-                  <input
-                    type="text"
-                    value={winnerCaption}
-                    onChange={(e) => setWinnerCaption(e.target.value)}
-                    placeholder="e.g. Excellence in eco-friendly pharmaceutical manufacturing operations"
-                  />
                 </div>
 
                 <div className="modal-form-row">

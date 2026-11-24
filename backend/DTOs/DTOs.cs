@@ -177,7 +177,7 @@ public class PastWinnerDto
     public int Year { get; set; }
     public string? YearStr { get; set; }
     public string Category { get; set; } = null!;
-    public string Name { get; set; } = null!;
+    public string? Name { get; set; }
     public string? Organisation { get; set; }
     public string? Description { get; set; }
     public string? Caption { get; set; }
