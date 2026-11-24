@@ -811,6 +811,19 @@ const AdminPortal = () => {
     window.location.href = '/';
   };
 
+  // Helper to resolve mobile number for an application (with fallback to users list)
+  const getAppMobile = (app) => {
+    const direct = app.applicant_mobile || app.user_mobile || app.mobile;
+    if (direct && String(direct).trim()) return String(direct).trim();
+    const appUserId = app.user_id || app.UserId;
+    const appEmail = (app.applicant_email || app.user_email || '').toLowerCase().trim();
+    const matchedUser = users.find(u =>
+      (appUserId && String(u.id || u.Id) === String(appUserId)) ||
+      (appEmail && (u.email || '').toLowerCase().trim() === appEmail)
+    );
+    return (matchedUser?.mobile && String(matchedUser.mobile).trim()) ? String(matchedUser.mobile).trim() : '—';
+  };
+
   // CSV download handlers
   const downloadUsersCSV = () => {
     const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name', 'Email id', 'Mobile', 'Category'];
@@ -821,53 +834,63 @@ const AdminPortal = () => {
         : '—';
       const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
       const categoryStr = validCategories.length > 0 ? validCategories.join(', ') : '—';
+      const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
       return [
         formatDateTime(u.createdAt || u.created_at),
         appDisplayId,
         u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—',
         `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
         u.email || '—',
-        u.mobile || '—',
+        mobile,
         categoryStr
       ];
     });
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `OPPI_Annual_Awards_Registered_Users_${new Date().toISOString().split('T')[0]}.csv`);
+    const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const csvContent = [headers.map(escapeCsv).join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `OPPI_Annual_Awards_Registered_Users_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const downloadAppsCSV = () => {
-    const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name'];
+    const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name', 'Email id', 'Mobile', 'Category', 'Status'];
     const rows = filteredApps.map(app => {
+      const statusInfo = getAppStatusPill(app.status);
       return [
         formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at),
         `#${String(app.id).padStart(2, '0')}`,
         app.company || app.institute_name || app.instituteName || '—',
-        app.applicant_name || app.user_name || 'Anonymous'
+        app.applicant_name || app.user_name || 'Anonymous',
+        app.applicant_email || app.user_email || '—',
+        getAppMobile(app),
+        app.category || '—',
+        statusInfo.label
       ];
     });
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `OPPI_Annual_Awards_Applications_${new Date().toISOString().split('T')[0]}.csv`);
+    const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const csvContent = [headers.map(escapeCsv).join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `OPPI_Annual_Awards_Applications_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Multi-format export helpers for Applications
   const handleExportFinalSubmissionsExcel = async () => {
     setShowAppExportDropdown(false);
     const submitted = apps.filter(a => a.status !== 'DRAFT');
-    await exportSubmissionsExcel(submitted);
+    await exportSubmissionsExcel(submitted, users);
     setSuccess('Final Submissions Excel report downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
@@ -875,14 +898,14 @@ const AdminPortal = () => {
   const handleExportDraftsExcel = async () => {
     setShowAppExportDropdown(false);
     const drafts = apps.filter(a => a.status === 'DRAFT');
-    await exportDraftApplicationsExcel(drafts);
+    await exportDraftApplicationsExcel(drafts, users);
     setSuccess('Draft Applications Excel report downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
 
   const handleExportAllAppsExcel = async () => {
     setShowAppExportDropdown(false);
-    await exportApplicationsExcel(filteredApps, 'OPPI Annual Awards — Applications Report', 'OPPI_Annual_Awards_Applications');
+    await exportApplicationsExcel(filteredApps, 'OPPI Annual Awards — Applications Report', 'OPPI_Annual_Awards_Applications', users);
     setSuccess('Filtered applications Excel sheet downloaded successfully.');
     setTimeout(() => setSuccess(''), 3500);
   };
@@ -890,7 +913,7 @@ const AdminPortal = () => {
   const handleExportFinalSubmissionsWord = () => {
     setShowAppExportDropdown(false);
     const submitted = apps.filter(a => a.status !== 'DRAFT');
-    exportSubmissionsDossierWord(submitted);
+    exportSubmissionsDossierWord(submitted, users);
     setSuccess('Final Submissions Word Dossier downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
@@ -898,7 +921,7 @@ const AdminPortal = () => {
   const handleExportDraftsWord = () => {
     setShowAppExportDropdown(false);
     const drafts = apps.filter(a => a.status === 'DRAFT');
-    exportDraftApplicationsWord(drafts);
+    exportDraftApplicationsWord(drafts, users);
     setSuccess('Draft Applications Word Report downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
@@ -927,18 +950,18 @@ const AdminPortal = () => {
     try {
       if (type === 'VALIDATOR_APPROVED') {
         const valApproved = apps.filter(a => a.status !== 'DRAFT' && a.status !== 'SUBMITTED' && a.status !== 'VALIDATOR_REJECTED');
-        await exportValidatorApplicationsExcel(valApproved, 'APPROVED');
+        await exportValidatorApplicationsExcel(valApproved, 'APPROVED', users);
         setSuccess('Validator Approved applications Excel sheet downloaded successfully.');
       } else if (type === 'VALIDATOR_REJECTED') {
         const valRejected = apps.filter(a => a.status === 'VALIDATOR_REJECTED');
-        await exportValidatorApplicationsExcel(valRejected, 'REJECTED');
+        await exportValidatorApplicationsExcel(valRejected, 'REJECTED', users);
         setSuccess('Validator Rejected applications Excel sheet downloaded successfully.');
       } else if (type === 'JURY_APPROVED') {
         const juryApproved = apps.filter(a => a.status === 'JURY_APPROVED' || a.status === 'PANEL_APPROVED' || a.status === 'PANEL_REJECTED');
-        await exportJuryApplicationsExcel(juryApproved, 'SCORED');
+        await exportJuryApplicationsExcel(juryApproved, 'SCORED', users);
         setSuccess('Jury Approved applications Excel sheet downloaded successfully.');
       } else {
-        await exportApplicationsExcel(filteredApps, 'OPPI Scientist Award — Applications Report', 'Applications_Report');
+        await exportApplicationsExcel(filteredApps, 'OPPI Annual Awards — Applications Report', 'Applications_Report', users);
         setSuccess('Filtered applications Excel sheet downloaded successfully.');
       }
       setTimeout(() => setSuccess(''), 3500);
@@ -1441,28 +1464,33 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
+                    <th>Date &amp; Time</th>
                     <th>App ID</th>
-                    <th>Organisation</th>
-                    <th>Name</th>
-                    <th>Email</th>
+                    <th>Organization</th>
+                    <th>Applicant Name</th>
+                    <th>Email id</th>
+                    <th>Mobile</th>
                     <th>Category</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && users.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-loading">Loading registrations...</td>
+                      <td colSpan="7" className="table-loading">Loading registrations...</td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="table-empty">No registrations found.</td>
+                      <td colSpan="7" className="table-empty">No registrations found.</td>
                     </tr>
                   ) : (
-                    paginatedUsers.map((u, idx) => {
+                    paginatedUsers.map((u) => {
                       const userApps = getUserApps(u);
-                      const appDisplayId = String((userPage - 1) * userPageSize + idx + 1).padStart(2, '0');
+                      const appDisplayId = userApps.length > 0
+                        ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ')
+                        : '—';
                       const organisation = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
                       const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+                      const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
                       
                       const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
                       let categoryDisplay = '—';
@@ -1477,10 +1505,12 @@ const AdminPortal = () => {
 
                       return (
                         <tr key={u.id}>
-                          <td className="id-col">{appDisplayId}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(u.createdAt || u.created_at)}</td>
+                          <td className="id-col" style={{ whiteSpace: 'nowrap' }}>{appDisplayId}</td>
                           <td>{organisation}</td>
                           <td className="bold-text">{fullName}</td>
-                          <td className="email-text">{u.email}</td>
+                          <td className="email-text">{u.email || '—'}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{mobile}</td>
                           <td>{categoryDisplay}</td>
                         </tr>
                       );
@@ -1660,37 +1690,41 @@ const AdminPortal = () => {
               <table className="oppi-dashboard-table">
                 <thead>
                   <tr>
+                    <th>Date &amp; Time</th>
                     <th>App ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Company</th>
+                    <th>Organization</th>
+                    <th>Applicant Name</th>
+                    <th>Email id</th>
+                    <th>Mobile</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && apps.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-loading">Loading applications...</td>
+                      <td colSpan="9" className="table-loading">Loading applications...</td>
                     </tr>
                   ) : filteredApps.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="table-empty">No applications found.</td>
+                      <td colSpan="9" className="table-empty">No applications found.</td>
                     </tr>
                   ) : (
                     paginatedApps.map((app, idx) => {
-                      const displayId = String(app.id || idx + 1).padStart(2, '0');
+                      const displayId = `#${String(app.id || idx + 1).padStart(2, '0')}`;
                       const statusInfo = getAppStatusPill(app.status);
 
                       return (
                         <tr key={app.id}>
-                          <td className="id-col">{displayId}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at)}</td>
+                          <td className="id-col" style={{ whiteSpace: 'nowrap' }}>{displayId}</td>
+                          <td>{app.company || app.institute_name || app.instituteName || '—'}</td>
                           <td className="bold-text">{app.applicant_name || app.user_name || 'Anonymous'}</td>
                           <td className="email-text">{app.applicant_email || app.user_email || '—'}</td>
-                          <td>{app.company || app.institute_name || app.instituteName || '—'}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{getAppMobile(app)}</td>
                           <td>{app.category || '—'}</td>
-                          <td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
                             <span className={`oppi-status-pill ${statusInfo.className}`}>
                               {statusInfo.label}
                             </span>

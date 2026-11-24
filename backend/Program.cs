@@ -1619,6 +1619,11 @@ api.MapGet("/admin/applications", async (HttpContext ctx, InnovationDbContext db
         if (string.IsNullOrWhiteSpace(appEmail))
             appEmail = a.User.Email;
 
+        var appMobile = db.ApplicantDetails.Where(ad => ad.ApplicationId == a.Id)
+            .Select(ad => ad.Mobile).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(appMobile))
+            appMobile = a.User.Mobile;
+
         var comp = pInfo?.CompanyName;
         if (string.IsNullOrWhiteSpace(comp))
             comp = a.User.Organisation;
@@ -1634,10 +1639,14 @@ api.MapGet("/admin/applications", async (HttpContext ctx, InnovationDbContext db
             user_id = a.UserId,
             a.Status,
             a.SubmittedAt,
+            a.CreatedAt,
             user_name = a.User.FirstName + " " + a.User.LastName,
             user_email = a.User.Email,
+            user_mobile = a.User.Mobile ?? "",
             applicant_name = appName,
             applicant_email = appEmail,
+            applicant_mobile = appMobile ?? "",
+            mobile = appMobile ?? "",
             company = comp,
             institute_name = comp,
             category = cat,

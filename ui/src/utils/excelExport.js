@@ -104,10 +104,39 @@ const downloadWorkbook = async (workbook, fileName) => {
   window.URL.revokeObjectURL(url);
 };
 
+const formatStatusLabel = (status) => {
+  const s = (status || '').toUpperCase().trim();
+  if (!s || s === 'DRAFT') return 'Draft';
+  if (s === 'SUBMITTED') return 'Submitted';
+  if (s === 'UNDER_JURY_REVIEW') return 'Under Jury Review';
+  if (s === 'VALIDATOR_APPROVED') return 'Validator Approved';
+  if (s === 'VALIDATOR_REJECTED') return 'Validator Rejected';
+  if (s === 'JURY_APPROVED') return 'Jury Approved';
+  if (s === 'JURY_REJECTED') return 'Jury Rejected';
+  if (s === 'PANEL_APPROVED') return 'Panel Approved';
+  if (s === 'PANEL_REJECTED') return 'Panel Rejected';
+  return s.replace(/_/g, ' ');
+};
+
+const resolveAppMobile = (app, users = []) => {
+  const direct = app.applicant_mobile || app.user_mobile || app.mobile;
+  if (direct && String(direct).trim()) return String(direct).trim();
+  if (Array.isArray(users) && users.length > 0) {
+    const appUserId = app.user_id || app.UserId;
+    const appEmail = (app.applicant_email || app.user_email || '').toLowerCase().trim();
+    const matched = users.find(u =>
+      (appUserId && String(u.id || u.Id) === String(appUserId)) ||
+      (appEmail && (u.email || '').toLowerCase().trim() === appEmail)
+    );
+    if (matched?.mobile && String(matched.mobile).trim()) return String(matched.mobile).trim();
+  }
+  return '—';
+};
+
 /**
  * Format raw application data for Excel export
  */
-const prepareAppRowData = (app) => {
+const prepareAppRowData = (app, users = []) => {
   const rev = app.review || {};
   const score1 = typeof rev.innovationIpScore === 'number' ? rev.innovationIpScore : null;
   const score2 = typeof rev.teamStrengthScore === 'number' ? rev.teamStrengthScore : null;
@@ -128,12 +157,14 @@ const prepareAppRowData = (app) => {
 
   return {
     id: app.id,
+    appId: app.id !== undefined && app.id !== null ? `#${String(app.id).padStart(2, '0')}` : '—',
     applicant_name: app.applicant_name || app.user_name || 'Anonymous',
     applicant_email: app.applicant_email || app.user_email || '—',
+    mobile: resolveAppMobile(app, users),
     category: app.category || '—',
-    institute_name: app.institute_name || app.instituteName || app.company || '—',
+    institute_name: app.company || app.institute_name || app.instituteName || '—',
     submittedAt: (() => {
-      const val = app.submittedAt || app.submitted_at;
+      const val = app.submittedAt || app.submitted_at || app.createdAt || app.created_at;
       if (!val) return '—';
       try {
         let str = String(val).trim();
@@ -148,7 +179,7 @@ const prepareAppRowData = (app) => {
       }
     })(),
     designation: app.designation || '—',
-    status: app.status || '—',
+    status: formatStatusLabel(app.status),
     score1: score1 !== null ? score1 : '—',
     score2: score2 !== null ? score2 : '—',
     score3: score3 !== null ? score3 : '—',
@@ -160,9 +191,13 @@ const prepareAppRowData = (app) => {
 
 const COMMON_HEADERS = [
   { header: 'Date & Time', key: 'submittedAt', width: 22, align: 'center' },
-  { header: 'App ID', key: 'id', width: 10, align: 'center' },
+  { header: 'App ID', key: 'appId', width: 12, align: 'center' },
   { header: 'Organization', key: 'institute_name', width: 30 },
-  { header: 'Applicant Name', key: 'applicant_name', width: 25 }
+  { header: 'Applicant Name', key: 'applicant_name', width: 26 },
+  { header: 'Email id', key: 'applicant_email', width: 28 },
+  { header: 'Mobile', key: 'mobile', width: 18, align: 'center' },
+  { header: 'Category', key: 'category', width: 34 },
+  { header: 'Status', key: 'status', width: 20, align: 'center' }
 ];
 
 const REGISTRATION_HEADERS = [
@@ -183,7 +218,7 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
   const title = 'OPPI Annual Awards — Registered Members Tracking';
   const worksheet = workbook.addWorksheet('Registrations');
 
-  const rows = users.map((u, idx) => {
+  const rows = users.map((u) => {
     const userEmail = (u.email || '').toLowerCase().trim();
     const userId = u.id || u.Id;
     const userApps = apps.filter(a => {
@@ -193,8 +228,6 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
       const matchesUserId = userId && (a.user_id || a.UserId) && String(a.user_id || a.UserId) === String(userId);
       return matchesEmail || matchesUserId;
     });
-    const hasSubmitted = userApps.some(a => a.status && a.status !== 'DRAFT');
-    const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
     const validCats = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
     const category = validCats.length > 0 ? validCats.join(', ') : '—';
     const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
@@ -222,7 +255,7 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
       company,
       name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
       email: u.email || '—',
-      mobile: u.mobile || '—',
+      mobile: u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—',
       category
     };
   });
@@ -237,12 +270,12 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
 /**
  * Export Draft / Saved Applications Sheet
  */
-export const exportDraftApplicationsExcel = async (draftApps = []) => {
+export const exportDraftApplicationsExcel = async (draftApps = [], users = []) => {
   const workbook = new ExcelJS.Workbook();
   const title = 'OPPI Annual Awards — Draft / Saved Applications';
   const worksheet = workbook.addWorksheet('Draft Applications');
 
-  const rows = draftApps.map(prepareAppRowData);
+  const rows = draftApps.map(app => prepareAppRowData(app, users));
   applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
 
   const dateStr = new Date().toISOString().split('T')[0];
@@ -253,12 +286,12 @@ export const exportDraftApplicationsExcel = async (draftApps = []) => {
 /**
  * Export Final Submissions Sheet
  */
-export const exportSubmissionsExcel = async (submittedApps = []) => {
+export const exportSubmissionsExcel = async (submittedApps = [], users = []) => {
   const workbook = new ExcelJS.Workbook();
   const title = 'OPPI Annual Awards — Final Submissions Report';
   const worksheet = workbook.addWorksheet('Final Submissions');
 
-  const rows = submittedApps.map(prepareAppRowData);
+  const rows = submittedApps.map(app => prepareAppRowData(app, users));
   applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
 
   const dateStr = new Date().toISOString().split('T')[0];
@@ -269,13 +302,13 @@ export const exportSubmissionsExcel = async (submittedApps = []) => {
 /**
  * Export Validator Applications (Approved, Rejected, or All)
  */
-export const exportValidatorApplicationsExcel = async (apps = [], type = 'APPROVED') => {
+export const exportValidatorApplicationsExcel = async (apps = [], type = 'APPROVED', users = []) => {
   const workbook = new ExcelJS.Workbook();
   const title = `OPPI Annual Awards — Validator ${type.toUpperCase()} Applications`;
   const sheetName = `Validator ${type} Apps`;
   const worksheet = workbook.addWorksheet(sheetName);
 
-  const rows = apps.map(prepareAppRowData);
+  const rows = apps.map(app => prepareAppRowData(app, users));
   applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
 
   const dateStr = new Date().toISOString().split('T')[0];
@@ -286,13 +319,13 @@ export const exportValidatorApplicationsExcel = async (apps = [], type = 'APPROV
 /**
  * Export Jury Applications (Scored, Pending, or All)
  */
-export const exportJuryApplicationsExcel = async (apps = [], type = 'SCORED') => {
+export const exportJuryApplicationsExcel = async (apps = [], type = 'SCORED', users = []) => {
   const workbook = new ExcelJS.Workbook();
   const title = `OPPI Annual Awards — Jury ${type.toUpperCase()} Applications`;
   const sheetName = `Jury ${type} Apps`;
   const worksheet = workbook.addWorksheet(sheetName);
 
-  const rows = apps.map(prepareAppRowData);
+  const rows = apps.map(app => prepareAppRowData(app, users));
   applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
 
   const dateStr = new Date().toISOString().split('T')[0];
@@ -303,11 +336,11 @@ export const exportJuryApplicationsExcel = async (apps = [], type = 'SCORED') =>
 /**
  * Export Generic Applications Sheet (Admin or custom filtering)
  */
-export const exportApplicationsExcel = async (apps = [], title = 'OPPI Annual Awards — Applications Report', filePrefix = 'Applications_Report') => {
+export const exportApplicationsExcel = async (apps = [], title = 'OPPI Annual Awards — Applications Report', filePrefix = 'Applications_Report', users = []) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Applications');
 
-  const rows = apps.map(prepareAppRowData);
+  const rows = apps.map(app => prepareAppRowData(app, users));
   applyExcelStyling(worksheet, title, COMMON_HEADERS, rows);
 
   const dateStr = new Date().toISOString().split('T')[0];

@@ -138,6 +138,35 @@ const triggerDocDownload = (htmlContent, fileName) => {
   URL.revokeObjectURL(url);
 };
 
+const resolveAppMobile = (app, users = []) => {
+  const direct = app.applicant_mobile || app.user_mobile || app.mobile;
+  if (direct && String(direct).trim()) return String(direct).trim();
+  if (Array.isArray(users) && users.length > 0) {
+    const appUserId = app.user_id || app.UserId;
+    const appEmail = (app.applicant_email || app.user_email || '').toLowerCase().trim();
+    const matched = users.find(u =>
+      (appUserId && String(u.id || u.Id) === String(appUserId)) ||
+      (appEmail && (u.email || '').toLowerCase().trim() === appEmail)
+    );
+    if (matched?.mobile && String(matched.mobile).trim()) return String(matched.mobile).trim();
+  }
+  return '—';
+};
+
+const formatStatusLabel = (status) => {
+  const s = (status || '').toUpperCase().trim();
+  if (!s || s === 'DRAFT') return 'Draft';
+  if (s === 'SUBMITTED') return 'Submitted';
+  if (s === 'UNDER_JURY_REVIEW') return 'Under Jury Review';
+  if (s === 'VALIDATOR_APPROVED') return 'Validator Approved';
+  if (s === 'VALIDATOR_REJECTED') return 'Validator Rejected';
+  if (s === 'JURY_APPROVED') return 'Jury Approved';
+  if (s === 'JURY_REJECTED') return 'Jury Rejected';
+  if (s === 'PANEL_APPROVED') return 'Panel Approved';
+  if (s === 'PANEL_REJECTED') return 'Panel Rejected';
+  return s.replace(/_/g, ' ');
+};
+
 /**
  * Export Registrations to Word (.doc)
  */
@@ -145,7 +174,7 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
   const timestamp = formatDateTime(new Date());
   let rowsHtml = '';
 
-  users.forEach((u, idx) => {
+  users.forEach((u) => {
     const userEmail = (u.email || '').toLowerCase().trim();
     const userId = u.id || u.Id;
     const userApps = apps.filter(a => {
@@ -155,11 +184,10 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
       const matchesUserId = userId && (a.user_id || a.UserId) && String(a.user_id || a.UserId) === String(userId);
       return matchesEmail || matchesUserId;
     });
-    const hasSubmitted = userApps.some(a => a.status && a.status !== 'DRAFT');
-    const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
     const validCats = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
     const category = validCats.length > 0 ? validCats.join(', ') : '—';
     const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
+    const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
 
     const appDisplayId = userApps.length > 0 
       ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
@@ -170,9 +198,9 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
         <td>${formatDateTime(u.createdAt || u.created_at)}</td>
         <td style="text-align: center;">${appDisplayId}</td>
         <td>${company}</td>
-        <td><strong>${u.firstName || ''} ${u.lastName || ''}</strong></td>
-        <td>${u.email}</td>
-        <td>${u.mobile || '—'}</td>
+        <td><strong>${`${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</strong></td>
+        <td>${u.email || '—'}</td>
+        <td>${mobile}</td>
         <td>${category}</td>
       </tr>
     `;
@@ -207,20 +235,22 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
 /**
  * Export Draft Applications to Word (.doc)
  */
-export const exportDraftApplicationsWord = (draftApps = []) => {
+export const exportDraftApplicationsWord = (draftApps = [], users = []) => {
   const timestamp = formatDateTime(new Date());
   let rowsHtml = '';
 
-  draftApps.forEach((app, idx) => {
+  draftApps.forEach((app) => {
+    const statusLabel = formatStatusLabel(app.status);
     rowsHtml += `
       <tr>
-        <td style="text-align: center;"><strong>#${app.id}</strong></td>
-        <td>${app.company || app.institute_name || '—'}</td>
-        <td>${app.category || 'Not yet selected'}</td>
+        <td>${formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at)}</td>
+        <td style="text-align: center;"><strong>#${String(app.id).padStart(2, '0')}</strong></td>
+        <td>${app.company || app.institute_name || app.instituteName || '—'}</td>
         <td>${app.applicant_name || app.user_name || '—'}</td>
         <td>${app.applicant_email || app.user_email || '—'}</td>
-        <td>${app.designation || '—'}</td>
-        <td><span class="badge badge-draft">DRAFT</span></td>
+        <td>${resolveAppMobile(app, users)}</td>
+        <td>${app.category || '—'}</td>
+        <td><span class="badge badge-draft">${statusLabel}</span></td>
       </tr>
     `;
   });
@@ -232,17 +262,18 @@ export const exportDraftApplicationsWord = (draftApps = []) => {
     <table>
       <thead>
         <tr>
+          <th style="width: 14%;">Date & Time</th>
           <th style="width: 8%;">App ID</th>
-          <th style="width: 22%;">Member Company</th>
-          <th style="width: 25%;">Award Category</th>
-          <th style="width: 18%;">Representative</th>
-          <th style="width: 18%;">Email</th>
-          <th style="width: 15%;">Designation</th>
-          <th style="width: 10%;">Status</th>
+          <th style="width: 16%;">Organization</th>
+          <th style="width: 14%;">Applicant Name</th>
+          <th style="width: 16%;">Email id</th>
+          <th style="width: 10%;">Mobile</th>
+          <th style="width: 14%;">Category</th>
+          <th style="width: 8%;">Status</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || '<tr><td colspan="7" style="text-align: center;">No draft applications found.</td></tr>'}
+        ${rowsHtml || '<tr><td colspan="8" style="text-align: center;">No draft applications found.</td></tr>'}
       </tbody>
     </table>
   `;
@@ -254,36 +285,65 @@ export const exportDraftApplicationsWord = (draftApps = []) => {
 /**
  * Export Final Submissions Dossier to Word (.doc)
  */
-export const exportSubmissionsDossierWord = (submittedApps = []) => {
+export const exportSubmissionsDossierWord = (submittedApps = [], users = []) => {
   const timestamp = formatDateTime(new Date());
+  let summaryRowsHtml = '';
   let dossiersHtml = '';
 
   submittedApps.forEach((app, idx) => {
+    const displayId = `#${String(app.id).padStart(2, '0')}`;
+    const dateTime = formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at);
+    const org = app.company || app.institute_name || app.instituteName || '—';
+    const applicantName = app.applicant_name || app.user_name || '—';
+    const email = app.applicant_email || app.user_email || '—';
+    const mobile = resolveAppMobile(app, users);
+    const category = app.category || '—';
+    const statusLabel = formatStatusLabel(app.status);
+
+    summaryRowsHtml += `
+      <tr>
+        <td>${dateTime}</td>
+        <td style="text-align: center;"><strong>${displayId}</strong></td>
+        <td>${org}</td>
+        <td>${applicantName}</td>
+        <td>${email}</td>
+        <td>${mobile}</td>
+        <td>${category}</td>
+        <td><span class="badge badge-submitted">${statusLabel}</span></td>
+      </tr>
+    `;
+
     dossiersHtml += `
       <div class="dossier-card">
-        <h2>${idx + 1}. Application #${app.id} — ${app.category || 'Annual Award Nomination'}</h2>
+        <h2>${idx + 1}. Application ${displayId} — ${app.category || 'Annual Award Nomination'}</h2>
         <table style="margin-top: 8px;">
           <tr>
-            <td class="label">Member Company</td>
-            <td class="field-val"><strong>${app.company || app.institute_name || '—'}</strong></td>
-            <td class="label">Award Category</td>
-            <td class="field-val">${app.category || '—'}</td>
+            <td class="label">Date & Time</td>
+            <td class="field-val">${dateTime}</td>
+            <td class="label">App ID</td>
+            <td class="field-val"><strong>${displayId}</strong></td>
           </tr>
           <tr>
-            <td class="label">Representative Name</td>
-            <td class="field-val">${app.applicant_name || app.user_name || '—'}</td>
+            <td class="label">Organization</td>
+            <td class="field-val"><strong>${org}</strong></td>
+            <td class="label">Applicant Name</td>
+            <td class="field-val">${applicantName}</td>
+          </tr>
+          <tr>
+            <td class="label">Email id</td>
+            <td class="field-val">${email}</td>
+            <td class="label">Mobile</td>
+            <td class="field-val">${mobile}</td>
+          </tr>
+          <tr>
+            <td class="label">Category</td>
+            <td class="field-val">${category}</td>
+            <td class="label">Status</td>
+            <td class="field-val"><span class="badge badge-submitted">${statusLabel}</span></td>
+          </tr>
+          <tr>
             <td class="label">Designation</td>
             <td class="field-val">${app.designation || '—'}</td>
-          </tr>
-          <tr>
-            <td class="label">Email Address</td>
-            <td class="field-val">${app.applicant_email || app.user_email || '—'}</td>
-            <td class="label">Submission Date</td>
-            <td class="field-val">${formatDateTime(app.submittedAt || app.submitted_at)}</td>
-          </tr>
-          <tr>
-            <td class="label">Application Status</td>
-            <td class="field-val"><span class="badge badge-submitted">${app.status}</span></td>
             <td class="label">Jury Score</td>
             <td class="field-val">${app.average_score > 0 ? app.average_score.toFixed(2) : 'Under Review'}</td>
           </tr>
@@ -301,7 +361,24 @@ export const exportSubmissionsDossierWord = (submittedApps = []) => {
   const content = `
     <h1>OPPI Annual Awards — Final Submissions Dossier</h1>
     <div class="meta-bar">Generated on: ${timestamp} (IST) | Total Final Submissions: ${submittedApps.length}</div>
-    <p>Comprehensive compilation of finalized and submitted nominations across all 9 OPPI Annual Award categories.</p>
+    <p>Comprehensive compilation of finalized and submitted nominations across all OPPI Annual Award categories.</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 14%;">Date & Time</th>
+          <th style="width: 8%;">App ID</th>
+          <th style="width: 16%;">Organization</th>
+          <th style="width: 14%;">Applicant Name</th>
+          <th style="width: 16%;">Email id</th>
+          <th style="width: 10%;">Mobile</th>
+          <th style="width: 14%;">Category</th>
+          <th style="width: 8%;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summaryRowsHtml || '<tr><td colspan="8" style="text-align: center;">No final submissions found.</td></tr>'}
+      </tbody>
+    </table>
     ${dossiersHtml || '<p>No final submissions found.</p>'}
   `;
 
