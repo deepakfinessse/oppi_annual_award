@@ -81,6 +81,21 @@ const formatDateTime = (dateStr) => {
   }
 };
 
+const renderDateTimeCell = (dateStr) => {
+  const formatted = formatDateTime(dateStr);
+  if (formatted === '—') return '—';
+  const parts = formatted.split(',');
+  if (parts.length >= 2) {
+    return (
+      <div className="dt-cell">
+        <span className="dt-cell-date">{parts[0].trim()}</span>
+        <span className="dt-cell-time">{parts.slice(1).join(',').trim()}</span>
+      </div>
+    );
+  }
+  return <div className="dt-cell"><span className="dt-cell-date">{formatted}</span></div>;
+};
+
 export const getAppStatusPill = (status) => {
   const s = (status || '').toUpperCase().trim();
   if (!s || s === 'DRAFT') {
@@ -1454,7 +1469,7 @@ const AdminPortal = () => {
             </div>
 
             <div className="table-wrapper">
-              <table className="oppi-dashboard-table">
+              <table className="oppi-dashboard-table admin-compact-table">
                 <thead>
                   <tr>
                     <th>Date &amp; Time</th>
@@ -1478,33 +1493,47 @@ const AdminPortal = () => {
                   ) : (
                     paginatedUsers.map((u) => {
                       const userApps = getUserApps(u);
-                      const appDisplayId = userApps.length > 0
-                        ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ')
-                        : '—';
+                      const appIds = userApps.map(a => `#${String(a.id).padStart(2, '0')}`);
                       const organisation = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
                       const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
                       const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
                       
                       const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
-                      let categoryDisplay = '—';
+                      let displayedCategories = [];
                       if (validCategories.length > 0) {
                         if (userCategoryFilter !== 'ALL') {
                           const matched = validCategories.find(c => isCategoryMatch(c, userCategoryFilter));
-                          categoryDisplay = matched || validCategories.join(', ');
+                          displayedCategories = matched ? [matched] : validCategories;
                         } else {
-                          categoryDisplay = validCategories.join(', ');
+                          displayedCategories = validCategories;
                         }
                       }
 
                       return (
                         <tr key={u.id}>
-                          <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(u.createdAt || u.created_at)}</td>
-                          <td className="id-col" style={{ whiteSpace: 'nowrap' }}>{appDisplayId}</td>
-                          <td>{organisation}</td>
-                          <td className="bold-text">{fullName}</td>
-                          <td className="email-text">{u.email || '—'}</td>
+                          <td>{renderDateTimeCell(u.createdAt || u.created_at)}</td>
+                          <td className="id-col">
+                            {appIds.length > 0 ? (
+                              <div className="app-id-chip-list" title={appIds.join(', ')}>
+                                {appIds.map(idStr => (
+                                  <span key={idStr} className="app-id-chip">{idStr}</span>
+                                ))}
+                              </div>
+                            ) : '—'}
+                          </td>
+                          <td style={{ maxWidth: '155px' }}>{organisation}</td>
+                          <td className="bold-text" style={{ maxWidth: '140px' }}>{fullName}</td>
+                          <td className="email-text" style={{ maxWidth: '205px' }}>{u.email || '—'}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>{mobile}</td>
-                          <td>{categoryDisplay}</td>
+                          <td>
+                            {displayedCategories.length > 0 ? (
+                              <div className="reg-category-list" title={displayedCategories.join(', ')}>
+                                {displayedCategories.map((cat, cIdx) => (
+                                  <span key={cIdx} className="reg-category-item">{cat}</span>
+                                ))}
+                              </div>
+                            ) : '—'}
+                          </td>
                         </tr>
                       );
                     })
@@ -1680,7 +1709,7 @@ const AdminPortal = () => {
             </div>
 
             <div className="table-wrapper">
-              <table className="oppi-dashboard-table">
+              <table className="oppi-dashboard-table admin-compact-table">
                 <thead>
                   <tr>
                     <th>Date &amp; Time</th>
@@ -1710,20 +1739,20 @@ const AdminPortal = () => {
 
                       return (
                         <tr key={app.id}>
-                          <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(app.submittedAt || app.submitted_at || app.createdAt || app.created_at)}</td>
+                          <td>{renderDateTimeCell(app.submittedAt || app.submitted_at || app.createdAt || app.created_at)}</td>
                           <td className="id-col" style={{ whiteSpace: 'nowrap' }}>{displayId}</td>
-                          <td>{app.company || app.institute_name || app.instituteName || '—'}</td>
-                          <td className="bold-text">{app.applicant_name || app.user_name || 'Anonymous'}</td>
-                          <td className="email-text">{app.applicant_email || app.user_email || '—'}</td>
+                          <td style={{ maxWidth: '145px' }}>{app.company || app.institute_name || app.instituteName || '—'}</td>
+                          <td className="bold-text" style={{ maxWidth: '130px' }}>{app.applicant_name || app.user_name || 'Anonymous'}</td>
+                          <td className="email-text" style={{ maxWidth: '185px' }}>{app.applicant_email || app.user_email || '—'}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>{getAppMobile(app)}</td>
-                          <td>{app.category || '—'}</td>
+                          <td style={{ minWidth: '170px', maxWidth: '220px', fontSize: '0.8rem' }}>{app.category || '—'}</td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <span className={`oppi-status-pill ${statusInfo.className}`}>
                               {statusInfo.label}
                             </span>
                           </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                               <button className="action-btn-pill-view" onClick={() => triggerViewApp(app.id)}>
                                 View
                               </button>

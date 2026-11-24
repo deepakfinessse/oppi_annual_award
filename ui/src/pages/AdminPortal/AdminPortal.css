@@ -429,6 +429,97 @@
 .email-text {
   color: #475569;
   font-weight: 500;
+  word-break: break-word;
+}
+
+/* Compact layout for multi-column Registrations & Applications tables */
+.oppi-dashboard-table.admin-compact-table {
+  font-size: 0.84rem;
+}
+
+.oppi-dashboard-table.admin-compact-table th {
+  padding: 0.85rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.oppi-dashboard-table.admin-compact-table td {
+  padding: 0.85rem 0.65rem;
+  line-height: 1.38;
+}
+
+.dt-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.dt-cell-date {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.dt-cell-time {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.app-id-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 145px;
+  max-height: 76px;
+  overflow-y: auto;
+}
+
+.app-id-chip {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.reg-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 210px;
+  max-width: 270px;
+  max-height: 84px;
+  overflow-y: auto;
+  font-size: 0.79rem;
+  line-height: 1.35;
+  padding-right: 4px;
+}
+
+.reg-category-item {
+  color: #334155;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.reg-category-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.app-id-chip-list::-webkit-scrollbar,
+.reg-category-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-id-chip-list::-webkit-scrollbar-thumb,
+.reg-category-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .table-loading,
