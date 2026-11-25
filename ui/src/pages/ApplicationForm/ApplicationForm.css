@@ -1616,3 +1616,33 @@
   font-size: 0.8rem;
   color: #b45309;
 }
+
+/* Final submission confirmation modal */
+.confirm-submit-modal-box {
+  max-width: 480px;
+}
+
+.confirm-warning-badge {
+  background: #fef3c7;
+  width: 70px;
+  height: 70px;
+}
+
+.confirm-submit-modal-box .confirm-submit-desc {
+  margin-bottom: 0.75rem;
+}
+
+.confirm-submit-warning {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #b91c1c;
+  line-height: 1.55;
+  margin: 0 0 0.75rem 0;
+}
+
+.confirm-submit-question {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1.5rem 0;
+}

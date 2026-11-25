@@ -133,6 +133,7 @@ const ApplicationForm = () => {
   const [appStatus, setAppStatus] = useState('DRAFT');
   const [viewMode, setViewMode] = useState('dashboard'); // 'dashboard' | 'form' | 'preview'
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
 
   // Submissions state
   const [submissions, setSubmissions] = useState([]);
@@ -1214,7 +1215,7 @@ const ApplicationForm = () => {
                   <button
                     type="button"
                     className="btn-preview-submit-exit"
-                    onClick={handleSubmitAndExit}
+                    onClick={() => setShowConfirmSubmitModal(true)}
                     disabled={isSubmitting || isSavingAndExiting}
                   >
                     {isSubmitting ? 'Submitting...' : (isAdmin ? 'Submit / Update & Exit' : 'Submit & Exit')}
@@ -1756,6 +1757,52 @@ const ApplicationForm = () => {
           </>
         )}
       </div>
+
+      {/* Final Submission Confirmation Modal */}
+      {showConfirmSubmitModal && (
+        <div className="submission-modal-backdrop">
+          <div className="submission-modal-box confirm-submit-modal-box" role="dialog" aria-modal="true" aria-labelledby="confirm-submit-title">
+            <div className="submission-modal-icon confirm-warning-badge">
+              <AlertCircle size={46} color="#d97706" />
+            </div>
+            <h3 className="submission-modal-title" id="confirm-submit-title">Confirm Submission</h3>
+            <p className="submission-modal-desc confirm-submit-desc">
+              Please review your application carefully, ensure that all details and documents are accurate and complete before proceeding with your submission.
+            </p>
+            <p className="confirm-submit-warning">
+              Once submitted, you will not be able to make any changes to your application.
+            </p>
+            <p className="confirm-submit-question">
+              Do you wish to continue with the submission?
+            </p>
+            <div className="submission-modal-actions">
+              <button
+                type="button"
+                className="btn-modal-download"
+                onClick={() => {
+                  setShowConfirmSubmitModal(false);
+                  handleSubmitAndExit();
+                }}
+                disabled={isSubmitting}
+              >
+                <span>Submit</span>
+              </button>
+              <button
+                type="button"
+                className="btn-modal-exit"
+                onClick={() => {
+                  setShowConfirmSubmitModal(false);
+                  setViewMode('form');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={isSubmitting}
+              >
+                Edit Application
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Submission Success Modal */}
       {showSubmitModal && (

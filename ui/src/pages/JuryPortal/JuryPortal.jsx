@@ -605,7 +605,7 @@ const JuryPortal = () => {
                   if (e.target.value.trim()) setCommentsError('');
                 }}
                 disabled={isFinalized || actioning}
-                placeholder="NA"
+                placeholder="In case of no remarks/comments please mention NA"
                 style={commentsError ? { borderColor: '#ef4444' } : {}}
               />
               {commentsError && (
