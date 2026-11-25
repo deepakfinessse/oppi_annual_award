@@ -260,7 +260,7 @@ public class PastWinner
     public string? Organisation { get; set; }
     public string Description { get; set; } = ""; // details
     public string? Caption { get; set; }
-    public string? Position { get; set; } // Winner, 1st Runner up, 2nd Runner up
+    public string? Position { get; set; } // Winner, Runner Up
     public string? ImagePath { get; set; }
     public string? Color { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

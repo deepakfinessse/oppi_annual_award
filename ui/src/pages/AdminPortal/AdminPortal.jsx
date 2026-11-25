@@ -727,8 +727,7 @@ const AdminPortal = () => {
 
     scoredItems.forEach((item, rIdx) => {
       if (rIdx === 0) item.position = 'Winner';
-      else if (rIdx === 1) item.position = '1st Runner up';
-      else if (rIdx === 2) item.position = '2nd Runner up';
+      else if (rIdx === 1) item.position = 'Runner Up';
       else item.position = `Rank ${rIdx + 1}`;
     });
 
@@ -769,7 +768,7 @@ const AdminPortal = () => {
       },
       total: 25.25,
       average: 6.31,
-      position: '1st Runner up'
+      position: 'Runner Up'
     },
     {
       id: 'demo-3',
@@ -785,7 +784,7 @@ const AdminPortal = () => {
       },
       total: 25.25,
       average: 6.31,
-      position: '2nd Runner up'
+      position: 'Rank 3'
     }
   ];
 
@@ -1171,10 +1170,10 @@ const AdminPortal = () => {
     setWinnerYearStr(w.yearStr || (w.year ? `${w.year - 1}-${w.year}` : '2025-2026'));
     setWinnerCategory(w.category || AWARD_CATEGORIES[0]);
     setWinnerOrganisation(w.organisation || w.name || '');
-    setWinnerPosition(w.position || 'Winner');
+    const isRunner = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
+    setWinnerPosition(isRunner ? 'Runner Up' : (w.position || 'Winner'));
     setWinnerDescription(w.description || '');
     setWinnerImagePath(w.imagePath || '');
-    const isRunner = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
     setWinnerColor(w.color || (isRunner ? '#f97316' : '#00a3e0'));
     setError('');
     setSuccess('');
@@ -1234,7 +1233,7 @@ const AdminPortal = () => {
       name: orgTrimmed,
       organisation: orgTrimmed,
       caption: '',
-      position: winnerPosition || 'Winner',
+      position: isRunner ? 'Runner Up' : (winnerPosition || 'Winner'),
       description: winnerDescription.trim() || '',
       imagePath: winnerImagePath,
       color: winnerColor || (isRunner ? '#f97316' : '#00a3e0')
@@ -1263,13 +1262,17 @@ const AdminPortal = () => {
   const downloadPastWinnersCSV = () => {
     const winnersToExport = displayedWinners;
     const headers = ['S. No.', 'Organisation', 'Category', 'Year', 'Position'];
-    const rows = winnersToExport.map((w, idx) => [
-      String(idx + 1).padStart(2, '0'),
-      `"${(w.organisation || '').replace(/"/g, '""')}"`,
-      `"${(w.category || '').replace(/"/g, '""')}"`,
-      `"${(w.yearStr || w.year || '').replace(/"/g, '""')}"`,
-      `"${(w.position || 'Winner').replace(/"/g, '""')}"`
-    ]);
+    const rows = winnersToExport.map((w, idx) => {
+      const isRunner = w.position && (w.position.toLowerCase().includes('runner') || w.position.includes('1st') || w.position.includes('2nd'));
+      const posLabel = isRunner ? 'Runner Up' : (w.position || 'Winner');
+      return [
+        String(idx + 1).padStart(2, '0'),
+        `"${(w.organisation || '').replace(/"/g, '""')}"`,
+        `"${(w.category || '').replace(/"/g, '""')}"`,
+        `"${(w.yearStr || w.year || '').replace(/"/g, '""')}"`,
+        `"${posLabel.replace(/"/g, '""')}"`
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2062,7 +2065,7 @@ const AdminPortal = () => {
                               className="past-winner-pos-pill"
                               style={{ backgroundColor: posColor }}
                             >
-                              {w.position || 'Winner'}
+                              {isRunnerUp ? 'Runner Up' : (w.position || 'Winner')}
                             </span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
@@ -2169,16 +2172,10 @@ const AdminPortal = () => {
                         Winner
                       </div>
                       <div
-                        className={`filter-menu-item ${evalStatusFilter === '1st runner up' ? 'active' : ''}`}
-                        onClick={() => { setEvalStatusFilter('1st runner up'); setShowEvalStatusDropdown(false); }}
+                        className={`filter-menu-item ${evalStatusFilter === 'Runner Up' ? 'active' : ''}`}
+                        onClick={() => { setEvalStatusFilter('Runner Up'); setShowEvalStatusDropdown(false); }}
                       >
-                        1st runner up
-                      </div>
-                      <div
-                        className={`filter-menu-item ${evalStatusFilter === '2nd runner up' ? 'active' : ''}`}
-                        onClick={() => { setEvalStatusFilter('2nd runner up'); setShowEvalStatusDropdown(false); }}
-                      >
-                        2nd runner up
+                        Runner Up
                       </div>
                     </div>
                   )}
@@ -2228,8 +2225,7 @@ const AdminPortal = () => {
                       const pos = item.position || '';
                       let posClass = 'pos-badge-default';
                       if (pos.toLowerCase() === 'winner') posClass = 'pos-badge-winner';
-                      else if (pos.toLowerCase().includes('1st')) posClass = 'pos-badge-runner-1';
-                      else if (pos.toLowerCase().includes('2nd')) posClass = 'pos-badge-runner-2';
+                      else if (pos.toLowerCase().includes('runner')) posClass = 'pos-badge-runner';
 
                       return (
                         <tr key={item.id}>
@@ -2680,8 +2676,7 @@ const AdminPortal = () => {
                       }}
                     >
                       <option value="Winner">Winner</option>
-                      <option value="1st Runner up">1st Runner up</option>
-                      <option value="2nd Runner up">2nd Runner up</option>
+                      <option value="Runner Up">Runner Up</option>
                       <option value="Special Recognition">Special Recognition</option>
                     </select>
                   </div>

@@ -467,6 +467,7 @@ using (var scope = app.Services.CreateScope())
     try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `position` VARCHAR(100) NULL;"); } catch {}
     try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `caption` TEXT NULL;"); } catch {}
     try { await db2.Database.ExecuteSqlRawAsync("ALTER TABLE `past_winners` ADD COLUMN `year_str` VARCHAR(50) NULL;"); } catch {}
+    try { await db2.Database.ExecuteSqlRawAsync("UPDATE `past_winners` SET `position` = 'Runner Up' WHERE LOWER(`position`) LIKE '%runner%';"); } catch {}
 
     if (!db2.PastWinners.Any(w => w.Category.Contains("OPPI") || w.Category.Contains("Sustainability")))
     {
@@ -497,7 +498,7 @@ using (var scope = app.Services.CreateScope())
                 Category = "OPPI Sustainability Excellence Award", 
                 Name = "Shivam", 
                 Organisation = "Company name 123", 
-                Position = "1st Runner up", 
+                Position = "Runner Up", 
                 Caption = "Outstanding breakthrough in sustainable supply chain and biodegradable packaging solutions.",
                 Description = "Outstanding breakthrough in sustainable supply chain and biodegradable packaging solutions.",
                 ImagePath = "/winner2.png", 

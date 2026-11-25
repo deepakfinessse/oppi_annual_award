@@ -22,7 +22,7 @@ const fallbackWinners = [
     id: 2,
     year: 2026,
     yearStr: '2025-2026',
-    position: 'Runner up',
+    position: 'Runner Up',
     category: 'OPPI Sustainability Excellence Award',
     organisation: 'Company name 123',
     name: 'Shivam',
@@ -178,7 +178,7 @@ const PastWinners = () => {
                     color: currentWinner.color || (isRunnerUp ? '#f97316' : '#2f9a2f')
                   }}
                 >
-                  {`${currentWinner.yearStr || currentWinner.year} ${(currentWinner.position || 'WINNER').toUpperCase()}`}
+                  {`${currentWinner.yearStr || currentWinner.year} ${(isRunnerUp ? 'RUNNER UP' : (currentWinner.position || 'WINNER')).toUpperCase()}`}
                 </span>
 
                 <div className="winner-company-block">
