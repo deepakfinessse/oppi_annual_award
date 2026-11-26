@@ -384,31 +384,67 @@ const AdminPortal = () => {
     });
   };
 
-  // Filter handlers
-  const filteredUsers = users.filter(u => {
+  // Build registration rows: one row per App ID (or one row with '—' if user has no apps yet)
+  const registrationRows = [];
+  users.forEach(u => {
     // Only show users with the role 'USER'
-    if (u.role?.toUpperCase() !== 'USER') return false;
+    if (u.role?.toUpperCase() !== 'USER') return;
 
     const userApps = getUserApps(u);
-    const org = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '';
-
-    // Organisation filter
-    if (userOrgFilter !== 'ALL') {
-      if (!isOrgMatch(org, userOrgFilter)) return false;
-    }
-    
-    // Category filter
-    if (userCategoryFilter !== 'ALL') {
-      const hasCat = userApps.some(app => isCategoryMatch(app.category, userCategoryFilter));
-      if (!hasCat) return false;
-    }
-
     const hasSubmitted = userApps.some(app => app.status && app.status !== 'DRAFT');
     const status = userApps.length === 0 ? 'REGISTERED' : (hasSubmitted ? 'SUBMITTED' : 'DRAFT');
 
-    if (userFilter === 'ALL') return true;
-    if (userFilter === 'REGISTERED' || userFilter === 'NEW') return status === 'REGISTERED';
-    return status === userFilter;
+    if (userFilter !== 'ALL') {
+      if (userFilter === 'REGISTERED' || userFilter === 'NEW') {
+        if (status !== 'REGISTERED') return;
+      } else if (status !== userFilter) {
+        return;
+      }
+    }
+
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+    const baseOrg = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
+    const baseMobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
+    const baseDate = u.createdAt || u.created_at;
+
+    if (userApps.length === 0) {
+      if (userOrgFilter !== 'ALL' && !isOrgMatch(baseOrg, userOrgFilter)) return;
+      if (userCategoryFilter !== 'ALL') return;
+
+      registrationRows.push({
+        rowKey: `user-${u.id}`,
+        user: u,
+        app: null,
+        dateTime: baseDate,
+        appId: '—',
+        organisation: baseOrg,
+        fullName,
+        email: u.email || '—',
+        mobile: baseMobile,
+        category: '—'
+      });
+    } else {
+      userApps.forEach(app => {
+        const rowOrg = u.organisation || app.company || app.institute_name || app.instituteName || '—';
+        const rowCategory = app.category?.trim() || '—';
+
+        if (userOrgFilter !== 'ALL' && !isOrgMatch(rowOrg, userOrgFilter)) return;
+        if (userCategoryFilter !== 'ALL' && !isCategoryMatch(rowCategory, userCategoryFilter)) return;
+
+        registrationRows.push({
+          rowKey: `user-${u.id}-app-${app.id}`,
+          user: u,
+          app,
+          dateTime: app.createdAt || app.created_at || baseDate,
+          appId: `#${String(app.id).padStart(2, '0')}`,
+          organisation: rowOrg,
+          fullName: fullName !== '—' ? fullName : (app.applicant_name || app.user_name || '—'),
+          email: u.email || app.applicant_email || app.user_email || '—',
+          mobile: u.mobile || app.applicant_mobile || app.user_mobile || app.mobile || '—',
+          category: rowCategory
+        });
+      });
+    }
   });
 
   const ANNUAL_AWARD_CATEGORIES = AWARD_CATEGORIES;
@@ -563,8 +599,8 @@ const AdminPortal = () => {
   const totalAppPages = Math.ceil(filteredApps.length / appPageSize) || 1;
   const paginatedApps = filteredApps.slice((appPage - 1) * appPageSize, appPage * appPageSize);
 
-  const totalUserPages = Math.ceil(filteredUsers.length / userPageSize) || 1;
-  const paginatedUsers = filteredUsers.slice((userPage - 1) * userPageSize, userPage * userPageSize);
+  const totalUserPages = Math.ceil(registrationRows.length / userPageSize) || 1;
+  const paginatedRegistrationRows = registrationRows.slice((userPage - 1) * userPageSize, userPage * userPageSize);
 
   // Final Evaluation and Ranking Juries and List
   const evalJuries = useMemo(() => {
@@ -839,24 +875,15 @@ const AdminPortal = () => {
   // CSV download handlers
   const downloadUsersCSV = () => {
     const headers = ['Date & Time', 'App ID', 'Organization', 'Applicant Name', 'Email id', 'Mobile', 'Category'];
-    const rows = filteredUsers.map((u) => {
-      const userApps = getUserApps(u);
-      const appDisplayId = userApps.length > 0 
-        ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
-        : '—';
-      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
-      const categoryStr = validCategories.length > 0 ? validCategories.join(', ') : '—';
-      const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
-      return [
-        formatDateTime(u.createdAt || u.created_at),
-        appDisplayId,
-        u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—',
-        `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
-        u.email || '—',
-        mobile,
-        categoryStr
-      ];
-    });
+    const rows = registrationRows.map((row) => [
+      formatDateTime(row.dateTime),
+      row.appId,
+      row.organisation,
+      row.fullName,
+      row.email,
+      row.mobile,
+      row.category
+    ]);
     const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
     const csvContent = [headers.map(escapeCsv).join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -941,14 +968,14 @@ const AdminPortal = () => {
   // Multi-format export helpers for Users
   const handleExportUsersExcel = async () => {
     setShowUserExportDropdown(false);
-    await exportRegistrationsExcel(filteredUsers, apps);
+    await exportRegistrationsExcel(registrationRows, apps);
     setSuccess('Registered Members Excel report downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
 
   const handleExportUsersWord = () => {
     setShowUserExportDropdown(false);
-    exportRegistrationsWord(filteredUsers, apps);
+    exportRegistrationsWord(registrationRows, apps);
     setSuccess('Registered Members Word Report downloaded.');
     setTimeout(() => setSuccess(''), 3500);
   };
@@ -1377,7 +1404,7 @@ const AdminPortal = () => {
           <div className="dashboard-card">
             <div className="card-header-bar">
               <div className="card-title-group">
-                <h3 className="card-title">Registrations({String(filteredUsers.length).padStart(2, '0')})</h3>
+                <h3 className="card-title">Registrations({String(registrationRows.length).padStart(2, '0')})</h3>
               </div>
 
               <div className="card-actions">
@@ -1434,7 +1461,7 @@ const AdminPortal = () => {
                   </button>
                   {showUserCatDropdown && (
                     <div className="filter-dropdown-menu" style={{ minWidth: '320px', maxHeight: '350px', overflowY: 'auto', right: 0 }}>
-                      <div className="filter-menu-item" onClick={() => { setUserCategoryFilter('ALL'); setShowUserCatDropdown(false); }}>
+                      <div className="filter-menu-item" onClick={() => { setUserCategoryFilter('ALL'); setUserPage(1); setShowUserCatDropdown(false); }}>
                         <strong>All Categories</strong>
                       </div>
                       <div style={{ borderTop: '1px solid #edf2f7', margin: '4px 0' }} />
@@ -1442,7 +1469,7 @@ const AdminPortal = () => {
                         <div
                           key={cat}
                           className={`filter-menu-item ${userCategoryFilter === cat ? 'active' : ''}`}
-                          onClick={() => { setUserCategoryFilter(cat); setShowUserCatDropdown(false); }}
+                          onClick={() => { setUserCategoryFilter(cat); setUserPage(1); setShowUserCatDropdown(false); }}
                         >
                           {cat}
                         </div>
@@ -1489,57 +1516,26 @@ const AdminPortal = () => {
                     <tr>
                       <td colSpan="7" className="table-loading">Loading registrations...</td>
                     </tr>
-                  ) : filteredUsers.length === 0 ? (
+                  ) : registrationRows.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="table-empty">No registrations found.</td>
                     </tr>
                   ) : (
-                    paginatedUsers.map((u) => {
-                      const userApps = getUserApps(u);
-                      const appIds = userApps.map(a => `#${String(a.id).padStart(2, '0')}`);
-                      const organisation = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
-                      const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
-                      const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
-                      
-                      const validCategories = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
-                      let displayedCategories = [];
-                      if (validCategories.length > 0) {
-                        if (userCategoryFilter !== 'ALL') {
-                          const matched = validCategories.find(c => isCategoryMatch(c, userCategoryFilter));
-                          displayedCategories = matched ? [matched] : validCategories;
-                        } else {
-                          displayedCategories = validCategories;
-                        }
-                      }
-
-                      return (
-                        <tr key={u.id}>
-                          <td>{renderDateTimeCell(u.createdAt || u.created_at)}</td>
-                          <td className="id-col">
-                            {appIds.length > 0 ? (
-                              <div className="app-id-chip-list" title={appIds.join(', ')}>
-                                {appIds.map(idStr => (
-                                  <span key={idStr} className="app-id-chip">{idStr}</span>
-                                ))}
-                              </div>
-                            ) : '—'}
-                          </td>
-                          <td style={{ maxWidth: '155px' }}>{organisation}</td>
-                          <td className="bold-text" style={{ maxWidth: '140px' }}>{fullName}</td>
-                          <td className="email-text" style={{ maxWidth: '205px' }}>{u.email || '—'}</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>{mobile}</td>
-                          <td>
-                            {displayedCategories.length > 0 ? (
-                              <div className="reg-category-list" title={displayedCategories.join(', ')}>
-                                {displayedCategories.map((cat, cIdx) => (
-                                  <span key={cIdx} className="reg-category-item">{cat}</span>
-                                ))}
-                              </div>
-                            ) : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })
+                    paginatedRegistrationRows.map((row) => (
+                      <tr key={row.rowKey}>
+                        <td>{renderDateTimeCell(row.dateTime)}</td>
+                        <td className="id-col" style={{ whiteSpace: 'nowrap' }}>
+                          {row.appId !== '—' ? (
+                            <span className="app-id-chip">{row.appId}</span>
+                          ) : '—'}
+                        </td>
+                        <td style={{ maxWidth: '155px' }}>{row.organisation}</td>
+                        <td className="bold-text" style={{ maxWidth: '140px' }}>{row.fullName}</td>
+                        <td className="email-text" style={{ maxWidth: '205px' }}>{row.email}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{row.mobile}</td>
+                        <td style={{ minWidth: '170px', maxWidth: '250px', fontSize: '0.8rem' }}>{row.category}</td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -1547,7 +1543,7 @@ const AdminPortal = () => {
 
             <div className="card-pagination-bar">
               <div className="pagination-info">
-                Showing <strong>{filteredUsers.length === 0 ? 0 : (userPage - 1) * userPageSize + 1}</strong> to <strong>{Math.min(userPage * userPageSize, filteredUsers.length)}</strong> of <strong>{filteredUsers.length}</strong> entries
+                Showing <strong>{registrationRows.length === 0 ? 0 : (userPage - 1) * userPageSize + 1}</strong> to <strong>{Math.min(userPage * userPageSize, registrationRows.length)}</strong> of <strong>{registrationRows.length}</strong> entries
               </div>
               <div className="pagination-controls">
                 <button

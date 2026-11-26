@@ -168,13 +168,43 @@ const formatStatusLabel = (status) => {
 };
 
 /**
- * Export Registrations to Word (.doc)
+ * Export Registrations to Word (.doc) (one row per App ID)
  */
-export const exportRegistrationsWord = (users = [], apps = []) => {
+export const exportRegistrationsWord = (items = [], apps = []) => {
   const timestamp = formatDateTime(new Date());
   let rowsHtml = '';
+  let totalCount = 0;
 
-  users.forEach((u) => {
+  const appendRow = (dateVal, appId, company, fullName, email, mobile, category) => {
+    totalCount += 1;
+    rowsHtml += `
+      <tr>
+        <td>${formatDateTime(dateVal)}</td>
+        <td style="text-align: center;">${appId}</td>
+        <td>${company}</td>
+        <td><strong>${fullName}</strong></td>
+        <td>${email}</td>
+        <td>${mobile}</td>
+        <td>${category}</td>
+      </tr>
+    `;
+  };
+
+  items.forEach((item) => {
+    if (item && 'rowKey' in item) {
+      appendRow(
+        item.dateTime,
+        item.appId || '—',
+        item.organisation || '—',
+        item.fullName || '—',
+        item.email || '—',
+        item.mobile || '—',
+        item.category || '—'
+      );
+      return;
+    }
+
+    const u = item;
     const userEmail = (u.email || '').toLowerCase().trim();
     const userId = u.id || u.Id;
     const userApps = apps.filter(a => {
@@ -184,31 +214,36 @@ export const exportRegistrationsWord = (users = [], apps = []) => {
       const matchesUserId = userId && (a.user_id || a.UserId) && String(a.user_id || a.UserId) === String(userId);
       return matchesEmail || matchesUserId;
     });
-    const validCats = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
-    const category = validCats.length > 0 ? validCats.join(', ') : '—';
-    const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
-    const mobile = u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—';
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
 
-    const appDisplayId = userApps.length > 0 
-      ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
-      : '—';
-
-    rowsHtml += `
-      <tr>
-        <td>${formatDateTime(u.createdAt || u.created_at)}</td>
-        <td style="text-align: center;">${appDisplayId}</td>
-        <td>${company}</td>
-        <td><strong>${`${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</strong></td>
-        <td>${u.email || '—'}</td>
-        <td>${mobile}</td>
-        <td>${category}</td>
-      </tr>
-    `;
+    if (userApps.length === 0) {
+      appendRow(
+        u.createdAt || u.created_at,
+        '—',
+        u.organisation || '—',
+        fullName,
+        u.email || '—',
+        u.mobile || '—',
+        '—'
+      );
+    } else {
+      userApps.forEach(a => {
+        appendRow(
+          a.createdAt || a.created_at || u.createdAt || u.created_at,
+          `#${String(a.id).padStart(2, '0')}`,
+          u.organisation || a.company || a.institute_name || a.instituteName || '—',
+          fullName !== '—' ? fullName : (a.applicant_name || a.user_name || '—'),
+          u.email || a.applicant_email || a.user_email || '—',
+          u.mobile || a.applicant_mobile || a.user_mobile || a.mobile || '—',
+          a.category?.trim() || '—'
+        );
+      });
+    }
   });
 
   const content = `
     <h1>OPPI Annual Awards — User Registrations Tracking</h1>
-    <div class="meta-bar">Generated on: ${timestamp} (IST) | Total Registered Members: ${users.length}</div>
+    <div class="meta-bar">Generated on: ${timestamp} (IST) | Total Entries: ${totalCount}</div>
     <p>This report tracks all member company representatives registered on the OPPI Annual Awards portal.</p>
     <table>
       <thead>

@@ -211,14 +211,44 @@ const REGISTRATION_HEADERS = [
 ];
 
 /**
- * Export Registered Users Tracking Sheet
+ * Export Registered Users Tracking Sheet (one row per App ID)
  */
-export const exportRegistrationsExcel = async (users = [], apps = []) => {
+export const exportRegistrationsExcel = async (items = [], apps = []) => {
   const workbook = new ExcelJS.Workbook();
   const title = 'OPPI Annual Awards — Registered Members Tracking';
   const worksheet = workbook.addWorksheet('Registrations');
 
-  const rows = users.map((u) => {
+  const formatRegDate = (rawDate) => {
+    if (!rawDate) return '—';
+    try {
+      let str = String(rawDate).trim();
+      if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) str = str.replace(' ', 'T') + 'Z';
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+      }
+    } catch (e) {}
+    return '—';
+  };
+
+  const rows = [];
+  items.forEach((item) => {
+    // Support pre-expanded registrationRows (one row per App ID)
+    if (item && 'rowKey' in item) {
+      rows.push({
+        registeredAt: formatRegDate(item.dateTime),
+        appId: item.appId || '—',
+        company: item.organisation || '—',
+        name: item.fullName || '—',
+        email: item.email || '—',
+        mobile: item.mobile || '—',
+        category: item.category || '—'
+      });
+      return;
+    }
+
+    // Fallback: expand raw user objects into one row per App ID
+    const u = item;
     const userEmail = (u.email || '').toLowerCase().trim();
     const userId = u.id || u.Id;
     const userApps = apps.filter(a => {
@@ -228,36 +258,31 @@ export const exportRegistrationsExcel = async (users = [], apps = []) => {
       const matchesUserId = userId && (a.user_id || a.UserId) && String(a.user_id || a.UserId) === String(userId);
       return matchesEmail || matchesUserId;
     });
-    const validCats = Array.from(new Set(userApps.map(a => a.category?.trim()).filter(Boolean)));
-    const category = validCats.length > 0 ? validCats.join(', ') : '—';
-    const company = u.organisation || userApps[0]?.company || userApps[0]?.institute_name || '—';
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
 
-    let regDate = '—';
-    const rawDate = u.createdAt || u.created_at;
-    if (rawDate) {
-      try {
-        let str = String(rawDate).trim();
-        if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) str = str.replace(' ', 'T') + 'Z';
-        const d = new Date(str);
-        if (!isNaN(d.getTime())) {
-          regDate = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
-        }
-      } catch (e) {}
+    if (userApps.length === 0) {
+      rows.push({
+        registeredAt: formatRegDate(u.createdAt || u.created_at),
+        appId: '—',
+        company: u.organisation || '—',
+        name: fullName,
+        email: u.email || '—',
+        mobile: u.mobile || '—',
+        category: '—'
+      });
+    } else {
+      userApps.forEach(a => {
+        rows.push({
+          registeredAt: formatRegDate(a.createdAt || a.created_at || u.createdAt || u.created_at),
+          appId: `#${String(a.id).padStart(2, '0')}`,
+          company: u.organisation || a.company || a.institute_name || a.instituteName || '—',
+          name: fullName !== '—' ? fullName : (a.applicant_name || a.user_name || '—'),
+          email: u.email || a.applicant_email || a.user_email || '—',
+          mobile: u.mobile || a.applicant_mobile || a.user_mobile || a.mobile || '—',
+          category: a.category?.trim() || '—'
+        });
+      });
     }
-
-    const appDisplayId = userApps.length > 0 
-      ? userApps.map(a => `#${String(a.id).padStart(2, '0')}`).join(', ') 
-      : '—';
-
-    return {
-      registeredAt: regDate,
-      appId: appDisplayId,
-      company,
-      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—',
-      email: u.email || '—',
-      mobile: u.mobile || userApps[0]?.applicant_mobile || userApps[0]?.user_mobile || userApps[0]?.mobile || '—',
-      category
-    };
   });
 
   applyExcelStyling(worksheet, title, REGISTRATION_HEADERS, rows);
